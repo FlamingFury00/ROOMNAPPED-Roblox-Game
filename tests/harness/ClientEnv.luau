@@ -17,6 +17,7 @@ local roblox = require("@lune/roblox")
 local task = require("@lune/task")
 
 local Env = require("./Env")
+local Events = require("./Events")
 
 local ClientEnv = {}
 ClientEnv.__index = ClientEnv
@@ -76,37 +77,10 @@ local function newSignal(errors: { string })
 	return signal
 end
 
--- Instance events Lune does not implement are created lazily per instance and kept here so tests can fire
--- them (e.g. press a button). Lune may hand out a fresh userdata wrapper for the same instance once the old
--- one is garbage collected, so signals are keyed by a stable id stored on the instance itself.
-local instanceSignals: { [number]: { [string]: any } } = {}
-local activeErrors: { string } = {}
 local shimsInstalled = false
-local nextId = 0
-
-local function idOf(inst: any): number
-	local id = inst:GetAttribute("HarnessId")
-	if type(id) ~= "number" then
-		nextId += 1
-		id = nextId
-		inst:SetAttribute("HarnessId", id)
-	end
-	return id
-end
 
 local function eventFor(inst: any, name: string)
-	local key = idOf(inst)
-	local perInstance = instanceSignals[key]
-	if not perInstance then
-		perInstance = {}
-		instanceSignals[key] = perInstance
-	end
-	local signal = perInstance[name]
-	if not signal then
-		signal = newSignal(activeErrors)
-		perInstance[name] = signal
-	end
-	return signal
+	return Events.eventFor(inst, name)
 end
 
 local function installShims()
@@ -114,34 +88,16 @@ local function installShims()
 		return
 	end
 	shimsInstalled = true
-	local events = {
-		{ "GuiButton", "Activated" },
-		{ "GuiButton", "MouseButton1Click" },
-		{ "GuiObject", "MouseEnter" },
-		{ "GuiObject", "MouseLeave" },
-		{ "GuiObject", "InputBegan" },
-		{ "GuiObject", "InputChanged" },
-		{ "GuiObject", "InputEnded" },
-		{ "GuiObject", "SelectionGained" },
-		{ "GuiObject", "SelectionLost" },
-		{ "TextBox", "FocusLost" },
-		{ "TextBox", "Focused" },
+	-- Shared with ClientSim: one registry, dispatched by whichever harness is active.
+	Events.install(Events.GUI_MEMBERS)
+	Events.install({
 		{ "Instance", "Destroying" },
-		{ "Instance", "Changed" },
 		{ "Instance", "ChildAdded" },
 		{ "Instance", "DescendantAdded" },
 		{ "Instance", "AncestryChanged" },
-		{ "BindableEvent", "Event" },
-	}
-	for _, pair in events do
-		pcall(function()
-			roblox.implementProperty(pair[1], pair[2], function(inst: any)
-				return eventFor(inst, pair[2])
-			end)
-		end)
-	end
-	-- Model:GetBoundingBox (used by the 3D previews).
-	roblox.implementMethod("Model", "GetBoundingBox", function(model: any)
+	})
+	-- Model:GetBoundingBox (used by the 3D previews). Another harness may already have implemented it.
+	pcall(roblox.implementMethod, "Model", "GetBoundingBox", function(model: any)
 		local minV, maxV = nil, nil
 		for _, d in model:GetDescendants() do
 			if d:IsA("BasePart") then
@@ -184,7 +140,13 @@ function ClientEnv.new(placePath: string)
 	installShims()
 	local self = setmetatable({}, ClientEnv)
 	self.errors = {}
-	activeErrors = self.errors
+	local errors0 = self.errors
+	Events.setDispatcher(function(fn, ...)
+		local ok, err = xpcall(fn, handler, ...)
+		if not ok then
+			table.insert(errors0, tostring(err))
+		end
+	end)
 	self.sent = {}
 	self.handlers = {}
 	self.binds = {}
@@ -198,6 +160,15 @@ function ClientEnv.new(placePath: string)
 			end,
 		},
 		typeof = typeof,
+		RaycastParams = {
+			new = function()
+				return {
+					FilterType = roblox.Enum.RaycastFilterType.Exclude,
+					FilterDescendantsInstances = {},
+					IgnoreWater = false,
+				}
+			end,
+		},
 	})
 	self.loaded = loaded
 	local game = loaded.game
@@ -500,6 +471,9 @@ function ClientEnv.new(placePath: string)
 		setUserScale = function() end,
 		isCompact = function()
 			return false
+		end,
+		toCanvas = function(_gui: any, point: any)
+			return point
 		end,
 	}
 	local function noop() end

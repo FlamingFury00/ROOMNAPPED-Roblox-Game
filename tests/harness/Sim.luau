@@ -325,6 +325,7 @@ function Sim.new(placePath: string)
 	fakeOs.time = function()
 		return 1700000000 + math.floor(sim.time)
 	end
+	sim.fakeOs = fakeOs
 
 	local engineModule = {
 		velocity = function(part)
@@ -400,7 +401,8 @@ function Sim.queryParts(self: any)
 	if not self.queryCache then
 		local list = {}
 		for _, d in self.workspace:GetDescendants() do
-			if d:IsA("BasePart") then
+			-- Terrain is a BasePart in the class tree but not a box; it has no geometry in the simulation.
+			if d:IsA("BasePart") and not d:IsA("Terrain") then
 				table.insert(list, d)
 			end
 		end
@@ -476,6 +478,11 @@ function Sim.spawnCharacter(self: any, player: any, at: any?)
 	part("UpperTorso", V3.new(2, 1.6, 1), V3.new(0, 0.2, 0))
 	part("RightHand", V3.new(0.6, 0.6, 0.6), V3.new(1.5, -1, 0))
 	local humanoid = roblox.Instance.new("Humanoid")
+	-- Engine-computed members a client reads (Lune only returns values that were written first).
+	humanoid.MoveDirection = V3.zero
+	humanoid.HipHeight = 2
+	root.AssemblyLinearVelocity = V3.zero
+	root.AssemblyMass = 14
 	humanoid.Parent = model
 	model.PrimaryPart = root
 	local spawnCF = at
@@ -532,6 +539,9 @@ end
 local StatePathModule = nil
 
 function Sim.deliver(self: any, player: any, remoteName: string, ...)
+	if self.client and self.client.player == player then
+		self.client:toClient(remoteName, ...)
+	end
 	local bot = self.bots[player]
 	if not bot then
 		return
@@ -559,6 +569,14 @@ function Sim.snapshot(self: any, bot: any)
 	for channel, payload in snapshot do
 		bot.mirror[channel] = Tables.deepCopy(payload.data)
 	end
+end
+
+function Sim.fireServerEvent(self: any, remote: any, player: any, ...)
+	signalFor(remote, "OnServerEvent"):Fire(player, ...)
+end
+
+function Sim.fireClientEvent(self: any, remote: any, ...)
+	signalFor(remote, "OnClientEvent"):Fire(...)
 end
 
 -- Fire a client->server remote as `bot`.
@@ -656,7 +674,13 @@ function Sim.stepBots(self: any, dt: number)
 				end
 			end
 			local finalPos = V3.new(nextPos.X, y, nextPos.Z)
-			self.velocities[root] = (finalPos - position) / math.max(dt, 1e-3)
+			local velocity = (finalPos - position) / math.max(dt, 1e-3)
+			self.velocities[root] = velocity
+			root.AssemblyLinearVelocity = velocity
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.MoveDirection = if horizontal.Magnitude > 1e-4 then horizontal.Unit else V3.zero
+			end
 			local look = if horizontal.Magnitude > 0.01 then horizontal.Unit else root.CFrame.LookVector
 			character:PivotTo(CF.lookAt(finalPos, finalPos + V3.new(look.X, 0, look.Z)))
 		end
@@ -669,9 +693,15 @@ function Sim.run(self: any, seconds: number)
 	local dt = 1 / 60
 	for _ = 1, frames do
 		self.queryCache = nil
+		signalFor(self.RunService, "PreSimulation"):Fire(dt)
+		signalFor(self.RunService, "Stepped"):Fire(self.time, dt)
 		self:stepBots(dt)
 		self.scheduler.runUntil(self.time + dt)
 		signalFor(self.RunService, "Heartbeat"):Fire(dt)
+		if self.client then
+			signalFor(self.RunService, "RenderStepped"):Fire(dt)
+			self.client:step()
+		end
 	end
 end
 

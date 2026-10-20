@@ -75,7 +75,7 @@ local function rootPosition(): Vector3?
 	local character = localPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		return root.Position
+		return root.CFrame.Position
 	end
 	return nil
 end
@@ -155,7 +155,7 @@ local function occupantsOf(socketId: string): { string }
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") and MathUtil.pointInBox(cf, size, root.Position, 0.25) then
+		if root and root:IsA("BasePart") and MathUtil.pointInBox(cf, size, root.CFrame.Position, 0.25) then
 			table.insert(out, player.DisplayName)
 		end
 	end

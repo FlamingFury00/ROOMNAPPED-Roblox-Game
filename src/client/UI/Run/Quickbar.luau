@@ -145,7 +145,13 @@ local function makeSlot(parent: Instance, index: number): Slot
 	}
 end
 
-local function roundButton(parent: Instance, name: string, size: number, icon: string, color: Color3): (TextButton, TextLabel)
+local function roundButton(
+	parent: Instance,
+	name: string,
+	size: number,
+	icon: string,
+	color: Color3
+): (TextButton, TextLabel)
 	local button = Create.new("TextButton", {
 		Name = name,
 		Size = UDim2.fromOffset(size, size),
@@ -185,7 +191,9 @@ function Quickbar.create(parent: Instance): Handle
 		Size = UDim2.fromOffset(250, 126),
 		BackgroundTransparency = 1,
 		Parent = parent,
-	}, { Create.list(Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom) })
+	}, {
+		Create.list(Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom),
+	})
 	local slots: { Slot } = {}
 	for i = 1, GameConfig.Loadout.Slots do
 		local slot = makeSlot(bar, i)
@@ -301,13 +309,19 @@ function Quickbar.create(parent: Instance): Handle
 	})
 	actionLabel.ZIndex = 3
 	actionButton.InputBegan:Connect(function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			InputController.trigger("Use", "Begin")
 			Motion.press(actionButton, true)
 		end
 	end)
 	actionButton.InputEnded:Connect(function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			InputController.trigger("Use", "End")
 			Motion.press(actionButton, false)
 		end
@@ -353,12 +367,18 @@ function Quickbar.create(parent: Instance): Handle
 	-- Tap = contextual ping, long press = wheel.
 	local pingDown: number? = nil
 	ping.InputBegan:Connect(function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			pingDown = os.clock()
 		end
 	end)
 	ping.InputEnded:Connect(function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			if pingDown and os.clock() - (pingDown :: number) < 0.35 then
 				PingController.quickPing()
 			end
@@ -401,13 +421,16 @@ function Quickbar.create(parent: Instance): Handle
 		rotate.Visible = candidate ~= nil and candidate.dir ~= nil
 		cancel.Visible = PlacementController.selectedSlot() ~= 0
 		drop.Visible = localPlayer:GetAttribute("Carrying") == true
-		pingLabel.Text = if localPlayer:GetAttribute("Downed") == true then Strings.t("ping.help") else Strings.t("hud.ping")
+		pingLabel.Text = if localPlayer:GetAttribute("Downed") == true
+			then Strings.t("ping.help")
+			else Strings.t("hud.ping")
 	end)
 
 	local visible = false
 	local function applyVisibility()
 		bar.Visible = visible
-		touch.Visible = visible and (Device.isTouch() or Device.hasTouch() and not Device.isGamepad() and not Device.isKeyboard())
+		touch.Visible = visible
+			and (Device.isTouch() or Device.hasTouch() and not Device.isGamepad() and not Device.isKeyboard())
 	end
 	Device.Changed:Connect(applyVisibility)
 

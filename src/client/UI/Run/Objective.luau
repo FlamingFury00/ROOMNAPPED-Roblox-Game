@@ -82,7 +82,9 @@ function Objective.create(parent: Instance): Handle
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 		Parent = column,
-	}, { Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center) })
+	}, {
+		Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+	})
 	local pill = Create.new("Frame", {
 		Name = "Objective",
 		Size = UDim2.fromOffset(0, 50),
@@ -134,7 +136,10 @@ function Objective.create(parent: Instance): Handle
 		Create.padding(4, 14),
 		Create.list(Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
 	})
-	local keyIconHolder = Create.new("Frame", { Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, LayoutOrder = 1, Parent = keysChip })
+	local keyIconHolder = Create.new(
+		"Frame",
+		{ Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, LayoutOrder = 1, Parent = keysChip }
+	)
 	Icons.make("key", C.gold, C.ink).Parent = keyIconHolder
 	local keysText = Components.label({
 		text = "",
@@ -156,7 +161,9 @@ function Objective.create(parent: Instance): Handle
 		BackgroundTransparency = 1,
 		LayoutOrder = 2,
 		Parent = column,
-	}, { Create.list(Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center) })
+	}, {
+		Create.list(Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+	})
 
 	local threat = Create.new("Frame", {
 		Name = "Threat",
@@ -174,7 +181,10 @@ function Objective.create(parent: Instance): Handle
 	})
 	local threatStroke = Create.stroke(C.green, 2.5, 0)
 	threatStroke.Parent = threat
-	local threatIconHolder = Create.new("Frame", { Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, LayoutOrder = 1, Parent = threat })
+	local threatIconHolder = Create.new(
+		"Frame",
+		{ Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, LayoutOrder = 1, Parent = threat }
+	)
 	local threatIcon: Frame? = nil
 	local threatText = Components.label({
 		text = "",
@@ -253,7 +263,9 @@ function Objective.create(parent: Instance): Handle
 		if phase == "Launching" then
 			return "objective.launching", "arrowUp", nil
 		elseif phase == "Explore" then
-			return if RunInfo.isTutorial() then "objective.exploreTutorial" else "objective.explore", "suitcase", { room = roomName }
+			return if RunInfo.isTutorial() then "objective.exploreTutorial" else "objective.explore",
+				"suitcase",
+				{ room = roomName }
 		elseif phase == "Capture" then
 			return "objective.capture", "star", nil
 		elseif phase == "Escape" then
@@ -309,7 +321,10 @@ function Objective.create(parent: Instance): Handle
 	local function refreshThreat()
 		local state = ClientState.get("global", "caretaker")
 		local mode = if type(state) == "table" then state.mode else nil
-		local visible = RunInfo.isParticipant() and RunInfo.isActivePhase() and type(mode) == "string" and mode ~= "Gone"
+		local visible = RunInfo.isParticipant()
+			and RunInfo.isActivePhase()
+			and type(mode) == "string"
+			and mode ~= "Gone"
 		threat.Visible = visible
 		if not visible then
 			lastThreat = ""
@@ -340,7 +355,9 @@ function Objective.create(parent: Instance): Handle
 		local run = RunInfo.run()
 		local endsAt = run.escapeEndsAt
 		local phase = RunInfo.phase()
-		local visible = RunInfo.isParticipant() and (phase == "Escape" or phase == "Capture") and type(endsAt) == "number"
+		local visible = RunInfo.isParticipant()
+			and (phase == "Escape" or phase == "Capture")
+			and type(endsAt) == "number"
 		timer.Visible = visible
 		if not visible then
 			lastSecond = -1

@@ -439,7 +439,7 @@ local function fireTransition(vis: FireVis, snap: any, silent: boolean)
 	for _, e in vis.smoke do
 		e.Enabled = burning
 	end
-	local centre = vis.anchor.Position + Vector3.new(0, 2, 0)
+	local centre = vis.anchor.CFrame.Position + Vector3.new(0, 2, 0)
 	if burning and not vis.loop then
 		vis.loop = AudioController.loop("fire_loop", { position = centre, rolloffMax = 80 })
 	elseif not burning and vis.loop then
@@ -596,7 +596,11 @@ local function setupPlate(s: Session, part: BasePart)
 		TweenService:Create(part, TweenInfo.new(0.15), { CFrame = goal }):Play()
 		part.Color = if active then Color3.fromRGB(110, 240, 130) else baseColor
 		if not silent then
-			AudioController.at("pressure_plate", part.Position, { volume = 0.8, pitch = if active then 1 else 0.85 })
+			AudioController.at(
+				"pressure_plate",
+				part.CFrame.Position,
+				{ volume = 0.8, pitch = if active then 1 else 0.85 }
+			)
 		end
 	end
 	apply(true)
@@ -711,7 +715,8 @@ local function buildKey(s: Session, anchor: BasePart)
 	model.PrimaryPart = bow
 	model.WorldPivot = CFrame.new()
 	model.Parent = s.folder
-	s.keys[id] = { id = id, model = model, base = anchor.Position, taken = false, seed = MathUtil.hash(id) % 100 }
+	s.keys[id] =
+		{ id = id, model = model, base = anchor.CFrame.Position, taken = false, seed = MathUtil.hash(id) % 100 }
 end
 
 local function renderKey(key: KeyVis, now: number)
@@ -976,7 +981,7 @@ function ZoneVisuals.zonePosition(zoneId: string): Vector3?
 		return nil
 	end
 	local part = s.zoneParts[zoneId]
-	return if part then part.Position else nil
+	return if part then part.CFrame.Position else nil
 end
 
 -- Session lifecycle ------------------------------------------------------------------------------------------

@@ -601,7 +601,7 @@ local function setMode(newMode: string)
 	local r = rig
 	if r then
 		applyModeStyle(r)
-		local p = r.torso.Position
+		local p = r.torso.CFrame.Position
 		if newMode == "Alert" then
 			AudioController.at("caretaker_alert", p, { volume = 1.2, rolloffMax = 400 })
 			Vfx.flash(p, Color3.fromRGB(255, 60, 40), 8, 50, 0.8)
@@ -612,7 +612,7 @@ local function setMode(newMode: string)
 			end
 		elseif newMode == "React" then
 			Vfx.burst(
-				r.head.Position + Vector3.new(0, 1, 0),
+				r.head.CFrame.Position + Vector3.new(0, 1, 0),
 				"magic",
 				14,
 				{ Color = ColorSequence.new(Theme.Colors.goldLight) }
@@ -859,14 +859,14 @@ function CaretakerView.start()
 		if name == "caretakerSpotted" then
 			spottedUntil = os.clock() + 1.4
 			applyModeStyle(r)
-			AudioController.at("caretaker_alert", r.torso.Position, { volume = 0.55, pitch = 1.25 })
+			AudioController.at("caretaker_alert", r.torso.CFrame.Position, { volume = 0.55, pitch = 1.25 })
 		elseif name == "caretakerPhase" then
-			Vfx.burst(r.torso.Position, "poof", 16, { Color = ColorSequence.new(Color3.fromRGB(170, 130, 255)) })
+			Vfx.burst(r.torso.CFrame.Position, "poof", 16, { Color = ColorSequence.new(Color3.fromRGB(170, 130, 255)) })
 		elseif name == "caretakerReappear" and type(params) == "table" and typeof(params.position) == "Vector3" then
 			Vfx.burst(params.position, "poof", 20, { Color = ColorSequence.new(Color3.fromRGB(170, 130, 255)) })
 			AudioController.at("caretaker_keys", params.position, { volume = 0.9 })
 		elseif name == "caretakerLunge" then
-			AudioController.at("caretaker_grab", r.torso.Position, { volume = 0.9 })
+			AudioController.at("caretaker_grab", r.torso.CFrame.Position, { volume = 0.9 })
 		end
 	end)
 	RunService.RenderStepped:Connect(step)

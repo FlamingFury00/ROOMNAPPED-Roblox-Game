@@ -64,7 +64,13 @@ local function heartRow(parent: Instance, size: number, count: number, max: numb
 		})
 	end
 	local r = row :: Frame
-	Create.list(Enum.FillDirection.Horizontal, math.floor(size * 0.15), Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center).Parent = r
+	Create.list(
+		Enum.FillDirection.Horizontal,
+		math.floor(size * 0.15),
+		Enum.HorizontalAlignment.Left,
+		Enum.VerticalAlignment.Center
+	).Parent =
+		r
 	for i = 1, max do
 		local holder = Create.new("Frame", {
 			Name = "Heart" .. i,
@@ -73,7 +79,8 @@ local function heartRow(parent: Instance, size: number, count: number, max: numb
 			LayoutOrder = i,
 			Parent = r,
 		})
-		Icons.make(if i <= count then "heart" else "heartEmpty", if i <= count then C.heart else C.heartEmpty, C.white).Parent = holder
+		Icons.make(if i <= count then "heart" else "heartEmpty", if i <= count then C.heart else C.heartEmpty, C.white).Parent =
+			holder
 	end
 	return r
 end
@@ -157,9 +164,17 @@ function Vitals.create(parent: Instance): Handle
 		}, {
 			Create.corner(Theme.Radius.pill),
 			Create.padding(2, 8),
-			Create.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
+			Create.list(
+				Enum.FillDirection.Horizontal,
+				4,
+				Enum.HorizontalAlignment.Center,
+				Enum.VerticalAlignment.Center
+			),
 		})
-		local statusIcon = Create.new("Frame", { Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, LayoutOrder = 1, Parent = status })
+		local statusIcon = Create.new(
+			"Frame",
+			{ Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, LayoutOrder = 1, Parent = status }
+		)
 		local statusText = Components.label({
 			text = "",
 			font = Theme.Fonts.bodyHeavy,

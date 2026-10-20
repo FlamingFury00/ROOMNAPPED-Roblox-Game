@@ -158,7 +158,7 @@ local function inBoxes(boxes: any, position: Vector3, margin: number): boolean
 end
 
 local function floorIsIce(r: CharacterRig): boolean
-	local origin = r.root.Position
+	local origin = r.root.CFrame.Position
 	local depth = r.humanoid.HipHeight + r.root.Size.Y / 2 + 1.6
 	local result = Workspace:Raycast(origin, Vector3.new(0, -depth, 0), rayParams)
 	if not result then
@@ -260,7 +260,7 @@ local function step(dt: number)
 		return
 	end
 	local now = os.clock()
-	local position = r.root.Position
+	local position = r.root.CFrame.Position
 	local level = RunInfo.level()
 	local inRun = RunInfo.isParticipant() and RunInfo.isActivePhase() and level ~= nil
 	local downed = player:GetAttribute("Downed") == true

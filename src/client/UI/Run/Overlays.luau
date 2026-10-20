@@ -39,7 +39,14 @@ export type Handle = { setVisible: (boolean) -> () }
 
 -- Vignette ---------------------------------------------------------------------------------------------------
 
-local function edge(parent: Instance, name: string, size: UDim2, position: UDim2, anchor: Vector2, rotation: number): Frame
+local function edge(
+	parent: Instance,
+	name: string,
+	size: UDim2,
+	position: UDim2,
+	anchor: Vector2,
+	rotation: number
+): Frame
 	local frame = Create.new("Frame", {
 		Name = name,
 		Size = size,
@@ -317,7 +324,10 @@ function Overlays.create(parent: Instance): Handle
 	})
 	local cargoStroke = Create.stroke(C.gold, 2.5, 0)
 	cargoStroke.Parent = cargo
-	local cargoIconHolder = Create.new("Frame", { Size = UDim2.fromOffset(38, 38), BackgroundTransparency = 1, LayoutOrder = 1, Parent = cargo })
+	local cargoIconHolder = Create.new(
+		"Frame",
+		{ Size = UDim2.fromOffset(38, 38), BackgroundTransparency = 1, LayoutOrder = 1, Parent = cargo }
+	)
 	Icons.make("suitcase", C.gold, C.ink).Parent = cargoIconHolder
 	local cargoTexts = Create.new("Frame", {
 		Size = UDim2.fromOffset(0, 50),
@@ -484,7 +494,9 @@ function Overlays.create(parent: Instance): Handle
 			local screen, onScreen = camera:WorldToViewportPoint(caretakerPosition :: Vector3)
 			local character = localPlayer.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
-			local near = root and root:IsA("BasePart") and ((caretakerPosition :: Vector3) - root.Position).Magnitude < 140
+			local near = root
+				and root:IsA("BasePart")
+				and ((caretakerPosition :: Vector3) - root.CFrame.Position).Magnitude < 140
 			if not onScreen and near then
 				local viewport = camera.ViewportSize
 				local centre = viewport / 2
@@ -499,7 +511,15 @@ function Overlays.create(parent: Instance): Handle
 					local sy = (viewport.Y / 2 - margin) / math.max(1e-3, math.abs(direction.Y))
 					local point = centre + direction * math.min(sx, sy)
 					local canvas = Responsive.toCanvas(UIRoot.Guis.Hud, point)
-					threatArrow.Position = UDim2.fromOffset(canvas.X, canvas.Y)
+					-- UDim offsets are integers; never feed a non-finite value to the layout.
+					if
+						canvas.X == canvas.X
+						and canvas.Y == canvas.Y
+						and math.abs(canvas.X) < 1e5
+						and math.abs(canvas.Y) < 1e5
+					then
+						threatArrow.Position = UDim2.fromOffset(math.round(canvas.X), math.round(canvas.Y))
+					end
 					threatArrow.Rotation = math.deg(math.atan2(direction.X, -direction.Y))
 					arrowHolder.Rotation = 0
 					showArrow = true

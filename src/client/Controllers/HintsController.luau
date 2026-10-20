@@ -125,7 +125,7 @@ local function rootPosition(): Vector3?
 	local character = localPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		return root.Position
+		return root.CFrame.Position
 	end
 	return nil
 end
@@ -219,7 +219,8 @@ local function tutorialHint(position: Vector3): string?
 	elseif step == "cross" then
 		local target = level.target
 		local crossed = target ~= nil
-			and (target.capturePoint - position).Magnitude < (target.capturePoint - (spawnPosition or position)).Magnitude * 0.55
+			and (target.capturePoint - position).Magnitude
+				< (target.capturePoint - (spawnPosition or position)).Magnitude * 0.55
 		if crossed or os.clock() - stepStarted > 25 then
 			advance("recall", "crossed")
 			return nil
@@ -285,7 +286,7 @@ local function situationalHint(position: Vector3): string?
 			local player = RunInfo.playerFor(key)
 			local character = player and player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
-			if root and root:IsA("BasePart") and (root.Position - position).Magnitude < 30 then
+			if root and root:IsA("BasePart") and (root.CFrame.Position - position).Magnitude < 30 then
 				return once("hint.revive", 6)
 			end
 		end

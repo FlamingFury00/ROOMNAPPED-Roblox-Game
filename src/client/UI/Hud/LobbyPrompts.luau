@@ -192,7 +192,7 @@ local function step(dt: number)
 		setActive(nil)
 		return
 	end
-	local position = root.Position
+	local position = root.CFrame.Position
 	local best: Target? = nil
 	local bestDistance = RANGE
 	for part, target in targets do

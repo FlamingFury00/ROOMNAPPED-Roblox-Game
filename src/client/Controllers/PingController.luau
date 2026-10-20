@@ -111,14 +111,21 @@ local function contextualKind(point: Vector3): (string, string?)
 	local level = RunInfo.level()
 	if level then
 		for socketId, socket in level.sockets do
-			if (socket.interactPoint - point).Magnitude < 7 or ((socket.doorCF :: CFrame).Position - point).Magnitude < 6 then
+			if
+				(socket.interactPoint - point).Magnitude < 7
+				or ((socket.doorCF :: CFrame).Position - point).Magnitude < 6
+			then
 				return "room", socketId
 			end
 		end
 		local zones = ClientState.get("global", "zones") or {}
 		for id, fire in level.fires or {} do
 			local zone = zones[id]
-			if type(zone) == "table" and zone.phase ~= "Out" and MathUtil.pointInBox(fire.volume.cf, fire.volume.size, point, 3) then
+			if
+				type(zone) == "table"
+				and zone.phase ~= "Out"
+				and MathUtil.pointInBox(fire.volume.cf, fire.volume.size, point, 3)
+			then
 				return "danger", nil
 			end
 		end
@@ -129,7 +136,11 @@ local function contextualKind(point: Vector3): (string, string?)
 		end
 		for id, basin in level.basins or {} do
 			local zone = zones[id]
-			if type(zone) == "table" and zone.electrified and MathUtil.pointInBox(basin.surface.cf, basin.surface.size + Vector3.new(0, 6, 0), point, 1) then
+			if
+				type(zone) == "table"
+				and zone.electrified
+				and MathUtil.pointInBox(basin.surface.cf, basin.surface.size + Vector3.new(0, 6, 0), point, 1)
+			then
 				return "danger", nil
 			end
 		end
@@ -146,7 +157,7 @@ local function sendPing(kind: string, point: Vector3?, target: string?)
 		local character = localPlayer.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") then
-			position = root.Position
+			position = root.CFrame.Position
 		end
 	end
 	if not position then
@@ -407,7 +418,7 @@ local function updateMarkers()
 	local camera = Workspace.CurrentCamera :: Camera
 	local character = localPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local origin = if root and root:IsA("BasePart") then root.Position else camera.CFrame.Position
+	local origin = if root and root:IsA("BasePart") then root.CFrame.Position else camera.CFrame.Position
 	for _, marker in table.clone(markers) do
 		if now >= marker.expires then
 			removeMarker(marker)
@@ -435,8 +446,10 @@ local function updateMarkers()
 			local edge = centre + direction * math.min(scaleX, scaleY)
 			-- Convert viewport pixels to the HUD's virtual canvas.
 			local p = Responsive.toCanvas(UIRoot.Guis.Hud, edge)
-			marker.arrow.Position = UDim2.fromOffset(p.X, p.Y)
-			marker.arrow.Visible = true
+			if p.X == p.X and p.Y == p.Y and math.abs(p.X) < 1e5 and math.abs(p.Y) < 1e5 then
+				marker.arrow.Position = UDim2.fromOffset(math.round(p.X), math.round(p.Y))
+				marker.arrow.Visible = true
+			end
 		end
 	end
 end

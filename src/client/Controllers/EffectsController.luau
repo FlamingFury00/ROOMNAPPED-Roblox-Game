@@ -40,7 +40,7 @@ local function characterPosition(key: any): Vector3?
 	local character = player and player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		return root.Position
+		return root.CFrame.Position
 	end
 	return nil
 end
@@ -60,7 +60,7 @@ local function crateCenter(crateId: any): Vector3?
 	local levelModel = RunInfo.levelModel()
 	local crate = levelModel and levelModel:FindFirstChild("Crate_" .. crateId, true)
 	if crate and crate:IsA("BasePart") then
-		return crate.Position
+		return crate.CFrame.Position
 	end
 	return nil
 end
@@ -166,7 +166,7 @@ HANDLERS.combo = function(p: any)
 	local character = localPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		Vfx.burst(root.Position + Vector3.new(0, 3, 0), "confetti", 30)
+		Vfx.burst(root.CFrame.Position + Vector3.new(0, 3, 0), "confetti", 30)
 	end
 end
 

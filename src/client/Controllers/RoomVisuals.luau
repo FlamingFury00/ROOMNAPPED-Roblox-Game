@@ -342,7 +342,7 @@ local function onRoomAdded(model: Instance)
 		Vfx.flash(doorPoint, color, 4, 26, 0.4)
 		local character = game:GetService("Players").LocalPlayer.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") and (root.Position - doorPoint).Magnitude < 30 then
+		if root and root:IsA("BasePart") and (root.CFrame.Position - doorPoint).Magnitude < 30 then
 			CameraController.shake(0.35, 0.3)
 		end
 		task.spawn(function()

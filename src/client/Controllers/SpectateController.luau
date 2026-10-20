@@ -28,7 +28,12 @@ local targetKey: string? = nil
 local function candidates(): { string }
 	local out = {}
 	for key, entry in RunInfo.roster() do
-		if key ~= RunInfo.myKey() and entry.status ~= "Eliminated" and entry.status ~= "Left" and entry.status ~= "Disconnected" then
+		if
+			key ~= RunInfo.myKey()
+			and entry.status ~= "Eliminated"
+			and entry.status ~= "Left"
+			and entry.status ~= "Disconnected"
+		then
 			local player = RunInfo.playerFor(key)
 			if player and player.Character then
 				table.insert(out, key)

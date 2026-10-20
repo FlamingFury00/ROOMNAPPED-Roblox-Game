@@ -140,6 +140,13 @@ export type Loaded = {
 function Env.load(placePath: string, extraGlobals: { [string]: any }?): Loaded
 	installShims()
 	local game = roblox.deserializePlace(fs.readFile(placePath))
+	return Env.runtime(game, extraGlobals)
+end
+
+-- A module runtime (globals + require with its own module cache) over an existing DataModel. Two runtimes
+-- over the same place behave like a server and a client VM: same instances, separate module state.
+function Env.runtime(game: any, extraGlobals: { [string]: any }?): Loaded
+	installShims()
 	local cache: { [any]: any } = {}
 	local loading: { [any]: boolean } = {}
 	local overrides: { [any]: any } = {}
@@ -194,13 +201,18 @@ function Env.load(placePath: string, extraGlobals: { [string]: any }?): Loaded
 			error("Cyclic require detected for " .. target:GetFullName())
 		end
 		loading[target] = true
-		local fn = luau.load(target.Source, {
-			debugName = target:GetFullName(),
-			environment = makeEnv(target),
-			injectGlobals = true,
-		})
-		local result = fn()
+		local ok, result = pcall(function()
+			local fn = luau.load(target.Source, {
+				debugName = target:GetFullName(),
+				environment = makeEnv(target),
+				injectGlobals = true,
+			})
+			return fn()
+		end)
 		loading[target] = nil
+		if not ok then
+			error(result, 0)
+		end
 		if result == nil then
 			error("Module returned nil: " .. target:GetFullName())
 		end

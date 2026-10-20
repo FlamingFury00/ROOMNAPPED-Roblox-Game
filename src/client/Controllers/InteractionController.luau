@@ -247,7 +247,7 @@ local function startRemoteHold(userKey: string, kind: string, target: string)
 		local character = player and player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") then
-			position = root.Position
+			position = root.CFrame.Position
 		end
 	end
 	if not position then
@@ -291,7 +291,7 @@ local function rootPosition(): Vector3?
 	local character = localPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		return root.Position
+		return root.CFrame.Position
 	end
 	return nil
 end
@@ -325,7 +325,7 @@ local function resolve(): Action?
 			local character = player and player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			if root and root:IsA("BasePart") then
-				local d = (root.Position - position).Magnitude
+				local d = (root.CFrame.Position - position).Magnitude
 				if d <= bestReviveDistance then
 					bestReviveDistance = d
 					bestRevive = {
@@ -334,7 +334,7 @@ local function resolve(): Action?
 						text = Strings.t("action.revive", { name = entry.display or key }),
 						hold = true,
 						duration = GameConfig.Revive.HoldSeconds,
-						position = root.Position,
+						position = root.CFrame.Position,
 						valid = true,
 						reasonText = nil,
 						color = C.green,
