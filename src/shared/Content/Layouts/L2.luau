@@ -24,7 +24,8 @@ local layout: LayoutTypes.LayoutDef = {
 	roomNumberBase = 210,
 	modules = {
 		{ kind = "Elevator" },
-		{ kind = "Hall", len = 2, sockets = { [1] = { R = "S1" }, [2] = { L = "S2" } } },
+		{ kind = "Hall", len = 1, sockets = { [1] = { R = "S1" } } },
+		{ kind = "Hall", len = 1, sockets = { [1] = { L = "S2" } } },
 		{ kind = "Basin", id = "B1", len = 1, wet = true, ledge = "L" },
 		{ kind = "Gap", id = "G1", len = 1, launch = true, beam = "R" },
 		{ kind = "Hall", len = 1, keys = { { id = "K1", at = 1, lateral = -4.5, along = 2 } } },
@@ -40,8 +41,8 @@ local layout: LayoutTypes.LayoutDef = {
 		{
 			kind = "Hall",
 			len = 1,
-			alcoves = { { id = "A1", at = 1, side = "R", gate = "GT1" } },
-			keys = { { id = "K2", at = 1, lateral = -4.5, along = -3 }, { id = "K3", alcove = "A1" } },
+			alcoves = { { id = "A1", at = 1, side = "R", gate = "GT1", key = "K3" } },
+			keys = { { id = "K2", at = 1, lateral = -4.5, along = -3 } },
 		},
 		{ kind = "Turn", dir = "R" },
 		{ kind = "Hall", len = 2, levers = { { id = "LV1", at = 1, side = "L" } } },

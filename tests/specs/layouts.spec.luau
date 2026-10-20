@@ -95,6 +95,15 @@ return function(ctx)
 		end
 		-- Keys: where they are and how they can be picked up.
 		local keyInfo = {}
+		for alcoveModule, mod in layout.modules do
+			for _, alcove in mod.alcoves or {} do
+				if alcove.key then
+					local tile = tileOf(rt, alcoveModule, alcove.at or 1)
+					keyInfo[alcove.key] =
+						{ id = alcove.key, tile = tile, gate = alcove.gate, regions = tileRegions[tile] }
+				end
+			end
+		end
 		for moduleIndex, mod in layout.modules do
 			for _, key in mod.keys or {} do
 				local info: any = { id = key.id }

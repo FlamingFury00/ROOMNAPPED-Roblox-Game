@@ -25,6 +25,7 @@ local layout: LayoutTypes.LayoutDef = {
 		S2 = { wind = { "Forward", "Backward" } },
 	},
 	caretaker = { dormant = true },
+	solutions = {}, -- the tutorial is a scripted single path (S24)
 }
 
 return layout

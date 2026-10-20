@@ -1766,7 +1766,32 @@ local function buildPlates(ctx: Ctx)
 	end
 end
 
+local function placeKey(ctx: Ctx, id: string, position: Vector3, alcove: string?)
+	if ctx.runtime.keys[id] then
+		err(ctx, "duplicate key id " .. id)
+		return
+	end
+	Kit.part(ctx.interact, {
+		name = "Key_" .. id,
+		cf = CFrame.new(position),
+		size = Vector3.new(1, 1, 1),
+		transparency = 1,
+		tag = "RN_Key",
+		attrs = { KeyId = id },
+	})
+	ctx.runtime.keys[id] = { id = id, position = position, alcove = alcove }
+end
+
 local function buildKeys(ctx: Ctx, alcoveFrames: { [string]: CFrame })
+	-- Keys waiting inside Lost & Found alcoves.
+	for _, mod in ctx.layout.modules do
+		for _, alcove in alcoves(mod) do
+			local acf = alcoveFrames[alcove.id]
+			if alcove.key and acf then
+				placeKey(ctx, alcove.key, (acf * CFrame.new(0, 2.6, -4.5)).Position, alcove.id)
+			end
+		end
+	end
 	for moduleIndex, mod in ctx.layout.modules do
 		for _, key in keysOf(mod) do
 			local position: Vector3
@@ -1785,15 +1810,7 @@ local function buildKeys(ctx: Ctx, alcoveFrames: { [string]: CFrame })
 				end
 				position = tpt(tile.cf, key.lateral or 0, 2.6, key.along or 0)
 			end
-			Kit.part(ctx.interact, {
-				name = "Key_" .. key.id,
-				cf = CFrame.new(position),
-				size = Vector3.new(1, 1, 1),
-				transparency = 1,
-				tag = "RN_Key",
-				attrs = { KeyId = key.id },
-			})
-			ctx.runtime.keys[key.id] = { id = key.id, position = position, alcove = key.alcove }
+			placeKey(ctx, key.id, position, key.alcove)
 		end
 	end
 end
@@ -2136,6 +2153,10 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 			end
 		end
 		for _, lever in levers(mod) do
+			if lever.side ~= "L" and lever.side ~= "R" then
+				err(ctx, "lever " .. lever.id .. " side must be L or R")
+				continue
+			end
 			local tile = runtime.tiles[tilesOfModule[lever.at or 1]]
 			if tile and not PIT_KINDS[tile.kind] then
 				if ctx.features[tile.index] and (ctx.features[tile.index] :: any)[lever.side] then
@@ -2148,6 +2169,10 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 			end
 		end
 		for _, alcove in alcoves(mod) do
+			if alcove.side ~= "L" and alcove.side ~= "R" then
+				err(ctx, "alcove " .. alcove.id .. " side must be L or R")
+				continue
+			end
 			local tile = runtime.tiles[tilesOfModule[alcove.at or 1]]
 			if tile and not PIT_KINDS[tile.kind] then
 				if ctx.features[tile.index] and (ctx.features[tile.index] :: any)[alcove.side] then

@@ -65,8 +65,7 @@ local layout: LayoutTypes.LayoutDef = {
 				{ id = "C3", at = 2, lateral = 1.6, along = 0, metal = true },
 			},
 			plates = { { id = "PL1", at = 2, lateral = -4.2, along = 4.6 } },
-			alcoves = { { id = "A1", at = 2, side = "R", gate = "GT1" } },
-			keys = { { id = "K2", alcove = "A1" } },
+			alcoves = { { id = "A1", at = 2, side = "R", gate = "GT1", key = "K2" } },
 		},
 		{
 			kind = "Gap",

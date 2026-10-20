@@ -21,11 +21,13 @@ export type SocketDef = {
 	protected: boolean?,
 }
 
+-- Wall sides inside these lists are plain strings ("L" / "R"): the type solver cannot push the Side singleton
+-- type into table literals nested in optional lists, so the builder validates them instead.
 export type CrateDef = { id: string, at: number, lateral: number, along: number?, metal: boolean? }
 export type PlateDef = { id: string, at: number, lateral: number, along: number? }
-export type LeverDef = { id: string, at: number, side: Side }
-export type KeyDef = { id: string, at: number, lateral: number?, along: number?, alcove: string? }
-export type AlcoveDef = { id: string, at: number, side: Side, gate: string }
+export type LeverDef = { id: string, at: number, side: string }
+export type KeyDef = { id: string, at: number?, lateral: number?, along: number?, alcove: string? }
+export type AlcoveDef = { id: string, at: number, side: string, gate: string, key: string? } -- key waits inside
 
 export type ModuleDef = {
 	kind: "Elevator" | "Hall" | "Turn" | "Basin" | "Gap" | "Fire" | "Puddle" | "Carts" | "Target",
@@ -101,7 +103,7 @@ export type LayoutDef = {
 	caretaker: { dormant: boolean?, patrolFrom: number?, patrolTo: number?, spawn: number? }?,
 	tutorial: boolean?,
 	roomNumberBase: number?,
-	solutions: { Solution }?,
+	solutions: { Solution }, -- empty for the tutorial
 }
 
 -- Runtime ------------------------------------------------------------------------------------------
