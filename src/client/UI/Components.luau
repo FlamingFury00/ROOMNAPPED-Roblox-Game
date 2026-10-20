@@ -6,8 +6,11 @@
 	large touch targets, an icon + label pair where it carries meaning, and a click sound.
 ]]
 
+local GuiService = game:GetService("GuiService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+local Strings = require(ReplicatedStorage.Shared.Config.Strings)
 local Theme = require(script.Parent.Theme)
 local Create = require(script.Parent.Create)
 local Icons = require(script.Parent.Icons)
@@ -553,64 +556,94 @@ end
 
 export type ToggleHandle = { frame: Frame, set: (boolean) -> (), get: () -> boolean }
 
+-- Highlight shown while a gamepad has an element selected (rows use it instead of the default box).
+local function selectionHighlight(target: GuiObject, stroke: UIStroke, normalColor: Color3, normalThickness: number)
+	target.SelectionGained:Connect(function()
+		stroke.Color = C.gold
+		stroke.Thickness = normalThickness + 1.5
+		stroke.Transparency = 0
+	end)
+	target.SelectionLost:Connect(function()
+		stroke.Color = normalColor
+		stroke.Thickness = normalThickness
+		stroke.Transparency = 0.2
+	end)
+end
+
+-- A labelled on/off switch. The whole row is the touch / click / gamepad target.
 function Components.toggle(text: string, value: boolean, onChange: (boolean) -> (), layoutOrder: number?): ToggleHandle
 	local state = value
 	local frame = Create.new("Frame", {
 		Name = "Toggle",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 48),
+		Size = UDim2.new(1, 0, 0, 64),
 		LayoutOrder = layoutOrder or 0,
 	})
-	Components.label({
-		text = text,
-		size = UDim2.new(1, -120, 1, 0),
-		font = Theme.Fonts.bodyBold,
-		textSize = Theme.Text.body,
-		parent = frame,
-	})
-	local track = Create.new("TextButton", {
-		Name = "Track",
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, 0, 0.5, 0),
-		Size = UDim2.fromOffset(96, 40),
+	local hit = Create.new("TextButton", {
+		Name = "Hit",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = C.panelDark,
+		BackgroundTransparency = 0.55,
 		Text = "",
 		AutoButtonColor = false,
-		BackgroundColor3 = C.panelDark,
+		Selectable = true,
+		SelectionImageObject = Create.new("Frame", { BackgroundTransparency = 1 }),
 		Parent = frame,
+	}, { Create.corner(Theme.Radius.medium) })
+	local rowStroke = Create.stroke(C.shadow, 1.5, 0.2)
+	rowStroke.Parent = hit
+	selectionHighlight(hit, rowStroke, C.shadow, 1.5)
+	Components.label({
+		text = text,
+		size = UDim2.new(1, -150, 1, 0),
+		position = UDim2.fromOffset(16, 0),
+		font = Theme.Fonts.bodyBold,
+		textSize = Theme.Text.body,
+		parent = hit,
+	})
+	local track = Create.new("Frame", {
+		Name = "Track",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -12, 0.5, 0),
+		Size = UDim2.fromOffset(104, 44),
+		BackgroundColor3 = C.panelDark,
+		Parent = hit,
 	}, { Create.corner(Theme.Radius.pill), Create.stroke(C.shadow, 2, 0.2) })
 	local knob = Create.new("Frame", {
 		Name = "Knob",
 		AnchorPoint = Vector2.new(0, 0.5),
-		Size = UDim2.fromOffset(32, 32),
+		Size = UDim2.fromOffset(36, 36),
 		BackgroundColor3 = C.cream,
+		ZIndex = 2,
 		Parent = track,
 	}, { Create.corner(Theme.Radius.pill) })
 	local stateLabel = Components.label({
 		text = "",
 		font = Theme.Fonts.heading,
-		textSize = 15,
-		size = UDim2.new(0, 46, 1, 0),
+		textSize = 16,
+		size = UDim2.new(0, 52, 1, 0),
 		align = Enum.TextXAlignment.Center,
 		parent = track,
 	})
+	local onText = string.upper(Strings.t("settings.on"))
+	local offText = string.upper(Strings.t("settings.off"))
+	local function knobPosition(): UDim2
+		return if state then UDim2.new(1, -40, 0.5, 0) else UDim2.new(0, 4, 0.5, 0)
+	end
 	local function paint()
-		track.BackgroundColor3 = if state then C.green else C.panelDark
-		Motion.tween(
-			knob,
-			Theme.Tween.fast,
-			{ Position = if state then UDim2.new(1, -36, 0.5, 0) else UDim2.new(0, 4, 0.5, 0) }
-		)
-		stateLabel.Position = if state then UDim2.new(0, 6, 0, 0) else UDim2.new(1, -52, 0, 0)
-		stateLabel.Text = if state then "ON" else "OFF"
+		track.BackgroundColor3 = if state then C.green else C.ink
+		Motion.tween(knob, Theme.Tween.fast, { Position = knobPosition() })
+		stateLabel.Position = if state then UDim2.new(0, 6, 0, 0) else UDim2.new(1, -58, 0, 0)
+		stateLabel.Text = if state then onText else offText
 		stateLabel.TextColor3 = if state then C.textDark else C.textDim
 	end
-	track.Activated:Connect(function()
+	hit.Activated:Connect(function()
 		state = not state
 		sound("ui_toggle")
 		paint()
 		onChange(state)
 	end)
-	knob.Position = if state then UDim2.new(1, -36, 0.5, 0) else UDim2.new(0, 4, 0.5, 0)
+	knob.Position = knobPosition()
 	paint()
 	return {
 		frame = frame,
@@ -626,6 +659,8 @@ end
 
 export type SliderHandle = { frame: Frame, set: (number) -> () }
 
+-- A labelled slider snapping to 5% steps. Drag or tap anywhere on the bar; with a gamepad, select the row
+-- and use left / right (D-pad, stick or arrow keys) to adjust.
 function Components.slider(
 	text: string,
 	value: number,
@@ -635,48 +670,71 @@ function Components.slider(
 	maxValue: number?
 ): SliderHandle
 	local lo, hi = minValue or 0, maxValue or 1
+	local stepSize = (hi - lo) / 20
 	local current = math.clamp(value, lo, hi)
 	local frame = Create.new("Frame", {
 		Name = "Slider",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 52),
+		Size = UDim2.new(1, 0, 0, 64),
 		LayoutOrder = layoutOrder or 0,
 	})
-	Components.label({ text = text, size = UDim2.new(0.38, 0, 1, 0), font = Theme.Fonts.bodyBold, parent = frame })
+	local hit = Create.new("TextButton", {
+		Name = "Hit",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = C.panelDark,
+		BackgroundTransparency = 0.55,
+		Text = "",
+		AutoButtonColor = false,
+		Selectable = true,
+		SelectionImageObject = Create.new("Frame", { BackgroundTransparency = 1 }),
+		Parent = frame,
+	}, { Create.corner(Theme.Radius.medium) })
+	-- Left / right adjust the value instead of moving the gamepad selection away.
+	hit.NextSelectionLeft = hit
+	hit.NextSelectionRight = hit
+	local rowStroke = Create.stroke(C.shadow, 1.5, 0.2)
+	rowStroke.Parent = hit
+	selectionHighlight(hit, rowStroke, C.shadow, 1.5)
+	Components.label({
+		text = text,
+		size = UDim2.new(0.36, -16, 1, 0),
+		position = UDim2.fromOffset(16, 0),
+		font = Theme.Fonts.bodyBold,
+		parent = hit,
+	})
 	local valueLabel = Components.label({
 		text = "",
-		size = UDim2.new(0, 56, 1, 0),
-		position = UDim2.new(1, 0, 0, 0),
+		size = UDim2.new(0, 64, 1, 0),
+		position = UDim2.new(1, -14, 0, 0),
 		anchor = Vector2.new(1, 0),
 		align = Enum.TextXAlignment.Right,
 		font = Theme.Fonts.heading,
 		color = C.goldLight,
-		parent = frame,
+		parent = hit,
 	})
-	local track = Create.new("TextButton", {
+	local bar = Create.new("Frame", {
 		Name = "Track",
 		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0.4, 0, 0.5, 0),
-		Size = UDim2.new(0.6, -70, 0, 14),
-		Text = "",
-		AutoButtonColor = false,
+		Position = UDim2.new(0.38, 0, 0.5, 0),
+		Size = UDim2.new(0.62, -96, 0, 14),
 		BackgroundColor3 = C.ink,
-		Parent = frame,
+		Parent = hit,
 	}, { Create.corner(Theme.Radius.pill), Create.stroke(C.shadow, 2, 0.3) })
 	local fill = Create.new("Frame", {
 		Name = "Fill",
 		Size = UDim2.fromScale(0, 1),
 		BackgroundColor3 = C.gold,
 		BorderSizePixel = 0,
-		Parent = track,
+		Parent = bar,
 	}, { Create.corner(Theme.Radius.pill) })
 	local knob = Create.new("Frame", {
 		Name = "Knob",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(30, 30),
+		Size = UDim2.fromOffset(32, 32),
 		Position = UDim2.fromScale(0, 0.5),
 		BackgroundColor3 = C.cream,
-		Parent = track,
+		ZIndex = 2,
+		Parent = bar,
 	}, { Create.corner(Theme.Radius.pill), Create.stroke(C.goldDark, 3, 0) })
 	local function render()
 		local t = (current - lo) / math.max(1e-6, hi - lo)
@@ -688,24 +746,23 @@ function Components.slider(
 			valueLabel.Text = string.format("%.2fx", current)
 		end
 	end
-	local dragging = false
-	local function setFromX(x: number)
-		local abs = track.AbsolutePosition.X
-		local width = math.max(1, track.AbsoluteSize.X)
-		local t = math.clamp((x - abs) / width, 0, 1)
-		local nextValue = lo + (hi - lo) * t
-		if hi <= 1 then
-			nextValue = math.floor(nextValue * 20 + 0.5) / 20
-		else
-			nextValue = math.floor(nextValue * 20 + 0.5) / 20
-		end
-		if nextValue ~= current then
-			current = nextValue
+	local function commit(nextValue: number)
+		local snapped = math.clamp(lo + math.floor((nextValue - lo) / stepSize + 0.5) * stepSize, lo, hi)
+		if math.abs(snapped - current) > 1e-6 then
+			current = snapped
 			render()
 			onChange(current)
 		end
 	end
-	track.InputBegan:Connect(function(input: InputObject)
+	local dragging = false
+	local nextNudge = 0
+	local function setFromX(x: number)
+		local abs = bar.AbsolutePosition.X
+		local width = math.max(1, bar.AbsoluteSize.X)
+		local t = math.clamp((x - abs) / width, 0, 1)
+		commit(lo + (hi - lo) * t)
+	end
+	hit.InputBegan:Connect(function(input: InputObject)
 		if
 			input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch
@@ -714,30 +771,66 @@ function Components.slider(
 			setFromX(input.Position.X)
 		end
 	end)
-	UserInputService.InputChanged:Connect(function(input: InputObject)
-		if
-			dragging
-			and (
-				input.UserInputType == Enum.UserInputType.MouseMovement
+	-- Global listeners (drag continues outside the bar); disconnected when the slider is destroyed.
+	local connections: { RBXScriptConnection } = {}
+	table.insert(
+		connections,
+		UserInputService.InputChanged:Connect(function(input: InputObject)
+			if
+				dragging
+				and (
+					input.UserInputType == Enum.UserInputType.MouseMovement
+					or input.UserInputType == Enum.UserInputType.Touch
+				)
+			then
+				setFromX(input.Position.X)
+			elseif input.KeyCode == Enum.KeyCode.Thumbstick1 and GuiService.SelectedObject == hit then
+				-- Stick nudges with a short repeat delay.
+				local x = input.Position.X
+				local now = os.clock()
+				if math.abs(x) > 0.7 and now >= nextNudge then
+					nextNudge = now + 0.16
+					commit(current + math.sign(x) * stepSize)
+				end
+			end
+		end)
+	)
+	table.insert(
+		connections,
+		UserInputService.InputEnded:Connect(function(input: InputObject)
+			if
+				input.UserInputType == Enum.UserInputType.MouseButton1
 				or input.UserInputType == Enum.UserInputType.Touch
-			)
-		then
-			setFromX(input.Position.X)
-		end
-	end)
-	UserInputService.InputEnded:Connect(function(input: InputObject)
-		if
-			input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch
-		then
-			if dragging then
-				dragging = false
+			then
+				if dragging then
+					dragging = false
+					sound("ui_toggle")
+				end
+			end
+		end)
+	)
+	table.insert(
+		connections,
+		UserInputService.InputBegan:Connect(function(input: InputObject)
+			if GuiService.SelectedObject ~= hit then
+				return
+			end
+			local key = input.KeyCode
+			if key == Enum.KeyCode.DPadLeft or key == Enum.KeyCode.Left then
+				commit(current - stepSize)
+				sound("ui_toggle")
+			elseif key == Enum.KeyCode.DPadRight or key == Enum.KeyCode.Right then
+				commit(current + stepSize)
 				sound("ui_toggle")
 			end
+		end)
+	)
+	frame.Destroying:Connect(function()
+		for _, connection in connections do
+			connection:Disconnect()
 		end
+		table.clear(connections)
 	end)
-	-- Gamepad / keyboard: arrow keys while selected.
-	track.SelectionGained:Connect(function() end)
 	render()
 	return {
 		frame = frame,
