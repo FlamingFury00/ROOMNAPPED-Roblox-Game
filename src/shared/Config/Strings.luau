@@ -234,6 +234,10 @@ local catalog: { [string]: string } = {
 	["action.missions"] = "Mission board",
 	["action.collection"] = "Room collection",
 	["action.hold"] = "Hold",
+	["action.drop"] = "Drop suitcase",
+	["action.reason.range"] = "Too far - walk closer",
+	["action.reason.sight"] = "Can't reach it from here",
+	["action.reason.timing"] = "Hold until the ring fills",
 
 	-- Placement (U05) -------------------------------------------------------------------------------------
 	["placement.valid"] = "Unfold here",
