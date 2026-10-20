@@ -380,7 +380,7 @@ return function(ctx)
 					local slot = rt.crates[mod.slot].slotCF.Position
 					got = (slot + V3.new(0, 3.4, 0) - position).Magnitude <= KEY_RADIUS
 				elseif by == "vine" then
-					got = nearBox(rt.vines[zone].bridge, position, KEY_RADIUS - 0.5)
+					got = nearBox(rt.vines[mod.vine].bridge, position, KEY_RADIUS - 0.5)
 				elseif by ~= "launch" and (mod.kind == "Fire" or mod.kind == "Puddle" or mod.kind == "Carts") then
 					got = true
 				end
@@ -588,8 +588,8 @@ return function(ctx)
 						bad("no crate sits in the slot of " .. zone)
 					end
 				elseif by == "vine" then
-					if not model:vineSolid(zone) then
-						bad("the vine over " .. zone .. " is not grown")
+					if mod.kind ~= "Gap" or not mod.vine or not model:vineSolid(mod.vine) then
+						bad("no grown vine bridges " .. zone)
 					end
 				elseif by == "pin" then
 					local cart = rt.carts[zone]

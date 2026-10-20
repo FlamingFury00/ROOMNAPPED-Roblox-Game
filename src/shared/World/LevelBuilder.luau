@@ -1319,21 +1319,22 @@ local function buildPitModule(ctx: Ctx, moduleIndex: number, mod: ModuleDef)
 			})
 			collider.CanCollide = false
 			zonePart(ctx, "VineZone_" .. mod.vine, bridge, mod.vine, "vine", { Length = lb - pitA0 + 1 })
-			-- Planter box at the near edge where the vine grows from.
+			-- Low planter bed at the near edge where the vine grows from. It is only a small step high so players
+			-- walk straight over it onto the grown bridge.
 			local planterA = la - 1.6
 			Kit.solid(
 				ctx.structure,
 				"Planter",
-				tcf(cf, 0, 0.9, planterA),
-				Vector3.new(5.6, 1.8, 2.4),
+				tcf(cf, 0, 0.3, planterA),
+				Vector3.new(5.6, 0.6, 2.4),
 				Color3.fromRGB(130, 86, 50),
 				M.WoodPlanks
 			)
 			Kit.decor(
 				ctx.decor,
 				"PlanterSoil",
-				tcf(cf, 0, 1.85, planterA),
-				Vector3.new(5.2, 0.1, 2),
+				tcf(cf, 0, 0.63, planterA),
+				Vector3.new(5.2, 0.06, 2),
 				Color3.fromRGB(70, 46, 30),
 				M.Ground
 			)
@@ -1659,10 +1660,22 @@ local function buildCrates(ctx: Ctx)
 					elseif pitLo >= startAlong then
 						hi = math.min(hi, pitLo - margin)
 					end
+				elseif t.kind == "Fire" or t.kind == "Puddle" or t.kind == "Carts" then
+					-- Floor hazards stop a rolling crate too: it never ends up in flames, live water or a cart track.
+					local tileLo, tileHi = t.runAlong - HALF, t.runAlong + HALF
+					if tileHi <= startAlong then
+						lo = math.max(lo, tileHi + margin)
+					elseif tileLo >= startAlong then
+						hi = math.min(hi, tileLo - margin)
+					else
+						err(ctx, "crate " .. crate.id .. " starts on a " .. t.kind .. " tile")
+					end
 				end
 			end
 			if slot and slotAlong == nil then
 				err(ctx, "crate " .. crate.id .. " slot is not on the crate's run")
+			elseif slotAlong and (slotAlong < lo - 0.01 or slotAlong > hi + 0.01) then
+				err(ctx, "crate " .. crate.id .. " cannot roll to its slot (a hazard or pit is in the way)")
 			end
 			if hi - lo < 1 then
 				err(ctx, "crate " .. crate.id .. " has no room to move")
