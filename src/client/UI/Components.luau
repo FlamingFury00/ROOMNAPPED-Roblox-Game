@@ -576,7 +576,7 @@ function Components.toggle(text: string, value: boolean, onChange: (boolean) -> 
 	local frame = Create.new("Frame", {
 		Name = "Toggle",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 64),
+		Size = UDim2.new(1, 0, 0, 72),
 		LayoutOrder = layoutOrder or 0,
 	})
 	local hit = Create.new("TextButton", {
@@ -675,7 +675,7 @@ function Components.slider(
 	local frame = Create.new("Frame", {
 		Name = "Slider",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 64),
+		Size = UDim2.new(1, 0, 0, 72),
 		LayoutOrder = layoutOrder or 0,
 	})
 	local hit = Create.new("TextButton", {

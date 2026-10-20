@@ -165,7 +165,7 @@ local function actionButton(
 		text = text,
 		icon = icon,
 		variant = variant,
-		size = UDim2.fromOffset(196, 64),
+		size = UDim2.fromOffset(196, 72),
 		textSize = Theme.Text.body,
 		layoutOrder = order,
 		onClick = onClick,
@@ -556,7 +556,7 @@ local function refreshSkinRoomRow()
 			text = Common.roomName(def.id),
 			icon = Icons.roomIcon[def.id],
 			variant = if def.id == skinRoom then "primary" else "secondary",
-			size = UDim2.fromOffset(150, 52),
+			size = UDim2.fromOffset(150, 62),
 			textSize = Theme.Text.small,
 			layoutOrder = index,
 			sound = "ui_toggle",
@@ -680,8 +680,8 @@ local function build()
 	local body = Create.new("Frame", {
 		Name = "Body",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 80),
-		Size = UDim2.new(1, 0, 1, -80),
+		Position = UDim2.fromOffset(0, 84),
+		Size = UDim2.new(1, 0, 1, -84),
 		Parent = content,
 	})
 	local left = Create.new("Frame", {
@@ -741,7 +741,7 @@ local function build()
 	skinRoomRow = Create.new("Frame", {
 		Name = "RoomFilter",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 120),
+		Size = UDim2.new(1, 0, 0, 134),
 		Parent = skins,
 	}, {
 		(function(): UIListLayout
@@ -750,7 +750,7 @@ local function build()
 			return layout
 		end)(),
 	})
-	skinGrid = Common.scroll(skins, UDim2.new(1, 0, 1, -126), UDim2.fromOffset(0, 126))
+	skinGrid = Common.scroll(skins, UDim2.new(1, 0, 1, -140), UDim2.fromOffset(0, 140))
 	useGrid(skinGrid)
 
 	-- Suitcases page.
@@ -809,7 +809,7 @@ local function build()
 		textSize = Theme.Text.small,
 		wrap = true,
 		size = UDim2.new(1, -24, 0, 26),
-		position = UDim2.new(0, 14, 1, -104),
+		position = UDim2.new(0, 14, 1, -112),
 		parent = detail,
 	})
 	actionRow = Create.new("Frame", {
@@ -817,7 +817,7 @@ local function build()
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 10, 1, -8),
-		Size = UDim2.new(1, -20, 0, 70),
+		Size = UDim2.new(1, -20, 0, 78),
 		Parent = detail,
 	}, {
 		Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),

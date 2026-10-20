@@ -260,7 +260,7 @@ function Common.tabs(parent: Instance, items: { TabItem }, onSelect: (string) ->
 	local frame = Create.new("Frame", {
 		Name = "Tabs",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 70),
+		Size = UDim2.new(1, 0, 0, 76),
 		Parent = parent,
 	}, {
 		Create.list(Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center),
@@ -291,7 +291,7 @@ function Common.tabs(parent: Instance, items: { TabItem }, onSelect: (string) ->
 			text = item.text,
 			icon = item.icon,
 			variant = "secondary",
-			size = UDim2.fromOffset(width or 200, 62),
+			size = UDim2.fromOffset(width or 200, 72),
 			textSize = Theme.Text.medium,
 			layoutOrder = index,
 			sound = "ui_toggle",

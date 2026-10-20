@@ -30,7 +30,7 @@ local MenuBar = {}
 MenuBar.priority = 120
 
 local C = Theme.Colors
-local BUTTON = 76
+local BUTTON = 80
 
 type Item = { frame: Frame, button: ButtonHandle, lobbyOnly: boolean, adminOnly: boolean }
 

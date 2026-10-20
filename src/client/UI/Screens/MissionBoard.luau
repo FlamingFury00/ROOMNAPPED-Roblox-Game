@@ -324,7 +324,7 @@ local function buildTargetPicker(mission: MissionDef)
 	local row = Create.new("Frame", {
 		Name = "Skins",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 60),
+		Size = UDim2.new(1, 0, 0, 68),
 		LayoutOrder = 1,
 		Parent = targetPicker,
 	}, { Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center) })
@@ -336,7 +336,7 @@ local function buildTargetPicker(mission: MissionDef)
 			text = text,
 			icon = if skin and skin.kind == "suitcase" then "suitcase" else "palette",
 			variant = if skinId == choice then "primary" else "secondary",
-			size = UDim2.fromOffset(300, 56),
+			size = UDim2.fromOffset(300, 64),
 			textSize = Theme.Text.body,
 			layoutOrder = index,
 			sound = "ui_toggle",
