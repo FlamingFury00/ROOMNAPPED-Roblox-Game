@@ -21,11 +21,13 @@ export type SocketDef = {
 	protected: boolean?,
 }
 
+-- Wall sides inside these lists are plain strings ("L" / "R"): the type solver cannot push the Side singleton
+-- type into table literals nested in optional lists, so the builder validates them instead.
 export type CrateDef = { id: string, at: number, lateral: number, along: number?, metal: boolean? }
 export type PlateDef = { id: string, at: number, lateral: number, along: number? }
-export type LeverDef = { id: string, at: number, side: Side }
-export type KeyDef = { id: string, at: number, lateral: number?, along: number?, alcove: string? }
-export type AlcoveDef = { id: string, at: number, side: Side, gate: string }
+export type LeverDef = { id: string, at: number, side: string }
+export type KeyDef = { id: string, at: number?, lateral: number?, along: number?, alcove: string? }
+export type AlcoveDef = { id: string, at: number, side: string, gate: string, key: string? } -- key waits inside
 
 export type ModuleDef = {
 	kind: "Elevator" | "Hall" | "Turn" | "Basin" | "Gap" | "Fire" | "Puddle" | "Carts" | "Target",
@@ -52,6 +54,43 @@ export type ModuleDef = {
 	note: string?,
 }
 
+-- Authored solutions: scripted solo playthroughs (documentation + the solvability spec in
+-- tests/specs/layouts.spec.luau, which replays them step by step against the real effect model, wind lanes,
+-- crate rails, plates, gates and the route's reachability).
+export type CrossingMethod =
+	"ice" -- a Freezer froze the flooded basin / pool
+	| "ledge" -- slow safe ledge along a basin or gap
+	| "beam" -- slow safe beam across a gap
+	| "walkway" -- heat-shielded walkway past a fire
+	| "launch" -- ice + wind launch over a gap (outward only)
+	| "crate" -- a pushed / pulled crate sits in the gap slot as stepping stones
+	| "vine" -- a grown vine bridge
+	| "douse" -- water put the fire out
+	| "power" -- the zone is not electrified (switch off, or frozen)
+	| "pin" -- a Fan blowing across the track pins the cart at the far side
+	| "slow" -- cold slows the cart right down
+	| "timing" -- dodge the running cart
+
+export type SolutionStep = {
+	deploy: string?, -- socket id (with `room`, and `dir` for directional rooms)
+	room: string?,
+	dir: string?,
+	recall: string?, -- room id to fold back (recall works from anywhere)
+	pull: string?, -- lever id
+	cross: string?, -- obstacle id (Basin / Gap / Fire / powered Puddle / Carts module id)
+	by: CrossingMethod?,
+	capture: boolean?, -- steal the target room (must be standing at the target)
+	escape: boolean?, -- reach the elevator with the suitcase
+}
+
+export type Solution = {
+	name: string,
+	loadout: { string }, -- the solo player's two equipped rooms
+	steps: { SolutionStep },
+	combos: { string }?, -- combos the playthrough performs (verified)
+	keys: { string }?, -- keys the playthrough collects (verified)
+}
+
 export type LayoutDef = {
 	id: string,
 	nameKey: string,
@@ -64,6 +103,7 @@ export type LayoutDef = {
 	caretaker: { dormant: boolean?, patrolFrom: number?, patrolTo: number?, spawn: number? }?,
 	tutorial: boolean?,
 	roomNumberBase: number?,
+	solutions: { Solution }, -- empty for the tutorial
 }
 
 -- Runtime ------------------------------------------------------------------------------------------

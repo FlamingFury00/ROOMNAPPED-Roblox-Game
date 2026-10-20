@@ -74,6 +74,7 @@ type Ctx = {
 	moduleTiles: { [number]: { number } },
 	features: { [number]: { L: string?, R: string? } }, -- tile index -> wall feature per side
 	zoneIds: { [string]: string },
+	crateRuns: { [number]: boolean }, -- runs with an off-centre crate rail (kept free of floor props)
 }
 
 -- Coordinate helpers -----------------------------------------------------------------------------
@@ -695,6 +696,16 @@ local function sideOpenings(feature: string?): { Opening }
 	return {}
 end
 
+-- Floor props must never block a bypass entrance (ledges, beams and fire walkways start right at the edge
+-- of the neighbouring hazard tile) or the path of an off-centre crate rail.
+local function propBlocksRoute(ctx: Ctx, tile: TileInfo, a: number): boolean
+	local neighbour = ctx.runtime.tiles[tile.index + (if a > 0 then 1 else -1)]
+	if neighbour and (PIT_KINDS[neighbour.kind] or neighbour.kind == "Fire") then
+		return true
+	end
+	return ctx.crateRuns[tile.run] == true
+end
+
 local function buildHallTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef, allowDoors: boolean)
 	local feats = ctx.features[tile.index] or {}
 	floorTile(ctx, tile.cf, -HALF, HALF, true)
@@ -707,7 +718,10 @@ local function buildHallTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef, allowDoor
 			local hasDoor = allowDoors and ctx.rng() < 0.7
 			decorateWall(ctx, tile, side, hasDoor)
 			if mod.kind == "Hall" and not ctx.runtime.tiles[tile.index].hazard and ctx.rng() < 0.32 then
-				floorProp(ctx, tile, side, if ctx.rng() < 0.5 then 5.2 else -5.2)
+				local a = if ctx.rng() < 0.5 then 5.2 else -5.2
+				if not propBlocksRoute(ctx, tile, a) then
+					floorProp(ctx, tile, side, a)
+				end
 			end
 		end
 	end
@@ -1305,21 +1319,22 @@ local function buildPitModule(ctx: Ctx, moduleIndex: number, mod: ModuleDef)
 			})
 			collider.CanCollide = false
 			zonePart(ctx, "VineZone_" .. mod.vine, bridge, mod.vine, "vine", { Length = lb - pitA0 + 1 })
-			-- Planter box at the near edge where the vine grows from.
+			-- Low planter bed at the near edge where the vine grows from. It is only a small step high so players
+			-- walk straight over it onto the grown bridge.
 			local planterA = la - 1.6
 			Kit.solid(
 				ctx.structure,
 				"Planter",
-				tcf(cf, 0, 0.9, planterA),
-				Vector3.new(5.6, 1.8, 2.4),
+				tcf(cf, 0, 0.3, planterA),
+				Vector3.new(5.6, 0.6, 2.4),
 				Color3.fromRGB(130, 86, 50),
 				M.WoodPlanks
 			)
 			Kit.decor(
 				ctx.decor,
 				"PlanterSoil",
-				tcf(cf, 0, 1.85, planterA),
-				Vector3.new(5.2, 0.1, 2),
+				tcf(cf, 0, 0.63, planterA),
+				Vector3.new(5.2, 0.06, 2),
 				Color3.fromRGB(70, 46, 30),
 				M.Ground
 			)
@@ -1333,25 +1348,113 @@ local function buildPitModule(ctx: Ctx, moduleIndex: number, mod: ModuleDef)
 	end
 end
 
+-- Heat-shielded service walkway along one wall of a fire tile: the slow, always-safe bypass (S10/S11) for
+-- squads without a water room. The flames stop short of it and a rail plus a glass shield separate it.
+local function buildFireWalkway(ctx: Ctx, tile: TileInfo, side: string)
+	local theme = ctx.theme
+	local s = sideSign(side)
+	local lw = Geometry.Ledge.Width
+	local walkLength = 12
+	local railX = s * (INNER - lw)
+	Kit.decor(
+		ctx.decor,
+		"WalkwayGrating",
+		tcf(tile.cf, s * (INNER - lw / 2), 0.07, 0),
+		Vector3.new(lw - 0.2, 0.14, T),
+		Color3.fromRGB(96, 98, 106),
+		M.DiamondPlate
+	)
+	local posts = 4
+	for i = 0, posts - 1 do
+		local a = -walkLength / 2 + 0.3 + i * ((walkLength - 0.6) / (posts - 1))
+		Kit.post(ctx.decor, {
+			name = "RailPost",
+			cf = tcf(tile.cf, railX, 0.8, a),
+			height = 1.6,
+			diameter = 0.3,
+			color = theme.brass,
+			material = M.Metal,
+		})
+	end
+	Kit.decor(
+		ctx.decor,
+		"Handrail",
+		tcf(tile.cf, railX, 1.6, 0),
+		Vector3.new(0.22, 0.22, walkLength - 0.4),
+		theme.brass,
+		M.Metal
+	)
+	local shield = Kit.decor(
+		ctx.decor,
+		"HeatShield",
+		tcf(tile.cf, railX, 5.1, 0),
+		Vector3.new(0.14, 6.8, walkLength - 1),
+		Color3.fromRGB(190, 225, 255),
+		M.Glass
+	)
+	shield.Transparency = 0.65
+	Kit.part(ctx.structure, {
+		name = "RailCollider",
+		cf = tcf(tile.cf, railX, 0.8, 0),
+		size = Vector3.new(0.4, 1.6, walkLength),
+		transparency = 1,
+		solid = true,
+	})
+	local signPos = tpt(tile.cf, s * (INNER - 0.06), 6.2, -walkLength / 2 - 0.6)
+	local inward = (tile.cf.Position - tpt(tile.cf, s * INNER, 0, 0)).Unit
+	local sign = Kit.decor(
+		ctx.decor,
+		"WalkwaySign",
+		CFrame.lookAt(signPos, signPos + inward),
+		Vector3.new(2.6, 0.9, 0.1),
+		Color3.fromRGB(40, 160, 80),
+		M.SmoothPlastic
+	)
+	Kit.surfaceText(sign, {
+		face = Enum.NormalId.Front,
+		text = "SAFE WAY",
+		color = Color3.fromRGB(255, 255, 255),
+		font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold),
+		lightInfluence = 0,
+	})
+	local lane = box(tile.cf, s * (INNER - lw / 2), 2.5, 0, lw, 5, walkLength)
+	table.insert(ctx.runtime.ledges, lane)
+end
+
 local function buildFireTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef)
 	buildHallTile(ctx, tile, mod, false)
 	local id = mod.id or ("F" .. tile.index)
 	local poolId = id .. "_pool"
 	registerZone(ctx, id, "fire")
 	registerZone(ctx, poolId, "basin")
-	Props.debrisPile(ctx.decor, tcf(tile.cf, -4.6, 0, 0), 4, ctx.rng)
-	Props.debrisPile(ctx.decor, tcf(tile.cf, 4.6, 0, 0), 4, ctx.rng)
+	-- The flames span the corridor unless a service walkway (mod.ledge) reserves one wall.
+	local fireLo, fireHi = -INNER, INNER
+	local walkSign = if mod.ledge then sideSign(mod.ledge) else 0
+	if walkSign > 0 then
+		fireHi = INNER - Geometry.Ledge.Width - 1
+	elseif walkSign < 0 then
+		fireLo = -INNER + Geometry.Ledge.Width + 1
+	end
+	if walkSign >= 0 then
+		Props.debrisPile(ctx.decor, tcf(tile.cf, -4.6, 0, 0), 4, ctx.rng)
+	end
+	if walkSign <= 0 then
+		Props.debrisPile(ctx.decor, tcf(tile.cf, 4.6, 0, 0), 4, ctx.rng)
+	end
 	-- Scorch marks.
 	Kit.decor(
 		ctx.decor,
 		"Scorch",
-		tcf(tile.cf, 0, 0.12, 0),
-		Vector3.new(13, 0.05, 6),
+		tcf(tile.cf, (fireLo + fireHi) / 2, 0.12, 0),
+		Vector3.new(fireHi - fireLo - 1, 0.05, 6),
 		Color3.fromRGB(30, 24, 22),
 		M.Slate
 	)
-	local volume = box(tile.cf, 0, 3.5, 0, INNER * 2, 7, 4.5)
+	local volume = box(tile.cf, (fireLo + fireHi) / 2, 3.5, 0, fireHi - fireLo, 7, 4.5)
 	zonePart(ctx, "Fire_" .. id, volume, id, "fire")
+	if mod.ledge then
+		buildFireWalkway(ctx, tile, mod.ledge)
+	end
 	local surface = box(tile.cf, 0, 0.1, 0, INNER * 2, 0.2, 12)
 	zonePart(
 		ctx,
@@ -1528,6 +1631,15 @@ local function buildCrates(ctx: Ctx)
 			local startAlong = tile.runAlong + (crate.along or 0)
 			local margin = Geometry.Crate.Size / 2 + 0.6
 			local lo, hi = -HALF + margin, last.runAlong + HALF - margin
+			-- A crate may never be blown into the elevator or the target tile: parked in front of either door it
+			-- would block the only exit (S10) or the capture.
+			for _, t in tiles do
+				if t.kind == "Elevator" then
+					lo = math.max(lo, t.runAlong + HALF + margin)
+				elseif t.kind == "Target" then
+					hi = math.min(hi, t.runAlong - HALF - margin)
+				end
+			end
 			-- Pits on this run cut the rail unless they hold this crate's slot.
 			local slot = slots[crate.id]
 			local slotAlong: number? = nil
@@ -1548,10 +1660,22 @@ local function buildCrates(ctx: Ctx)
 					elseif pitLo >= startAlong then
 						hi = math.min(hi, pitLo - margin)
 					end
+				elseif t.kind == "Fire" or t.kind == "Puddle" or t.kind == "Carts" then
+					-- Floor hazards stop a rolling crate too: it never ends up in flames, live water or a cart track.
+					local tileLo, tileHi = t.runAlong - HALF, t.runAlong + HALF
+					if tileHi <= startAlong then
+						lo = math.max(lo, tileHi + margin)
+					elseif tileLo >= startAlong then
+						hi = math.min(hi, tileLo - margin)
+					else
+						err(ctx, "crate " .. crate.id .. " starts on a " .. t.kind .. " tile")
+					end
 				end
 			end
 			if slot and slotAlong == nil then
 				err(ctx, "crate " .. crate.id .. " slot is not on the crate's run")
+			elseif slotAlong and (slotAlong < lo - 0.01 or slotAlong > hi + 0.01) then
+				err(ctx, "crate " .. crate.id .. " cannot roll to its slot (a hazard or pit is in the way)")
 			end
 			if hi - lo < 1 then
 				err(ctx, "crate " .. crate.id .. " has no room to move")
@@ -1642,7 +1766,32 @@ local function buildPlates(ctx: Ctx)
 	end
 end
 
+local function placeKey(ctx: Ctx, id: string, position: Vector3, alcove: string?)
+	if ctx.runtime.keys[id] then
+		err(ctx, "duplicate key id " .. id)
+		return
+	end
+	Kit.part(ctx.interact, {
+		name = "Key_" .. id,
+		cf = CFrame.new(position),
+		size = Vector3.new(1, 1, 1),
+		transparency = 1,
+		tag = "RN_Key",
+		attrs = { KeyId = id },
+	})
+	ctx.runtime.keys[id] = { id = id, position = position, alcove = alcove }
+end
+
 local function buildKeys(ctx: Ctx, alcoveFrames: { [string]: CFrame })
+	-- Keys waiting inside Lost & Found alcoves.
+	for _, mod in ctx.layout.modules do
+		for _, alcove in alcoves(mod) do
+			local acf = alcoveFrames[alcove.id]
+			if alcove.key and acf then
+				placeKey(ctx, alcove.key, (acf * CFrame.new(0, 2.6, -4.5)).Position, alcove.id)
+			end
+		end
+	end
 	for moduleIndex, mod in ctx.layout.modules do
 		for _, key in keysOf(mod) do
 			local position: Vector3
@@ -1661,15 +1810,7 @@ local function buildKeys(ctx: Ctx, alcoveFrames: { [string]: CFrame })
 				end
 				position = tpt(tile.cf, key.lateral or 0, 2.6, key.along or 0)
 			end
-			Kit.part(ctx.interact, {
-				name = "Key_" .. key.id,
-				cf = CFrame.new(position),
-				size = Vector3.new(1, 1, 1),
-				transparency = 1,
-				tag = "RN_Key",
-				attrs = { KeyId = key.id },
-			})
-			ctx.runtime.keys[key.id] = { id = key.id, position = position, alcove = key.alcove }
+			placeKey(ctx, key.id, position, key.alcove)
 		end
 	end
 end
@@ -1970,6 +2111,7 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 		moduleTiles = {},
 		features = {},
 		zoneIds = {},
+		crateRuns = {},
 	}
 
 	if #layout.modules == 0 or layout.modules[1].kind ~= "Elevator" then
@@ -1980,6 +2122,14 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 	end
 
 	walkRoute(ctx, originCF)
+	for moduleIndex, mod in layout.modules do
+		for _, crate in crates(mod) do
+			local tile = runtime.tiles[ctx.moduleTiles[moduleIndex][crate.at or 1]]
+			if tile and math.abs(crate.lateral) > 1 then
+				ctx.crateRuns[tile.run] = true
+			end
+		end
+	end
 
 	-- Wall features first (sockets, levers, alcoves) so walls get their openings.
 	local alcoveFrames: { [string]: CFrame } = {}
@@ -2003,6 +2153,10 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 			end
 		end
 		for _, lever in levers(mod) do
+			if lever.side ~= "L" and lever.side ~= "R" then
+				err(ctx, "lever " .. lever.id .. " side must be L or R")
+				continue
+			end
 			local tile = runtime.tiles[tilesOfModule[lever.at or 1]]
 			if tile and not PIT_KINDS[tile.kind] then
 				if ctx.features[tile.index] and (ctx.features[tile.index] :: any)[lever.side] then
@@ -2015,6 +2169,10 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 			end
 		end
 		for _, alcove in alcoves(mod) do
+			if alcove.side ~= "L" and alcove.side ~= "R" then
+				err(ctx, "alcove " .. alcove.id .. " side must be L or R")
+				continue
+			end
 			local tile = runtime.tiles[tilesOfModule[alcove.at or 1]]
 			if tile and not PIT_KINDS[tile.kind] then
 				if ctx.features[tile.index] and (ctx.features[tile.index] :: any)[alcove.side] then

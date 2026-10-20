@@ -5,7 +5,7 @@ local LayoutTypes = require(script.Parent.Parent.Parent.World.LayoutTypes)
 
 local layout: LayoutTypes.LayoutDef = {
 	id = "L0",
-	nameKey = "layout.L0.name",
+	nameKey = "mission.M0.name",
 	theme = "classic",
 	seed = 1001,
 	roomNumberBase = 100,
@@ -25,6 +25,7 @@ local layout: LayoutTypes.LayoutDef = {
 		S2 = { wind = { "Forward", "Backward" } },
 	},
 	caretaker = { dormant = true },
+	solutions = {}, -- the tutorial is a scripted single path (S24)
 }
 
 return layout

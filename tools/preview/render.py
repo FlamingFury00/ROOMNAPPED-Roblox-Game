@@ -2,7 +2,7 @@
 """Software rasteriser for exported ROOMNAPPED geometry (offline visual QA).
 
 Usage:
-  python3 tools/preview/render.py scene.json out_prefix [--views N] [--size WxH]
+  python3 tools/preview/render.py scene.json out_prefix [--views N] [--size WxH] [--tiles 3,7,12] [--focus 3,7]
 
 Renders a top-down overview (ceilings hidden) plus eye-level walkthrough views along the route, using a
 z-buffer rasteriser with per-triangle lighting from the scene's point lights. It approximates Roblox's
@@ -277,12 +277,18 @@ def main():
     scene_path, out_prefix = sys.argv[1], sys.argv[2]
     views = 4
     w, h = 800, 450
+    picked = None
+    focus = []
     args = sys.argv[3:]
     for i, a in enumerate(args):
         if a == "--views":
             views = int(args[i + 1])
         if a == "--size":
             w, h = map(int, args[i + 1].split("x"))
+        if a == "--tiles":
+            picked = [int(x) - 1 for x in args[i + 1].split(",") if x]
+        if a == "--focus":
+            focus = [int(x) - 1 for x in args[i + 1].split(",") if x]
     scene = json.load(open(scene_path))
     parts = scene["parts"]
     pts = np.array([p["cf"][0:3] for p in parts])
@@ -294,11 +300,22 @@ def main():
     save(render(scene, top, HIDE_TOP, fog_end=span * 3 + 200), f"{out_prefix}_top.png")
     print("wrote", f"{out_prefix}_top.png")
     tiles = scene.get("tiles")
+    # Close-up bird's-eye views centred on chosen tiles (ceilings hidden).
+    for k, i in enumerate(focus):
+        if tiles and 0 <= i < len(tiles):
+            t = tiles[i]
+            c = np.array(t["pos"])
+            look = np.array(t["look"])
+            eye = c - look * 26 + np.array([0, 44, 0])
+            cam = Camera(eye, c + look * 4, 60, w, h)
+            save(render(scene, cam, HIDE_TOP, fog_end=400), f"{out_prefix}_f{k}.png")
+            print("wrote", f"{out_prefix}_f{k}.png")
     if tiles:
         step = max(1, len(tiles) // max(1, views))
-        for k, i in enumerate(range(0, len(tiles), step)):
-            if k >= views:
-                break
+        indices = picked if picked is not None else list(range(0, len(tiles), step))[:views]
+        for k, i in enumerate(indices):
+            if i < 0 or i >= len(tiles):
+                continue
             t = tiles[i]
             p = np.array(t["pos"]) + np.array([0, 6.5, 0]) - np.array(t["look"]) * 6
             target = p + np.array(t["look"]) * 20 + np.array([0, -1.5, 0])
