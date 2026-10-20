@@ -231,6 +231,7 @@ function Common.confirmFrame(
 		Create.list(Enum.FillDirection.Horizontal, 18, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
 	})
 	local no = Components.button({
+		name = "Cancel",
 		text = noText,
 		variant = "secondary",
 		size = UDim2.fromOffset(230, 78),
@@ -239,6 +240,7 @@ function Common.confirmFrame(
 		parent = row,
 	})
 	local yes = Components.button({
+		name = "Confirm",
 		text = yesText,
 		variant = yesVariant or "danger",
 		size = UDim2.fromOffset(230, 78),

@@ -51,11 +51,12 @@ local function ring(parent: Instance, x: number, y: number, d: number, color: Co
 	stroke.Color = color
 	stroke.Thickness = thickness
 	stroke.Parent = frame
-	-- Thickness is in pixels; scale it with the icon size.
+	-- Thickness is in pixels; scale it with the icon size once the icon is laid out (an unparented frame
+	-- has no size yet, so the first real value arrives through this signal).
+	stroke.Thickness = 1
 	frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		stroke.Thickness = math.max(1, frame.AbsoluteSize.X * thickness / 10)
 	end)
-	stroke.Thickness = math.max(1, frame.AbsoluteSize.X * thickness / 10)
 	return frame
 end
 

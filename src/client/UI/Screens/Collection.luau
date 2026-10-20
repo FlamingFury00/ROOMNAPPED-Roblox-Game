@@ -881,9 +881,9 @@ function Collection.start()
 		frame = buyConfirmFrame,
 		keepUnder = true,
 		defaultSelection = function(): GuiObject?
-			local buttons = buyConfirmFrame:FindFirstChild("Buttons", true)
-			local yes = buttons and buttons:FindFirstChild("Button", true)
-			return if yes and yes:IsA("GuiObject") then yes else nil
+			-- Default to "No" so a stray press never spends credits.
+			local no = buyConfirmFrame:FindFirstChild("Cancel", true)
+			return if no and no:IsA("GuiObject") then no else nil
 		end,
 	})
 	ClientState.observe("me", "profile", function()

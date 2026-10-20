@@ -236,6 +236,7 @@ local function build()
 		local handle = Components.slider(Strings.t("settings." .. key), (current :: any)[key], function(value: number)
 			SettingsController.set(key, value)
 		end, nextOrder())
+		handle.frame.Name = "Slider_" .. key
 		handle.frame.Parent = scroll
 		sliders[key] = handle
 		if firstSelectable == nil then
@@ -253,12 +254,14 @@ local function build()
 			end,
 			nextOrder()
 		)
+		handle.frame.Name = "Toggle_" .. key
 		handle.frame.Parent = scroll
 		toggles[key] = handle
 	end
 	local textScale = Components.slider(Strings.t("settings.textScale"), current.textScale, function(value: number)
 		SettingsController.set("textScale", value)
 	end, nextOrder(), 0.85, 1.3)
+	textScale.frame.Name = "Slider_textScale"
 	textScale.frame.Parent = scroll
 	sliders.textScale = textScale
 
@@ -393,8 +396,7 @@ function Settings.start()
 		frame = leaveConfirm,
 		keepUnder = true,
 		defaultSelection = function(): GuiObject?
-			local buttons = leaveConfirm:FindFirstChild("Buttons", true)
-			local stay = buttons and buttons:FindFirstChild("Button", true)
+			local stay = leaveConfirm:FindFirstChild("Cancel", true)
 			return if stay and stay:IsA("GuiObject") then stay else nil
 		end,
 	})

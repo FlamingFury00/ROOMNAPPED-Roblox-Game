@@ -107,8 +107,11 @@ local function addLine(text: string, color: Color3?)
 			labels[i]:Destroy()
 		end
 	end
+	-- Keep the newest reply in view once the list has been laid out.
 	task.defer(function()
-		log.CanvasPosition = Vector2.new(0, math.max(0, log.AbsoluteCanvasSize.Y))
+		pcall(function()
+			log.CanvasPosition = Vector2.new(0, math.max(0, log.AbsoluteCanvasSize.Y - log.AbsoluteWindowSize.Y))
+		end)
 	end)
 end
 

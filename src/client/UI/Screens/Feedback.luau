@@ -141,6 +141,7 @@ local function build()
 		Create.list(Enum.FillDirection.Horizontal, 18, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
 	})
 	Components.button({
+		name = "Skip",
 		text = Strings.t("feedback.skip"),
 		variant = "secondary",
 		size = UDim2.fromOffset(220, 78),
@@ -151,6 +152,7 @@ local function build()
 		parent = buttons,
 	})
 	sendButton = Components.button({
+		name = "Send",
 		text = Strings.t("feedback.send"),
 		icon = "check",
 		iconColor = C.textDark,
