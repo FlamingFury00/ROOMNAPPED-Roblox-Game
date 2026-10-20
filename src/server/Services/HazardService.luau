@@ -252,6 +252,26 @@ local function knockFrom(origin: Vector3, position: Vector3, strength: number): 
 	return (away.Unit + Vector3.new(0, 0.55, 0)).Unit * strength
 end
 
+-- Region from the launch trigger to the landing point (cached per launch record).
+local launchRegions: { [any]: { cf: CFrame, size: Vector3 } } = setmetatable({}, { __mode = "k" }) :: any
+local function launchRegion(launch: any): { cf: CFrame, size: Vector3 }
+	local cached = launchRegions[launch]
+	if cached then
+		return cached
+	end
+	local from = launch.trigger.cf.Position
+	local to = launch.landing
+	local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+	local length = math.max(flat.Magnitude, 1)
+	local middle = (from + to) / 2
+	local region = {
+		cf = CFrame.lookAt(middle, middle + flat.Unit),
+		size = Vector3.new(launch.trigger.size.X, 40, length + launch.trigger.size.Z),
+	}
+	launchRegions[launch] = region
+	return region
+end
+
 local function inPitXZ(run: Run, position: Vector3): any?
 	for _, pit in run.runtime.pits do
 		if MathUtil.pointInBoxXZ(pit.box.cf, pit.box.size, position, 0) then
@@ -370,10 +390,13 @@ local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: bool
 		end
 	end
 
-	-- Ice + wind launch (R08): detected from the replicated character velocity on the launch ramp.
+	-- Ice + wind launch (R08): detected from the replicated character velocity anywhere between the launch
+	-- ramp and the landing point. Hazards tick at 10 Hz and a sliding player crosses the ramp in well under
+	-- a tick, so the detection region covers the whole flight arc instead of only the ramp.
 	if status == "Active" then
 		for _, launch in run.runtime.launches do
-			if MathUtil.pointInBox(launch.trigger.cf, launch.trigger.size, position, 0.5) then
+			local region = launchRegion(launch)
+			if MathUtil.pointInBox(region.cf, region.size, position, 0.5) then
 				local velocity = Engine.velocity(root)
 				local along = Vector3.new(velocity.X, 0, velocity.Z):Dot(launch.direction)
 				if along >= GameConfig.Wind.LaunchMinSpeed * 0.8 then

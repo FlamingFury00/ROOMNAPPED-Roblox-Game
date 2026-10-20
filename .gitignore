@@ -8,3 +8,4 @@ sourcemap.json
 Thumbs.db
 tools/preview/out/
 __pycache__/
+.claude/
