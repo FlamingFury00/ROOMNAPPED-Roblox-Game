@@ -31,7 +31,7 @@ export type PlayOptions = {
 	pitch: number?,
 	group: GroupName?,
 	position: Vector3?,
-	parent: Instance?,
+	parent: any?, -- Instance (any so callers can pass BasePart/Attachment literals without casts)
 	looped: boolean?,
 	rolloffMin: number?,
 	rolloffMax: number?,

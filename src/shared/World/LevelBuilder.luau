@@ -2145,6 +2145,14 @@ function LevelBuilder.clientInfo(runtime: Runtime): { [string]: any }
 	for i, tile in runtime.tiles do
 		tiles[i] = { cf = tile.cf, kind = tile.kind }
 	end
+	-- Power circuits: which levers toggle which circuit (lever lamps show live / safe).
+	local powers = {}
+	local defs = runtime.effectDefs
+	if type(defs) == "table" and type(defs.powers) == "table" then
+		for id, power in defs.powers do
+			powers[id] = { default = power.default, levers = table.clone(power.levers) }
+		end
+	end
 	return {
 		layoutId = runtime.layoutId,
 		theme = runtime.theme,
@@ -2167,6 +2175,7 @@ function LevelBuilder.clientInfo(runtime: Runtime): { [string]: any }
 		},
 		tiles = tiles,
 		spawns = runtime.spawns,
+		powers = powers,
 	}
 end
 
