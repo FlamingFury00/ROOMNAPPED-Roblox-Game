@@ -49,7 +49,7 @@ function DebugService.isAdmin(player: Player): boolean
 			admin = true
 		elseif game.CreatorType == Enum.CreatorType.Group then
 			local ok, rank = pcall(function()
-				return player:GetRankInGroup(game.CreatorId)
+				return player:GetRankInGroupAsync(game.CreatorId)
 			end)
 			admin = ok and rank >= 254
 		end
@@ -59,7 +59,7 @@ function DebugService.isAdmin(player: Player): boolean
 		local group = Flags.adminGroup()
 		if not admin and group then
 			local ok, rank = pcall(function()
-				return player:GetRankInGroup(group.id)
+				return player:GetRankInGroupAsync(group.id)
 			end)
 			admin = ok and rank >= group.minRank
 		end

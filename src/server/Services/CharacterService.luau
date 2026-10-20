@@ -103,7 +103,9 @@ local function onCharacterAdded(player: Player, character: Model)
 		humanoid.Died:Connect(function()
 			task.delay(Players.RespawnTime, function()
 				if player.Parent == Players and player.Character == character then
-					player:LoadCharacter()
+					pcall(function()
+						player:LoadCharacterAsync()
+					end)
 				end
 			end)
 		end)
