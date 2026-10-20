@@ -74,6 +74,7 @@ type Ctx = {
 	moduleTiles: { [number]: { number } },
 	features: { [number]: { L: string?, R: string? } }, -- tile index -> wall feature per side
 	zoneIds: { [string]: string },
+	crateRuns: { [number]: boolean }, -- runs with an off-centre crate rail (kept free of floor props)
 }
 
 -- Coordinate helpers -----------------------------------------------------------------------------
@@ -695,6 +696,16 @@ local function sideOpenings(feature: string?): { Opening }
 	return {}
 end
 
+-- Floor props must never block a bypass entrance (ledges, beams and fire walkways start right at the edge
+-- of the neighbouring hazard tile) or the path of an off-centre crate rail.
+local function propBlocksRoute(ctx: Ctx, tile: TileInfo, a: number): boolean
+	local neighbour = ctx.runtime.tiles[tile.index + (if a > 0 then 1 else -1)]
+	if neighbour and (PIT_KINDS[neighbour.kind] or neighbour.kind == "Fire") then
+		return true
+	end
+	return ctx.crateRuns[tile.run] == true
+end
+
 local function buildHallTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef, allowDoors: boolean)
 	local feats = ctx.features[tile.index] or {}
 	floorTile(ctx, tile.cf, -HALF, HALF, true)
@@ -707,7 +718,10 @@ local function buildHallTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef, allowDoor
 			local hasDoor = allowDoors and ctx.rng() < 0.7
 			decorateWall(ctx, tile, side, hasDoor)
 			if mod.kind == "Hall" and not ctx.runtime.tiles[tile.index].hazard and ctx.rng() < 0.32 then
-				floorProp(ctx, tile, side, if ctx.rng() < 0.5 then 5.2 else -5.2)
+				local a = if ctx.rng() < 0.5 then 5.2 else -5.2
+				if not propBlocksRoute(ctx, tile, a) then
+					floorProp(ctx, tile, side, a)
+				end
 			end
 		end
 	end
@@ -1333,25 +1347,113 @@ local function buildPitModule(ctx: Ctx, moduleIndex: number, mod: ModuleDef)
 	end
 end
 
+-- Heat-shielded service walkway along one wall of a fire tile: the slow, always-safe bypass (S10/S11) for
+-- squads without a water room. The flames stop short of it and a rail plus a glass shield separate it.
+local function buildFireWalkway(ctx: Ctx, tile: TileInfo, side: string)
+	local theme = ctx.theme
+	local s = sideSign(side)
+	local lw = Geometry.Ledge.Width
+	local walkLength = 12
+	local railX = s * (INNER - lw)
+	Kit.decor(
+		ctx.decor,
+		"WalkwayGrating",
+		tcf(tile.cf, s * (INNER - lw / 2), 0.07, 0),
+		Vector3.new(lw - 0.2, 0.14, T),
+		Color3.fromRGB(96, 98, 106),
+		M.DiamondPlate
+	)
+	local posts = 4
+	for i = 0, posts - 1 do
+		local a = -walkLength / 2 + 0.3 + i * ((walkLength - 0.6) / (posts - 1))
+		Kit.post(ctx.decor, {
+			name = "RailPost",
+			cf = tcf(tile.cf, railX, 0.8, a),
+			height = 1.6,
+			diameter = 0.3,
+			color = theme.brass,
+			material = M.Metal,
+		})
+	end
+	Kit.decor(
+		ctx.decor,
+		"Handrail",
+		tcf(tile.cf, railX, 1.6, 0),
+		Vector3.new(0.22, 0.22, walkLength - 0.4),
+		theme.brass,
+		M.Metal
+	)
+	local shield = Kit.decor(
+		ctx.decor,
+		"HeatShield",
+		tcf(tile.cf, railX, 5.1, 0),
+		Vector3.new(0.14, 6.8, walkLength - 1),
+		Color3.fromRGB(190, 225, 255),
+		M.Glass
+	)
+	shield.Transparency = 0.65
+	Kit.part(ctx.structure, {
+		name = "RailCollider",
+		cf = tcf(tile.cf, railX, 0.8, 0),
+		size = Vector3.new(0.4, 1.6, walkLength),
+		transparency = 1,
+		solid = true,
+	})
+	local signPos = tpt(tile.cf, s * (INNER - 0.06), 6.2, -walkLength / 2 - 0.6)
+	local inward = (tile.cf.Position - tpt(tile.cf, s * INNER, 0, 0)).Unit
+	local sign = Kit.decor(
+		ctx.decor,
+		"WalkwaySign",
+		CFrame.lookAt(signPos, signPos + inward),
+		Vector3.new(2.6, 0.9, 0.1),
+		Color3.fromRGB(40, 160, 80),
+		M.SmoothPlastic
+	)
+	Kit.surfaceText(sign, {
+		face = Enum.NormalId.Front,
+		text = "SAFE WAY",
+		color = Color3.fromRGB(255, 255, 255),
+		font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold),
+		lightInfluence = 0,
+	})
+	local lane = box(tile.cf, s * (INNER - lw / 2), 2.5, 0, lw, 5, walkLength)
+	table.insert(ctx.runtime.ledges, lane)
+end
+
 local function buildFireTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef)
 	buildHallTile(ctx, tile, mod, false)
 	local id = mod.id or ("F" .. tile.index)
 	local poolId = id .. "_pool"
 	registerZone(ctx, id, "fire")
 	registerZone(ctx, poolId, "basin")
-	Props.debrisPile(ctx.decor, tcf(tile.cf, -4.6, 0, 0), 4, ctx.rng)
-	Props.debrisPile(ctx.decor, tcf(tile.cf, 4.6, 0, 0), 4, ctx.rng)
+	-- The flames span the corridor unless a service walkway (mod.ledge) reserves one wall.
+	local fireLo, fireHi = -INNER, INNER
+	local walkSign = if mod.ledge then sideSign(mod.ledge) else 0
+	if walkSign > 0 then
+		fireHi = INNER - Geometry.Ledge.Width - 1
+	elseif walkSign < 0 then
+		fireLo = -INNER + Geometry.Ledge.Width + 1
+	end
+	if walkSign >= 0 then
+		Props.debrisPile(ctx.decor, tcf(tile.cf, -4.6, 0, 0), 4, ctx.rng)
+	end
+	if walkSign <= 0 then
+		Props.debrisPile(ctx.decor, tcf(tile.cf, 4.6, 0, 0), 4, ctx.rng)
+	end
 	-- Scorch marks.
 	Kit.decor(
 		ctx.decor,
 		"Scorch",
-		tcf(tile.cf, 0, 0.12, 0),
-		Vector3.new(13, 0.05, 6),
+		tcf(tile.cf, (fireLo + fireHi) / 2, 0.12, 0),
+		Vector3.new(fireHi - fireLo - 1, 0.05, 6),
 		Color3.fromRGB(30, 24, 22),
 		M.Slate
 	)
-	local volume = box(tile.cf, 0, 3.5, 0, INNER * 2, 7, 4.5)
+	local volume = box(tile.cf, (fireLo + fireHi) / 2, 3.5, 0, fireHi - fireLo, 7, 4.5)
 	zonePart(ctx, "Fire_" .. id, volume, id, "fire")
+	if mod.ledge then
+		buildFireWalkway(ctx, tile, mod.ledge)
+	end
 	local surface = box(tile.cf, 0, 0.1, 0, INNER * 2, 0.2, 12)
 	zonePart(
 		ctx,
@@ -1970,6 +2072,7 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 		moduleTiles = {},
 		features = {},
 		zoneIds = {},
+		crateRuns = {},
 	}
 
 	if #layout.modules == 0 or layout.modules[1].kind ~= "Elevator" then
@@ -1980,6 +2083,14 @@ function LevelBuilder.build(layout: LayoutDef, origin: Vector3?): BuildResult
 	end
 
 	walkRoute(ctx, originCF)
+	for moduleIndex, mod in layout.modules do
+		for _, crate in crates(mod) do
+			local tile = runtime.tiles[ctx.moduleTiles[moduleIndex][crate.at or 1]]
+			if tile and math.abs(crate.lateral) > 1 then
+				ctx.crateRuns[tile.run] = true
+			end
+		end
+	end
 
 	-- Wall features first (sockets, levers, alcoves) so walls get their openings.
 	local alcoveFrames: { [string]: CFrame } = {}

@@ -5,7 +5,7 @@ local LayoutTypes = require(script.Parent.Parent.Parent.World.LayoutTypes)
 
 local layout: LayoutTypes.LayoutDef = {
 	id = "L0",
-	nameKey = "layout.L0.name",
+	nameKey = "mission.M0.name",
 	theme = "classic",
 	seed = 1001,
 	roomNumberBase = 100,

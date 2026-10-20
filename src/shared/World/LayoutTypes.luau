@@ -52,6 +52,45 @@ export type ModuleDef = {
 	note: string?,
 }
 
+-- Authored solutions (documentation + the solvability spec in tests/specs/layouts.spec.luau). A solution is
+-- how one squad (by default a solo player) crosses every obstacle on the way out and back.
+export type CrossingMethod =
+	"ice" -- a Freezer froze the flooded basin / pool
+	| "ledge" -- slow safe ledge along a basin or gap
+	| "beam" -- slow safe beam across a gap
+	| "walkway" -- heat-shielded walkway past a fire
+	| "launch" -- ice + wind launch over a gap (out only)
+	| "crate" -- a pushed / pulled crate became stepping stones in the gap slot
+	| "vine" -- a grown vine bridge
+	| "douse" -- water put the fire out
+	| "power" -- the zone is not electrified (lever cut the power, or it froze)
+	| "pin" -- a Fan blowing across the track pins the cart at the far side
+	| "slow" -- cold slows the cart right down
+	| "timing" -- dodge the running cart
+	| "walk" -- nothing to solve (e.g. unpowered shallow water)
+
+export type Crossing = {
+	zone: string, -- obstacle id (Basin / Gap / Fire / Puddle / Carts module id)
+	by: CrossingMethod,
+	rooms: { [string]: string }?, -- socketId -> "Room" or "Room:Dir" active while crossing
+	levers: { string }?, -- levers pulled (an odd number of times) while crossing
+	way: ("out" | "back")?, -- only valid in one direction (default: both)
+}
+
+export type KeyPlan = {
+	id: string,
+	rooms: { [string]: string }?, -- rooms active when the key is collected (alcove gates)
+	levers: { string }?,
+}
+
+export type Solution = {
+	name: string,
+	loadout: { string }, -- rooms the squad brings (a solo player: at most two)
+	crossings: { Crossing },
+	keys: { KeyPlan }?,
+	combos: { string }?, -- combos this solution performs (checked against the crossings)
+}
+
 export type LayoutDef = {
 	id: string,
 	nameKey: string,
@@ -64,6 +103,7 @@ export type LayoutDef = {
 	caretaker: { dormant: boolean?, patrolFrom: number?, patrolTo: number?, spawn: number? }?,
 	tutorial: boolean?,
 	roomNumberBase: number?,
+	solutions: { Solution }?,
 }
 
 -- Runtime ------------------------------------------------------------------------------------------
