@@ -1630,6 +1630,15 @@ local function buildCrates(ctx: Ctx)
 			local startAlong = tile.runAlong + (crate.along or 0)
 			local margin = Geometry.Crate.Size / 2 + 0.6
 			local lo, hi = -HALF + margin, last.runAlong + HALF - margin
+			-- A crate may never be blown into the elevator or the target tile: parked in front of either door it
+			-- would block the only exit (S10) or the capture.
+			for _, t in tiles do
+				if t.kind == "Elevator" then
+					lo = math.max(lo, t.runAlong + HALF + margin)
+				elseif t.kind == "Target" then
+					hi = math.min(hi, t.runAlong - HALF - margin)
+				end
+			end
 			-- Pits on this run cut the rail unless they hold this crate's slot.
 			local slot = slots[crate.id]
 			local slotAlong: number? = nil

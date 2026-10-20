@@ -237,6 +237,22 @@ return function(ctx)
 		end
 	end
 
+	local function pressedPlates(rt, state: State): { [string]: boolean }
+		local pressed = {}
+		for crateId, c in state.crates do
+			if not c.slotted then
+				local p = cratePosition(rt, crateId, c.offset)
+				for plateId, plate in rt.plates do
+					local d = V3.new(p.X - plate.cf.Position.X, 0, p.Z - plate.cf.Position.Z).Magnitude
+					if d <= plate.radius then
+						pressed[plateId] = true
+					end
+				end
+			end
+		end
+		return pressed
+	end
+
 	local function effects(rt, state: State)
 		local model = EffectModel.new(rt.effectDefs, GameConfig.Effects, 0)
 		local sources = {}
@@ -249,16 +265,8 @@ return function(ctx)
 				model:setLever(leverId, true)
 			end
 		end
-		for crateId, c in state.crates do
-			if not c.slotted then
-				local p = cratePosition(rt, crateId, c.offset)
-				for plateId, plate in rt.plates do
-					local d = V3.new(p.X - plate.cf.Position.X, 0, p.Z - plate.cf.Position.Z).Magnitude
-					if d <= plate.radius then
-						model:setPlate(plateId, true)
-					end
-				end
-			end
+		for plateId in pressedPlates(rt, state) do
+			model:setPlate(plateId, true)
 		end
 		for _ = 1, 300 do
 			model:step(0.1)
@@ -462,6 +470,9 @@ return function(ctx)
 				local placed: Placed = { room = room :: string, dir = dir }
 				state.rooms[socketId] = placed
 				settleCrates(rt, state)
+				if next(pressedPlates(rt, state)) then
+					state.combos.crate_plate = true
+				end
 				local after = effects(rt, state)
 				noteCombos(rt, state, model, after, "deploy")
 				noteCartCombos(rt, state, socketId, placed)
@@ -478,6 +489,9 @@ return function(ctx)
 				end
 				state.rooms[found :: string] = nil
 				settleCrates(rt, state)
+				if next(pressedPlates(rt, state)) then
+					state.combos.crate_plate = true
+				end
 				local after = effects(rt, state)
 				noteCombos(rt, state, model, after, "recall")
 				model = after
