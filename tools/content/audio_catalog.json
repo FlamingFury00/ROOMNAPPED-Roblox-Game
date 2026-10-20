@@ -1,0 +1,1652 @@
+{
+  "ui_click": {
+    "id": 15675032796,
+    "name": "Roblox_UI_Small_Click",
+    "duration": 0,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 17208396156,
+        "name": "Roblox GUI - Select",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 10066968815,
+        "name": "RBLX UI Select 02 (SFX)",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox 2023 UI pack 'Small Click' - short soft click. Alts from the 2024 'Roblox GUI' and 2022 'RBLX UI' packs."
+  },
+  "ui_hover": {
+    "id": 17208339919,
+    "name": "Roblox GUI - Hover 01",
+    "duration": 0,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 17208343514,
+        "name": "Roblox GUI - Hover 02",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 10066931761,
+        "name": "RBLX UI Hover 01 (SFX)",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox GUI pack hover tick (<1 s). Hover 02/03 exist for random variation."
+  },
+  "ui_open": {
+    "id": 15675024286,
+    "name": "Roblox_UI_Whoosh_01",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 17208405682,
+        "name": "Roblox GUI - Swipe",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 17208204604,
+        "name": "Roblox GUI - Bubble",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox UI whoosh for panel open; 'Swipe' (whoosh) and 'Bubble' (pop) as alternates."
+  },
+  "ui_close": {
+    "id": 17208186900,
+    "name": "Roblox GUI - Back",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 10066914500,
+        "name": "RBLX UI Back (SFX)",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 15675012262,
+        "name": "Roblox_UI_Whoosh_04",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox GUI 'Back' - natural close/dismiss partner to the open whoosh."
+  },
+  "ui_toggle": {
+    "id": 17208408337,
+    "name": "Roblox GUI - Tab",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 12222183,
+        "name": "SWITCH3.wav",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9119717523,
+        "name": "Switch Click On Or Off Toggle Button 2 (SFX)",
+        "duration": 0,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox GUI 'Tab' click for toggles/tabs; classic Roblox SWITCH3.wav or a PSE toggle-switch click as alternates."
+  },
+  "ui_error": {
+    "id": 17208353912,
+    "name": "Roblox GUI - Negative",
+    "duration": 0,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 17208214688,
+        "name": "Roblox GUI - Call Decline",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 17208220181,
+        "name": "Roblox GUI - Call Hang Up",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox GUI 'Negative' - short gentle denied tone (not a harsh buzzer). Call Decline / Hang Up are softer negative tones."
+  },
+  "ui_success": {
+    "id": 17208209318,
+    "name": "Roblox GUI - Call Accept",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 10128760939,
+        "name": "RBLX UI Select 01 (SFX)",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 99366249808641,
+        "name": "TutorialPurchase_01",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox GUI 'Call Accept' - positive confirm tone from the same pack as hover/back/negative, so UI stays consistent."
+  },
+  "ui_reward": {
+    "id": 12222253,
+    "name": "victory.wav",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 1844442542,
+        "name": "Winner",
+        "duration": 3,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1844692556,
+        "name": "Game Show",
+        "duration": 2,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "Classic Roblox victory.wav (~1 s jingle). APM 'Winner' (jackpot sting, 3 s) and 'Game Show' (2 s fanfare) if a fuller fanfare is wanted."
+  },
+  "ui_coin": {
+    "id": 127645268874265,
+    "name": "CoinTransfer_01",
+    "duration": 2,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 16480548103,
+        "name": "Audio/Roblox_Pinball_Token_Insert_01",
+        "duration": 2,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9113849651,
+        "name": "Coin Throws 3 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox 'CoinTransfer_01' credit-gain sound; Roblox pinball token insert or PSE coin toss as alternates."
+  },
+  "ui_countdown_tick": {
+    "id": 16480580213,
+    "name": "Audio/Roblox_Pinball_8Bit_Blip_01",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 9113399926,
+        "name": "Beeps Simple Multiple Variations 5 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9118777841,
+        "name": "Scanner Beeps 15 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox pinball 8-bit blip (arcade-style countdown beep). PSE 'Beeps Simple' / clean scanner beep if a non-retro tone is preferred."
+  },
+  "ui_countdown_go": {
+    "id": 16480579685,
+    "name": "Audio/Roblox_Pinball_8Bit_Blip_04",
+    "duration": 2,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 9125485591,
+        "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
+        "duration": 5,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9113399767,
+        "name": "Beeps Simple Multiple Variations 1 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Longest blip of the same Roblox 8-bit set (2 s) to pair with the tick. Thematic alternative: PSE hotel desk-bell single ding (long decay)."
+  },
+  "ui_ready": {
+    "id": 17208361335,
+    "name": "Roblox GUI - Notification High",
+    "duration": 2,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 12221990,
+        "name": "electronicpingshort.wav",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9125485659,
+        "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
+        "duration": 5,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox GUI 'Notification High' as a ready ding; classic electronicpingshort.wav or a PSE hotel desk-bell single ding (hotel theme) as alternates."
+  },
+  "ui_notify": {
+    "id": 99437156604053,
+    "name": "PV_ToastNotif",
+    "duration": 3,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 17208372272,
+        "name": "Roblox GUI - Notification Low",
+        "duration": 3,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 17208361335,
+        "name": "Roblox GUI - Notification High",
+        "duration": 2,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox 'PV_ToastNotif' - literally a toast-notification sound."
+  },
+  "room_unfold": {
+    "id": 9118478607,
+    "name": "Robot Transform Metal Bangs Clunks 4 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9126229255,
+        "name": "Whoosh By Fast Airy Swooshing Whipping Thuds (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114514975,
+        "name": "Folding Chairs 18 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Robot Transform, Metal Bangs, Clunks' (1.8 s) = mechanical unfolding. Alt 1 is an airy whoosh ending in thuds (whoosh+thud); alt 2 a folding chair snapping open. Layer unfold + whoosh for the full effect. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "room_fold": {
+    "id": 9119707271,
+    "name": "Swish Suck Reversed Metallic Swoosh Impact 2 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9118158252,
+        "name": "Reversed Whoosh Backwards Hissing Burst 3 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 15675028888,
+        "name": "Roblox_UI_Whoosh_02",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE 'Swish Suck, Reversed Metallic Swoosh Impact' (1.1 s) - reverse/collapse into the suitcase. Alts: reversed hissing whoosh, Roblox UI whoosh. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "room_select": {
+    "id": 17208323435,
+    "name": "Roblox GUI - Equip",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 10128760939,
+        "name": "RBLX UI Select 01 (SFX)",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 17208396156,
+        "name": "Roblox GUI - Select",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox GUI 'Equip' - equip click when choosing a room suitcase."
+  },
+  "placement_invalid": {
+    "id": 17208214688,
+    "name": "Roblox GUI - Call Decline",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 17208353912,
+        "name": "Roblox GUI - Negative",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 16480558943,
+        "name": "Audio/Roblox_Pinball_Joystick_Buzz_Release_01",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox GUI 'Call Decline' (descending negative) so it differs from ui_error; alts: GUI 'Negative', Roblox pinball short buzz-release."
+  },
+  "capture_charge_loop": {
+    "id": 9125805094,
+    "name": "Rising Synth Tone Ascending In Pitch Waverin (SFX)",
+    "duration": 4,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9126236071,
+        "name": "Wind Suck Slow Backwards Swooshing Build Up  (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 16480578036,
+        "name": "Audio/Roblox_Pinball_8Bit_Riser_02",
+        "duration": 3,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE rising synth tone ascending in pitch, wavering (4 s riser). Alt 1: wind 'suck' build-up (great for a room being sucked into a suitcase); alt 2: Roblox 8-bit riser (retro style). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "capture_success": {
+    "id": 9116384485,
+    "name": "Magic Burst 1 (SFX)",
+    "duration": 3,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9116384473,
+        "name": "Magic Burst 2 (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9125647212,
+        "name": "Magic Whooshes Pass Bys Metallic Shimmering  (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Magic Burst: big beefy impact, thudding hits, glowing tonal decay' (3 s). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "cargo_pickup": {
+    "id": 9119671087,
+    "name": "Suitcase Movement 8 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9119671558,
+        "name": "Suitcase Movement 15 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 17208319162,
+        "name": "Roblox GUI - Pickup",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE 'Suitcase Movement - picking up and putting down' takes (avoid the 'hit human body' takes in that series). Roblox GUI 'Pickup' as a stylised alt. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "cargo_drop": {
+    "id": 9114186861,
+    "name": "Drop Suitcase 3 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114186811,
+        "name": "Drop Suitcase 2 (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9113245890,
+        "name": "Bag Drop Wood Floor 4 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Drop Suitcase (to concrete)'; leather bag on wood floor as a softer alt. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "cargo_bank": {
+    "id": 17208380755,
+    "name": "Roblox GUI - Purchase",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 10066947742,
+        "name": "RBLX UI Purchase (SFX)",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9113728042,
+        "name": "Cash Register 1 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox GUI 'Purchase' success sound for banking cargo. PSE cash register (drawer open/close, no bell) as a literal register alt."
+  },
+  "elevator_ding": {
+    "id": 9114302017,
+    "name": "Elevator Bell Synth Chimes 2 (SFX)",
+    "duration": 3,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114302926,
+        "name": "Elevator Bell Synth Chimes 5 (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114301685,
+        "name": "Elevator Bell Synth Chimes 4 (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Elevator Bell, Synth Chimes, group of tones up and down' - real elevator arrival chime. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "elevator_doors": {
+    "id": 365551881,
+    "name": "SlidingDoor",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 9114305290,
+        "name": "Elevator Doors Open Close 9 (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114305596,
+        "name": "Elevator Doors Open Close 13 (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox-owned 'SlidingDoor' (1 s). Alts: PSE recorded elevator doors open/close (include squeak/rattle and a ding)."
+  },
+  "elevator_move_loop": {
+    "id": 9125446564,
+    "name": "Command Room Tone Deep Air Conditioning Hum  (SFX)",
+    "duration": 35,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9112777512,
+        "name": "Energy Presence 2 (SFX)",
+        "duration": 47,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9125710803,
+        "name": "New York City 150 West End Avenue Elevator B (SFX)",
+        "duration": 47,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE deep resonant air-conditioning/machine hum room tone (35 s) as cabin hum. Alt 1: 'Energy Presence, Constant Rumble, Loop'; alt 2: real NYC elevator ride (contains bell+doors, loop only the interior-run section via PlaybackRegion). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "door_open": {
+    "id": 9114135682,
+    "name": "Door Creak 1 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114829485,
+        "name": "Hotel Door 1 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114145395,
+        "name": "Door Long Squeaks 20 (SFX)",
+        "duration": 6,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Door Creak, open and close' (2 s). Alt 1 is PSE 'Hotel Door' (interior latch); alt 2 a long spooky squeak with lock/latch. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "door_close": {
+    "id": 9114135555,
+    "name": "Door Closes 2 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114136719,
+        "name": "Door Hard Closes 4 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114829386,
+        "name": "Hotel Door 5 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Door Closes, Latch'; hard close or PSE 'Hotel Door' as alternates. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "lever_switch": {
+    "id": 12222170,
+    "name": "switch.wav",
+    "duration": 0,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 9125626478,
+        "name": "Lever Mechanism Crank Clicks Big Metal Clunk (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9116259834,
+        "name": "Lever Two Large Metal Pulls 1 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Classic Roblox switch.wav click. PSE 'Lever Mechanism, Crank Clicks, Big Metal Clunk' / large metal lever pull for chunkier levers."
+  },
+  "pressure_plate": {
+    "id": 16480560857,
+    "name": "Audio/Roblox_Pinball_Giant_Button_Press_01",
+    "duration": 1,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 16480567946,
+        "name": "Audio/Roblox_Pinball_Bumper_Weighted_Click_01",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9119713923,
+        "name": "Switch 1 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox pinball 'Giant Button Press' = heavy plate click; pinball 'Weighted Click' or PSE single switch click as alternates."
+  },
+  "crate_slide": {
+    "id": 9126002028,
+    "name": "Statue Slide Drag On Wood Ramp Various Versi (SFX)",
+    "duration": 3,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9125759586,
+        "name": "Plywood Slide Short Dragging Bursts On Wood  (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9120842179,
+        "name": "Wood Drag 3 (SFX)",
+        "duration": 12,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Statue slide/drag on wood ramp' (3 s). Alt 1: plywood dragging bursts; alt 2: 12 s wood drag for continuous pushing (loop/trim). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "crate_impact": {
+    "id": 9120906197,
+    "name": "Wood Impact 6 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9120900308,
+        "name": "Wood Impact 4 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9117973587,
+        "name": "Punch Wood Box 1 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Wood Impact, powerful wood hits'; hollow variant and a punch-on-wood-box thud as alternates. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "water_loop": {
+    "id": 9114492495,
+    "name": "Flood Bubbling Water 1 (SFX)",
+    "duration": 46,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9120606720,
+        "name": "Water Stream 1 (SFX)",
+        "duration": 56,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 365551014,
+        "name": "BathRunning",
+        "duration": 82,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE 'Flood, constant, bubbling water, flowing' (46 s) - ideal for flooded floors. Alts: PSE water stream into a tank (56 s), Roblox-owned 'BathRunning' (82 s). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "water_fill": {
+    "id": 365203457,
+    "name": "FaucetTurnOn",
+    "duration": 15,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 365551014,
+        "name": "BathRunning",
+        "duration": 82,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9120575856,
+        "name": "Water Pour 1 (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox-owned 'FaucetTurnOn' (15 s, faucet on + running water). Alts: Roblox 'BathRunning' (long fill), PSE short splashy pour (4 s)."
+  },
+  "splash": {
+    "id": 9120585252,
+    "name": "Water Splash Big Water Splash Dive In 1 (SFX)",
+    "duration": 4,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9117823374,
+        "name": "Pool Jumps Splashes Water Impact Swimming 4 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 12222054,
+        "name": "Kerplunk.wav",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE 'Big water splash, dive in' with drips (4 s) for falling into water. Shorter pool splash or classic Roblox Kerplunk.wav (tiny plop) as alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "drain_gurgle": {
+    "id": 9125498759,
+    "name": "Drain Bubbling Liquid Gurgle Emptying Drain  (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9119152211,
+        "name": "Sink Drain 2 (SFX)",
+        "duration": 5,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114167406,
+        "name": "Drain Gurgle 2 (SFX)",
+        "duration": 10,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Drain, bubbling liquid gurgle, emptying drain' (2 s). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "freeze": {
+    "id": 9125611419,
+    "name": "Ice Freeze Large Piece Crackles Liquid Nitro (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9125611312,
+        "name": "Ice Freeze Large Piece Crackles Liquid Nitro (SFX)",
+        "duration": 6,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114858583,
+        "name": "Ice Crackle Large Block Cracks 1 (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Ice Freeze, large piece crackle, liquid nitrogen' (2 s); 6 s take or large-block ice crackle as alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "ice_crack": {
+    "id": 9114858588,
+    "name": "Ice Crackle Large Block Cracks 3 (SFX)",
+    "duration": 4,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114858605,
+        "name": "Ice Crackle Large Block Cracks 2 (SFX)",
+        "duration": 6,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9112796414,
+        "name": "Ice Cracking And Splintering 1 (SFX)",
+        "duration": 46,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Ice Crackle, large block cracks' (4 s) as the warning crack. Alt 2 is a 46 s 'Ice Cracking and Splintering ... Loop' for a sustained warning. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "ice_melt": {
+    "id": 75232856473344,
+    "name": "WellWater_DrippyLoop_01",
+    "duration": 5,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 9120510269,
+        "name": "Water Drip Cu Single Drips Constant 9 (SFX)",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9112893331,
+        "name": "Water Drips In Bathroom Splats Ploops 2 (SFX)",
+        "duration": 19,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Roblox-owned 'WellWater_DrippyLoop_01' (5 s drip loop). Roblox single water drip and PSE rhythmic bathroom drips (19 s) as alts."
+  },
+  "wind_loop": {
+    "id": 9118747525,
+    "name": "Rumble Ambience Interior Wind Turbo Shaft 1 (SFX)",
+    "duration": 36,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114057128,
+        "name": "Desert Wind Whistley Light Gusts 2 (SFX)",
+        "duration": 92,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 15675021174,
+        "name": "Roblox_UI_Loop_Air_Whooshes",
+        "duration": 11,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE 'Interior Wind, Turbo Shaft, light rumble' (36 s) = forced air indoors (not tagged as a seamless loop; crossfade). Alts: PSE desert wind light gusts (92 s), Roblox 'UI_Loop_Air_Whooshes' (11 s, stylised). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "fan_motor_loop": {
+    "id": 9112777640,
+    "name": "Fan Swish Rhythmic 2 (SFX)",
+    "duration": 39,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9119907761,
+        "name": "Table Fan Click 1 (SFX)",
+        "duration": 39,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9117174637,
+        "name": "Oscillating Fan 2 (SFX)",
+        "duration": 37,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Fan Swish, blade movement, rhythmic, rotating blade, Loop' (39 s, tagged loopable). Table fan (hum/buzz) and oscillating fan (has start/stop - trim) as alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "fire_loop": {
+    "id": 9112780193,
+    "name": "Fireplace Constant Burning Flame 1 (SFX)",
+    "duration": 36,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9112780462,
+        "name": "Fireplace Constant Burning Flame 4 (SFX)",
+        "duration": 43,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9112906846,
+        "name": "Wind Whipped Fire 1 (SFX)",
+        "duration": 36,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Fireplace, crackly, constant burning flame, Loop' (36 s). Alt 2 'Wind Whipped Fire ... Loop' is a bigger, hazard-scale fire. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "fire_ignite": {
+    "id": 9114443037,
+    "name": "Fire Whoosh 7 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114439997,
+        "name": "Fire Whoosh 14 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114446183,
+        "name": "Fire Whoosh 2 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Fire Whoosh' (kerosene/air torch short punchy burst, 2 s). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "extinguish": {
+    "id": 9119165436,
+    "name": "Sizzle Short And Explosive Sear 1 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114437277,
+        "name": "Fire Extinguisher 2 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114588467,
+        "name": "Giant Steam Chuff Air Burst Valve 3 (SFX)",
+        "duration": 7,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Sizzle, intense sear, hiss' (2 s) = water/ice hitting fire. Fire-extinguisher air bursts or a giant steam valve chuff as alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "electric_loop": {
+    "id": 9125516674,
+    "name": "Electrical Zap Room Constant Sparking Arcing (SFX)",
+    "duration": 29,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9112889082,
+        "name": "Transformer Hum 1 (SFX)",
+        "duration": 36,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114238020,
+        "name": "Electric Arcing 2 (SFX)",
+        "duration": 43,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Electrical Zap Room, constant, sparking, arcing, sizzling' (29 s) for electrified water. Alts: 'Transformer Hum, Buzz, Steady, Loop' (calmer hum), soft electric arcing (43 s). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "electric_zap": {
+    "id": 9119594871,
+    "name": "Static Zap Body Two Buzzy Impacts 2 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9119594718,
+        "name": "Static Zap Body Two Buzzy Impacts 1 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9116272073,
+        "name": "Lightning Flashes Quick Electrical Bursts 1 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Static Zap Body, buzzy impact' (1 s) - shock on a character. Alt 2 is a quick searing electrical burst. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "vine_grow": {
+    "id": 9112747580,
+    "name": "Beanstalk Growth 1 (SFX)",
+    "duration": 56,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114514963,
+        "name": "Foliage Crunchy Leaf Rustle 1 (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9120261928,
+        "name": "Tree Creak 1 (SFX)",
+        "duration": 20,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Beanstalk Growth: crackling vegetation sprouting, foliage movement, magical plant, Loop' (56 s) - play a slice or loop while growing. Short leaf rustle / tree creak as one-shot alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "magnet_hum": {
+    "id": 9125636146,
+    "name": "Magic Force Field Constant Deep Electrical H (SFX)",
+    "duration": 42,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9125784811,
+        "name": "Power Throb Tonal Hum Slow Pulse Electrical  (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9112889303,
+        "name": "Transformer Hum 2 (SFX)",
+        "duration": 36,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Magic Force Field, constant, deep electrical hum, slow whomping pulses' (42 s; asset is typed Music but is an SFX). Alts: 4 s tonal power-throb hum, steady transformer hum loop. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "metal_clank": {
+    "id": 9116541944,
+    "name": "Metal Clanks 2 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9116673678,
+        "name": "Metal Impact Heavy Clunking Hits Scraping 1 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9116617140,
+        "name": "Metal Drops Clanking Impacts On Concrete 12 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Metal Clanks, hollow pipe hits, some ring' (1 s). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "caretaker_step": {
+    "id": 9116478399,
+    "name": "Massive Footstep Impact 22 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9116477578,
+        "name": "Massive Footstep Impact 12 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114523345,
+        "name": "Foot Stomp 3 (SFX)",
+        "duration": 0,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Massive Footstep Impact: whomping boom, reverberant' (1 s) = ghostly thump. Foot stomp on hard carpet as a more literal hotel-corridor alt. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "caretaker_alert": {
+    "id": 9045122943,
+    "name": "Ghost With The Most - Hit1",
+    "duration": 2,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 1845713466,
+        "name": "Nervous Ghosts F",
+        "duration": 3,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9042321434,
+        "name": "Pocket Ghost - Sting 1",
+        "duration": 4,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "APM 'Ghost With The Most - Hit1' (2 s) from a kitschy comedy-Halloween cue - spooky but kid-friendly. Alts: 'Nervous Ghosts F' (3 s), 'Pocket Ghost - Sting 1' (4 s). [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "caretaker_keys": {
+    "id": 9116177077,
+    "name": "Keys Movement 2 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9116177238,
+        "name": "Keys Movement 6 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9116161848,
+        "name": "Key Dings Handling 1 (SFX)",
+        "duration": 5,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Keys Movement - jingling metallic key ring, shaking' (1 s). Alt 2 is a big ring of keys on a string (5 s) - very bellhop/janitor. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "caretaker_hum_loop": {
+    "id": 9119469188,
+    "name": "Spirit Presence Constant Airy Hissing 2 (SFX)",
+    "duration": 30,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9119514343,
+        "name": "Spooky Presence 1 (SFX)",
+        "duration": 48,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9113586520,
+        "name": "Breathing Presence Constant Airy Breaths 2 (SFX)",
+        "duration": 35,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Key chosen: caretaker_hum_loop. PSE 'Spirit Presence, constant, airy hissing, high-end ringing' (30 s). Alts: 'Spooky Presence' (48 s, typed Music), 'Breathing Presence ... airy breaths' (35 s) if you prefer a breath loop. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "caretaker_grab": {
+    "id": 9120729973,
+    "name": "Whoosh Impact 1 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9125989410,
+        "name": "Spirit Whooshes Low End Airy Growls Fast Bys (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9113077334,
+        "name": "Air Whoosh Heavy Bys And Impacts 1 (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Whoosh Impact, thick swish, hard impact' (2 s). Spirit whoosh with airy growl is the ghostlier alt. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "caretaker_search": {
+    "id": 9114495513,
+    "name": "Floor Creaks Short Med Wood Creaks 12 (SFX)",
+    "duration": 3,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114840555,
+        "name": "House Creaks 7 (SFX)",
+        "duration": 6,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9125562923,
+        "name": "Floor Creaks Wood Floorboard Cu Many Version (SFX)",
+        "duration": 3,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE short/medium floor creaks (3 s) - safe, kid-friendly 'searching' cue. Kept to creaks: the licensed library's ghost voices are described as monstrous/possessed, so no voice moan is recommended. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "player_hurt": {
+    "id": 79348298352567,
+    "name": "Official OOF Sound Effect",
+    "duration": 0,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 12222058,
+        "name": "Kid saying Ouch.wav",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 12222046,
+        "name": "hit.wav",
+        "duration": 1,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "Roblox 'Official OOF Sound Effect' (Roblox-owned). Kid 'Ouch' or classic hit.wav as alts."
+  },
+  "player_downed": {
+    "id": 1836245036,
+    "name": "Comic Falling Sting",
+    "duration": 2,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 79348298352567,
+        "name": "Official OOF Sound Effect",
+        "duration": 0,
+        "source": "roblox",
+        "creator": "Roblox"
+      },
+      {
+        "id": 9113480915,
+        "name": "Body Fall Thud 2 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "APM 'Comic Falling Sting' (2 s) - cartoon-dramatic knock-down. Alts: Roblox OOF, PSE body-fall thud. [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "player_revive": {
+    "id": 9116395089,
+    "name": "Magic Glows Soft Clusters Of Chiming Hits 4 (SFX)",
+    "duration": 2,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9114369623,
+        "name": "Fairy Dust 1 (SFX)",
+        "duration": 4,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 17208327798,
+        "name": "Roblox GUI - Aura",
+        "duration": 2,
+        "source": "roblox",
+        "creator": "Roblox"
+      }
+    ],
+    "notes": "PSE 'Magic Glow, soft cluster of chiming hits, shimmering' (~3 s) heal chime. Fairy dust chimes or Roblox GUI 'Aura' as alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "heartbeat_loop": {
+    "id": 6202853067,
+    "name": "Heartbeat (loop)",
+    "duration": 6,
+    "source": "community",
+    "creator": "Screaming_Monkeys (userId 44050748)",
+    "alternates": [
+      {
+        "id": 2867269913,
+        "name": "Heartbeat sound",
+        "duration": 6,
+        "source": "community",
+        "creator": "Nyaniix"
+      },
+      {
+        "id": 1836920299,
+        "name": "Heartbeat",
+        "duration": 10,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "COMMUNITY asset: no heartbeat exists in Roblox-owned or PSE audio. 'Heartbeat (loop)' (6 s, 2021, generic name, verified creator). Alt 2 is the APM library cue titled 'Heartbeat' (10 s) - licensed but may be musical; audition first."
+  },
+  "respawn": {
+    "id": 9116406610,
+    "name": "Magic Poofs Thumpy Wheezy Exhale 1 (SFX)",
+    "duration": 1,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9116406643,
+        "name": "Magic Poofs Thumpy Wheezy Exhale 2 (SFX)",
+        "duration": 1,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9116385087,
+        "name": "Magic Burst 5 (SFX)",
+        "duration": 2,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Magic Poof, thumpy, wheezy exhale' (1.7 s). (Avoided the 'Short Breathy Bursts' poofs - tagged 'farty'.) [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "hotel_ambience_loop": {
+    "id": 9112775414,
+    "name": "Eerie Ambience 2 (SFX)",
+    "duration": 64,
+    "source": "community",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9113203785,
+        "name": "Attic Wind Whistley Cold Hollow 1 (SFX)",
+        "duration": 94,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114493195,
+        "name": "Floor Board Creaks 2 (SFX)",
+        "duration": 23,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "PSE 'Eerie Ambience, slow rumbly presence, pipe interior, Loop' (64 s) = old-building room tone. Alts: 'Attic Wind ... hollow room, possible use: haunted house' (94 s), constant attic floorboard creaks (23 s) to layer. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
+  "clock_tick_loop": {
+    "id": 9043366741,
+    "name": "TICK TOCK 09 100BPM",
+    "duration": 38,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 1835342630,
+        "name": "Deadly Heist Clock Ticking",
+        "duration": 14,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9116463812,
+        "name": "Mantle Clock 1 (SFX)",
+        "duration": 37,
+        "source": "community",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "APM/Epic Score 'TICK TOCK 09 100BPM' - insistent clock ticking element (38 s). Alts: APM 'Deadly Heist Clock Ticking' (14 s), PSE antique mantle clock (37 s, includes chime strikes). [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "music_lobby": {
+    "id": 1840096894,
+    "name": "Hotel Lobby (a)",
+    "duration": 143,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 1842207993,
+        "name": "Riviera Bossa Nova",
+        "duration": 170,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9046234388,
+        "name": "Secret Beauty A",
+        "duration": 270,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1841998269,
+        "name": "Smooth Elevator Operator (a)",
+        "duration": 148,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "APM 'Hotel Lobby (a)': 'luxurious and totally relaxed chillout bed with soothing acoustic guitar, downtempo groove'. Alts: 'Riviera Bossa Nova' (light, medium bossa tempo), 'Secret Beauty A' (gentle relaxing lounge swing), 'Smooth Elevator Operator (a)' (elevator-music gag). Roblox-owned fallback: Roblox_UI_Loop_Calm_Music (15675069601, 95 s, style unverified). [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "music_explore": {
+    "id": 9043067401,
+    "name": "A Curious Case A",
+    "duration": 155,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 1837467266,
+        "name": "Sneaky Ghost",
+        "duration": 88,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9043066611,
+        "name": "Skeletons In The Closet A",
+        "duration": 155,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9043067384,
+        "name": "House Of Intrigue B",
+        "duration": 127,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "APM 'A Curious Case A': intriguing clarinet over subtle cha-cha with pizzicato - quirky heist mystery. Alts: 'Sneaky Ghost' (mysterious yet comedic, Halloween spooky), 'Skeletons In The Closet A' (quirky, darkly comic Halloween), 'House Of Intrigue B' (quizzical, stealthy). [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "music_escape": {
+    "id": 1836271798,
+    "name": "Spooky Chase",
+    "duration": 89,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 9042675817,
+        "name": "Chase Me",
+        "duration": 131,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9042777725,
+        "name": "Silly Chase",
+        "duration": 103,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1848090337,
+        "name": "Intense Chase",
+        "duration": 108,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "APM 'Spooky Chase' (89 s). Alts: 'Chase Me' (spooky organ, dramatic percussion - most intense), 'Silly Chase' (fast comedy chase for family movie - lightest), 'Intense Chase'. [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "music_results_win": {
+    "id": 1837762472,
+    "name": "Victory Dance (sting a)",
+    "duration": 11,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 1838221725,
+        "name": "Story Time - Comic - Happy",
+        "duration": 9,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1845466651,
+        "name": "Celebration Fanfare",
+        "duration": 11,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1838686024,
+        "name": "Winners Parade",
+        "duration": 159,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "APM 'Victory Dance (sting a)' (11 s jingle). Alts: 'Story Time - Comic - Happy' (9 s, pairs with the fail pick; asset typed SoundEffect), 'Celebration Fanfare' (11 s), 'Winners Parade' (159 s upbeat track for a looping results screen). [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "music_results_fail": {
+    "id": 1838221720,
+    "name": "Story Time - Comic - Sad",
+    "duration": 13,
+    "source": "community",
+    "creator": "APMOfficial (userId 7462718749)",
+    "alternates": [
+      {
+        "id": 1838221912,
+        "name": "Story Time - Quirky - Sad",
+        "duration": 14,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1844306643,
+        "name": "Game Over",
+        "duration": 16,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1838635121,
+        "name": "Sad End (Solo Piano)",
+        "duration": 153,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "APM 'Story Time - Comic - Sad' (13 s) - comedic, kid-friendly fail sting. Alts: 'Story Time - Quirky - Sad', 'Game Over' (16 s), 'Sad End (Solo Piano)' (153 s calm track). [Source note: Roblox licensed production-music partner library (APM Music), verified account; free to use in experiences.]"
+  },
+  "music_tutorial": {
+    "id": 130053244401794,
+    "name": "TutorialMusic_01",
+    "duration": 262,
+    "source": "roblox",
+    "creator": "Roblox (userId 1)",
+    "alternates": [
+      {
+        "id": 9043066413,
+        "name": "Under The Stairs A",
+        "duration": 144,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 9048586338,
+        "name": "Tutorial A",
+        "duration": 147,
+        "source": "community",
+        "creator": "APMOfficial"
+      },
+      {
+        "id": 1841928563,
+        "name": "Curious Mind (a)",
+        "duration": 126,
+        "source": "community",
+        "creator": "APMOfficial"
+      }
+    ],
+    "notes": "Roblox-owned 'TutorialMusic_01' (262 s). Alts (APM): 'Under The Stairs A' (curious, playful waltz), 'Tutorial A' (uplifting how-to theme), 'Curious Mind (a)'."
+  }
+}

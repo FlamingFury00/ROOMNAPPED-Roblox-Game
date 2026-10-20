@@ -1,0 +1,623 @@
+--!strict
+--[[
+	SkinDefs: cosmetic themes for rooms and suitcases. Skins never change room mechanics.
+
+	source:
+	  default - owned by everyone
+	  shop    - bought with credits earned in expeditions (never with Robux)
+	  mission - earned by choosing it as the reward target of a mission and extracting
+]]
+
+local Tables = require(script.Parent.Parent.Util.Tables)
+
+export type Palette = {
+	wall: Color3,
+	wallMaterial: Enum.Material,
+	floor: Color3,
+	floorMaterial: Enum.Material,
+	trim: Color3,
+	trimMaterial: Enum.Material,
+	accent: Color3,
+	accentMaterial: Enum.Material,
+	prop: Color3,
+	light: Color3,
+	lightBrightness: number,
+	style: string,
+}
+
+export type SkinDef = {
+	id: string,
+	kind: "room" | "suitcase",
+	room: string?,
+	nameKey: string,
+	source: "default" | "shop" | "mission",
+	price: number?,
+	missionId: string?,
+	order: number,
+	palette: Palette,
+}
+
+local M = Enum.Material
+
+local function rgb(r: number, g: number, b: number): Color3
+	return Color3.fromRGB(r, g, b)
+end
+
+local list: { SkinDef } = {
+	-- Freezer ------------------------------------------------------------------------------------------
+	{
+		id = "freezer_classic",
+		kind = "room",
+		room = "Freezer",
+		nameKey = "skin.freezer_classic",
+		source = "default",
+		order = 1,
+		palette = {
+			wall = rgb(178, 192, 204),
+			wallMaterial = M.Metal,
+			floor = rgb(120, 134, 148),
+			floorMaterial = M.DiamondPlate,
+			trim = rgb(70, 160, 230),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(214, 244, 255),
+			accentMaterial = M.Ice,
+			prop = rgb(230, 240, 250),
+			light = rgb(170, 220, 255),
+			lightBrightness = 1.6,
+			style = "classic",
+		},
+	},
+	{
+		id = "freezer_icecream",
+		kind = "room",
+		room = "Freezer",
+		nameKey = "skin.freezer_icecream",
+		source = "shop",
+		price = 150,
+		order = 2,
+		palette = {
+			wall = rgb(255, 196, 214),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(196, 255, 228),
+			floorMaterial = M.Marble,
+			trim = rgb(255, 245, 225),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(255, 150, 190),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(255, 230, 160),
+			light = rgb(255, 214, 230),
+			lightBrightness = 1.5,
+			style = "icecream",
+		},
+	},
+	{
+		id = "freezer_lodge",
+		kind = "room",
+		room = "Freezer",
+		nameKey = "skin.freezer_lodge",
+		source = "mission",
+		missionId = "M2",
+		order = 3,
+		palette = {
+			wall = rgb(146, 104, 72),
+			wallMaterial = M.WoodPlanks,
+			floor = rgb(240, 246, 255),
+			floorMaterial = M.Snow,
+			trim = rgb(176, 40, 46),
+			trimMaterial = M.Fabric,
+			accent = rgb(220, 240, 255),
+			accentMaterial = M.Glacier,
+			prop = rgb(110, 76, 50),
+			light = rgb(255, 214, 170),
+			lightBrightness = 1.4,
+			style = "lodge",
+		},
+	},
+	{
+		id = "freezer_aurora",
+		kind = "room",
+		room = "Freezer",
+		nameKey = "skin.freezer_aurora",
+		source = "shop",
+		price = 300,
+		order = 4,
+		palette = {
+			wall = rgb(26, 30, 64),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(40, 46, 90),
+			floorMaterial = M.Glass,
+			trim = rgb(90, 255, 190),
+			trimMaterial = M.Neon,
+			accent = rgb(190, 120, 255),
+			accentMaterial = M.Neon,
+			prop = rgb(160, 220, 255),
+			light = rgb(140, 255, 210),
+			lightBrightness = 1.8,
+			style = "aurora",
+		},
+	},
+
+	-- Fan ----------------------------------------------------------------------------------------------
+	{
+		id = "fan_industrial",
+		kind = "room",
+		room = "Fan",
+		nameKey = "skin.fan_industrial",
+		source = "default",
+		order = 1,
+		palette = {
+			wall = rgb(150, 150, 146),
+			wallMaterial = M.Concrete,
+			floor = rgb(96, 98, 104),
+			floorMaterial = M.DiamondPlate,
+			trim = rgb(246, 196, 40),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(40, 40, 44),
+			accentMaterial = M.Metal,
+			prop = rgb(200, 206, 214),
+			light = rgb(225, 240, 255),
+			lightBrightness = 1.4,
+			style = "industrial",
+		},
+	},
+	{
+		id = "fan_tropical",
+		kind = "room",
+		room = "Fan",
+		nameKey = "skin.fan_tropical",
+		source = "shop",
+		price = 150,
+		order = 2,
+		palette = {
+			wall = rgb(214, 182, 110),
+			wallMaterial = M.WoodPlanks,
+			floor = rgb(238, 214, 160),
+			floorMaterial = M.Sand,
+			trim = rgb(56, 170, 96),
+			trimMaterial = M.Grass,
+			accent = rgb(255, 120, 90),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(120, 86, 50),
+			light = rgb(255, 230, 170),
+			lightBrightness = 1.5,
+			style = "tropical",
+		},
+	},
+	{
+		id = "fan_retro",
+		kind = "room",
+		room = "Fan",
+		nameKey = "skin.fan_retro",
+		source = "mission",
+		missionId = "M3",
+		order = 3,
+		palette = {
+			wall = rgb(64, 208, 200),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(240, 240, 240),
+			floorMaterial = M.Marble,
+			trim = rgb(220, 224, 230),
+			trimMaterial = M.Foil,
+			accent = rgb(255, 80, 110),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(230, 234, 240),
+			light = rgb(255, 245, 230),
+			lightBrightness = 1.5,
+			style = "retro",
+		},
+	},
+	{
+		id = "fan_storm",
+		kind = "room",
+		room = "Fan",
+		nameKey = "skin.fan_storm",
+		source = "shop",
+		price = 300,
+		order = 4,
+		palette = {
+			wall = rgb(50, 56, 70),
+			wallMaterial = M.Slate,
+			floor = rgb(36, 40, 52),
+			floorMaterial = M.Slate,
+			trim = rgb(110, 190, 255),
+			trimMaterial = M.Neon,
+			accent = rgb(255, 255, 160),
+			accentMaterial = M.Neon,
+			prop = rgb(140, 150, 170),
+			light = rgb(150, 200, 255),
+			lightBrightness = 1.7,
+			style = "storm",
+		},
+	},
+
+	-- Laundry ------------------------------------------------------------------------------------------
+	{
+		id = "laundry_laundromat",
+		kind = "room",
+		room = "Laundry",
+		nameKey = "skin.laundry_laundromat",
+		source = "default",
+		order = 1,
+		palette = {
+			wall = rgb(236, 242, 248),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(120, 170, 230),
+			floorMaterial = M.Marble,
+			trim = rgb(60, 120, 230),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(255, 255, 255),
+			accentMaterial = M.Glass,
+			prop = rgb(245, 248, 252),
+			light = rgb(235, 245, 255),
+			lightBrightness = 1.5,
+			style = "laundromat",
+		},
+	},
+	{
+		id = "laundry_bubble",
+		kind = "room",
+		room = "Laundry",
+		nameKey = "skin.laundry_bubble",
+		source = "shop",
+		price = 150,
+		order = 2,
+		palette = {
+			wall = rgb(214, 190, 255),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(255, 214, 240),
+			floorMaterial = M.Marble,
+			trim = rgb(255, 120, 200),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(200, 240, 255),
+			accentMaterial = M.Glass,
+			prop = rgb(255, 245, 255),
+			light = rgb(255, 220, 250),
+			lightBrightness = 1.5,
+			style = "bubble",
+		},
+	},
+	{
+		id = "laundry_royal",
+		kind = "room",
+		room = "Laundry",
+		nameKey = "skin.laundry_royal",
+		source = "mission",
+		missionId = "M1",
+		order = 3,
+		palette = {
+			wall = rgb(92, 40, 120),
+			wallMaterial = M.Fabric,
+			floor = rgb(60, 26, 80),
+			floorMaterial = M.Marble,
+			trim = rgb(232, 186, 70),
+			trimMaterial = M.Foil,
+			accent = rgb(255, 240, 200),
+			accentMaterial = M.Glass,
+			prop = rgb(250, 236, 210),
+			light = rgb(255, 220, 160),
+			lightBrightness = 1.4,
+			style = "royal",
+		},
+	},
+	{
+		id = "laundry_seaside",
+		kind = "room",
+		room = "Laundry",
+		nameKey = "skin.laundry_seaside",
+		source = "shop",
+		price = 300,
+		order = 4,
+		palette = {
+			wall = rgb(28, 54, 110),
+			wallMaterial = M.WoodPlanks,
+			floor = rgb(236, 226, 200),
+			floorMaterial = M.WoodPlanks,
+			trim = rgb(250, 250, 250),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(220, 50, 60),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(250, 250, 250),
+			light = rgb(220, 236, 255),
+			lightBrightness = 1.5,
+			style = "seaside",
+		},
+	},
+
+	-- Greenhouse ---------------------------------------------------------------------------------------
+	{
+		id = "greenhouse_botanic",
+		kind = "room",
+		room = "Greenhouse",
+		nameKey = "skin.greenhouse_botanic",
+		source = "default",
+		order = 1,
+		palette = {
+			wall = rgb(206, 236, 220),
+			wallMaterial = M.Glass,
+			floor = rgb(130, 96, 64),
+			floorMaterial = M.WoodPlanks,
+			trim = rgb(255, 255, 255),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(86, 170, 70),
+			accentMaterial = M.Grass,
+			prop = rgb(170, 100, 70),
+			light = rgb(255, 246, 210),
+			lightBrightness = 1.6,
+			style = "botanic",
+		},
+	},
+	{
+		id = "greenhouse_mushroom",
+		kind = "room",
+		room = "Greenhouse",
+		nameKey = "skin.greenhouse_mushroom",
+		source = "shop",
+		price = 200,
+		order = 2,
+		palette = {
+			wall = rgb(46, 60, 44),
+			wallMaterial = M.Slate,
+			floor = rgb(70, 54, 40),
+			floorMaterial = M.Ground,
+			trim = rgb(190, 120, 255),
+			trimMaterial = M.Neon,
+			accent = rgb(110, 200, 90),
+			accentMaterial = M.LeafyGrass,
+			prop = rgb(230, 80, 80),
+			light = rgb(200, 160, 255),
+			lightBrightness = 1.4,
+			style = "mushroom",
+		},
+	},
+	{
+		id = "greenhouse_zen",
+		kind = "room",
+		room = "Greenhouse",
+		nameKey = "skin.greenhouse_zen",
+		source = "mission",
+		missionId = "M5",
+		order = 3,
+		palette = {
+			wall = rgb(236, 224, 200),
+			wallMaterial = M.Fabric,
+			floor = rgb(150, 150, 146),
+			floorMaterial = M.Slate,
+			trim = rgb(90, 60, 40),
+			trimMaterial = M.Wood,
+			accent = rgb(255, 170, 200),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(120, 170, 90),
+			light = rgb(255, 236, 220),
+			lightBrightness = 1.4,
+			style = "zen",
+		},
+	},
+
+	-- Magnet -------------------------------------------------------------------------------------------
+	{
+		id = "magnet_junkyard",
+		kind = "room",
+		room = "Magnet",
+		nameKey = "skin.magnet_junkyard",
+		source = "default",
+		order = 1,
+		palette = {
+			wall = rgb(120, 92, 74),
+			wallMaterial = M.CorrodedMetal,
+			floor = rgb(84, 80, 76),
+			floorMaterial = M.DiamondPlate,
+			trim = rgb(240, 130, 40),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(220, 50, 50),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(170, 176, 184),
+			light = rgb(255, 214, 180),
+			lightBrightness = 1.4,
+			style = "junkyard",
+		},
+	},
+	{
+		id = "magnet_lab",
+		kind = "room",
+		room = "Magnet",
+		nameKey = "skin.magnet_lab",
+		source = "shop",
+		price = 200,
+		order = 2,
+		palette = {
+			wall = rgb(240, 242, 246),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(200, 204, 212),
+			floorMaterial = M.Marble,
+			trim = rgb(60, 110, 230),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(230, 50, 60),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(200, 206, 214),
+			light = rgb(240, 248, 255),
+			lightBrightness = 1.6,
+			style = "lab",
+		},
+	},
+	{
+		id = "magnet_arcade",
+		kind = "room",
+		room = "Magnet",
+		nameKey = "skin.magnet_arcade",
+		source = "mission",
+		missionId = "M6",
+		order = 3,
+		palette = {
+			wall = rgb(30, 20, 50),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(20, 16, 36),
+			floorMaterial = M.Glass,
+			trim = rgb(255, 60, 200),
+			trimMaterial = M.Neon,
+			accent = rgb(60, 220, 255),
+			accentMaterial = M.Neon,
+			prop = rgb(255, 230, 80),
+			light = rgb(255, 120, 230),
+			lightBrightness = 1.7,
+			style = "arcade",
+		},
+	},
+
+	-- Suitcases ----------------------------------------------------------------------------------------
+	{
+		id = "case_leather",
+		kind = "suitcase",
+		nameKey = "skin.case_leather",
+		source = "default",
+		order = 1,
+		palette = {
+			wall = rgb(132, 82, 48),
+			wallMaterial = M.Leather,
+			floor = rgb(96, 58, 34),
+			floorMaterial = M.Leather,
+			trim = rgb(214, 170, 80),
+			trimMaterial = M.Metal,
+			accent = rgb(240, 220, 170),
+			accentMaterial = M.Fabric,
+			prop = rgb(60, 40, 26),
+			light = rgb(255, 220, 150),
+			lightBrightness = 1,
+			style = "leather",
+		},
+	},
+	{
+		id = "case_sticker",
+		kind = "suitcase",
+		nameKey = "skin.case_sticker",
+		source = "shop",
+		price = 100,
+		order = 2,
+		palette = {
+			wall = rgb(60, 130, 230),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(40, 90, 180),
+			floorMaterial = M.SmoothPlastic,
+			trim = rgb(240, 240, 240),
+			trimMaterial = M.Metal,
+			accent = rgb(255, 200, 40),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(255, 90, 120),
+			light = rgb(200, 230, 255),
+			lightBrightness = 1,
+			style = "sticker",
+		},
+	},
+	{
+		id = "case_polka",
+		kind = "suitcase",
+		nameKey = "skin.case_polka",
+		source = "shop",
+		price = 120,
+		order = 3,
+		palette = {
+			wall = rgb(220, 50, 60),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(170, 30, 40),
+			floorMaterial = M.SmoothPlastic,
+			trim = rgb(250, 250, 250),
+			trimMaterial = M.SmoothPlastic,
+			accent = rgb(255, 255, 255),
+			accentMaterial = M.SmoothPlastic,
+			prop = rgb(255, 255, 255),
+			light = rgb(255, 210, 210),
+			lightBrightness = 1,
+			style = "polka",
+		},
+	},
+	{
+		id = "case_gold",
+		kind = "suitcase",
+		nameKey = "skin.case_gold",
+		source = "mission",
+		missionId = "M4",
+		order = 4,
+		palette = {
+			wall = rgb(232, 186, 60),
+			wallMaterial = M.Foil,
+			floor = rgb(200, 150, 40),
+			floorMaterial = M.Foil,
+			trim = rgb(255, 245, 210),
+			trimMaterial = M.Metal,
+			accent = rgb(255, 255, 255),
+			accentMaterial = M.Neon,
+			prop = rgb(150, 100, 30),
+			light = rgb(255, 230, 140),
+			lightBrightness = 1.2,
+			style = "gold",
+		},
+	},
+	{
+		id = "case_midnight",
+		kind = "suitcase",
+		nameKey = "skin.case_midnight",
+		source = "shop",
+		price = 250,
+		order = 5,
+		palette = {
+			wall = rgb(24, 26, 36),
+			wallMaterial = M.SmoothPlastic,
+			floor = rgb(16, 18, 26),
+			floorMaterial = M.SmoothPlastic,
+			trim = rgb(80, 200, 255),
+			trimMaterial = M.Neon,
+			accent = rgb(180, 100, 255),
+			accentMaterial = M.Neon,
+			prop = rgb(60, 64, 80),
+			light = rgb(120, 200, 255),
+			lightBrightness = 1.2,
+			style = "midnight",
+		},
+	},
+}
+
+local byId: { [string]: SkinDef } = {}
+local byRoom: { [string]: { SkinDef } } = {}
+local defaultForRoom: { [string]: string } = {}
+local suitcases: { SkinDef } = {}
+
+for _, skin in list do
+	assert(byId[skin.id] == nil, "duplicate skin id " .. skin.id)
+	byId[skin.id] = skin
+	if skin.kind == "room" then
+		local room = skin.room :: string
+		byRoom[room] = byRoom[room] or {}
+		table.insert(byRoom[room], skin)
+		if skin.source == "default" then
+			defaultForRoom[room] = skin.id
+		end
+	else
+		table.insert(suitcases, skin)
+	end
+end
+for _, skins in byRoom do
+	table.sort(skins, function(a, b)
+		return a.order < b.order
+	end)
+end
+table.sort(suitcases, function(a, b)
+	return a.order < b.order
+end)
+
+local Skins = {
+	list = list,
+	byId = byId,
+	byRoom = byRoom,
+	suitcases = suitcases,
+	defaultForRoom = defaultForRoom,
+	defaultSuitcase = "case_leather",
+}
+
+function Skins.get(id: string): SkinDef?
+	return byId[id]
+end
+
+function Skins.defaultFor(roomId: string): string
+	return defaultForRoom[roomId]
+end
+
+return Tables.deepFreeze(Skins)

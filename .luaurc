@@ -1,0 +1,12 @@
+{
+	"languageMode": "strict",
+	"lint": {
+		"*": true,
+		"LocalShadow": false,
+		"SameLineStatement": false,
+		"FunctionUnused": true,
+		"ImportUnused": true
+	},
+	"lintErrors": false,
+	"typeErrors": true
+}

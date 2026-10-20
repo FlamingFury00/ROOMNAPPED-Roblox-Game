@@ -1,0 +1,105 @@
+{
+  "name": "ROOMNAPPED",
+  "emitLegacyScripts": false,
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedFirst": {
+      "$path": "src/ReplicatedFirst"
+    },
+
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+
+    "StarterPlayer": {
+      "$properties": {
+        "CharacterWalkSpeed": 16,
+        "CharacterUseJumpPower": false,
+        "CharacterJumpHeight": 7.2,
+        "CharacterMaxSlopeAngle": 60,
+        "CameraMaxZoomDistance": 28,
+        "CameraMinZoomDistance": 4,
+        "CameraMode": "Classic",
+        "DevCameraOcclusionMode": "Zoom",
+        "EnableMouseLockOption": true,
+        "AutoJumpEnabled": false,
+        "LoadCharacterAppearance": true,
+        "CharacterBreakJointsOnDeath": false,
+        "HealthDisplayDistance": 0,
+        "NameDisplayDistance": 60,
+        "UserEmotesEnabled": true
+      },
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+
+    "StarterGui": {
+      "$properties": {
+        "ResetPlayerGuiOnSpawn": false,
+        "ShowDevelopmentGui": true
+      }
+    },
+
+    "Players": {
+      "$properties": {
+        "CharacterAutoLoads": true,
+        "RespawnTime": 2
+      }
+    },
+
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false,
+        "Gravity": 196.2,
+        "FallenPartsDestroyHeight": -2000,
+        "SignalBehavior": "Deferred"
+      }
+    },
+
+    "Lighting": {
+      "$properties": {
+        "LightingStyle": "Realistic",
+        "PrioritizeLightingQuality": true,
+        "Technology": "Future",
+        "Ambient": [0.09, 0.075, 0.1],
+        "OutdoorAmbient": [0.12, 0.1, 0.14],
+        "Brightness": 0.6,
+        "ClockTime": 0.5,
+        "GlobalShadows": true,
+        "EnvironmentDiffuseScale": 0.35,
+        "EnvironmentSpecularScale": 0.6,
+        "ExposureCompensation": 0.25,
+        "ShadowSoftness": 0.35,
+        "FogColor": [0.05, 0.04, 0.06],
+        "FogStart": 60,
+        "FogEnd": 420
+      }
+    },
+
+    "SoundService": {
+      "$properties": {
+        "AmbientReverb": "Hallway",
+        "RespectFilteringEnabled": true,
+        "RolloffScale": 1
+      }
+    },
+
+    "TextChatService": {
+      "$properties": {
+        "ChatVersion": "TextChatService"
+      }
+    }
+  }
+}

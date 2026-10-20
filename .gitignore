@@ -1,0 +1,10 @@
+# Build outputs (the release place file lives in release/)
+build/
+sourcemap.json
+/roblox.yml
+*.rbxl.lock
+*.rbxlx.lock
+.DS_Store
+Thumbs.db
+tools/preview/out/
+__pycache__/

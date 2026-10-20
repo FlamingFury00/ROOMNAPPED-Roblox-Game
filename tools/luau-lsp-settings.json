@@ -1,0 +1,5 @@
+{
+	"luau-lsp.require.mode": "relativeToFile",
+	"luau-lsp.platform.type": "roblox",
+	"luau-lsp.types.roblox": true
+}
