@@ -223,6 +223,9 @@ local catalog: { [string]: string } = {
 	["hud.spectate.prev"] = "Prev",
 	["hud.spectate.next"] = "Next",
 	["hud.keys"] = "{count}/{total}",
+	["banner.captured"] = "ROOM STOLEN!",
+	["banner.capturedSub"] = "The Caretaker woke up - run for the elevator!",
+	["banner.extracted"] = "EXTRACTED!",
 
 	-- Context actions (U06) -------------------------------------------------------------------------------
 	["action.deploy"] = "Unfold {room}",

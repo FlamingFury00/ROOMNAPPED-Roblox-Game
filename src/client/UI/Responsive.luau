@@ -73,6 +73,12 @@ function Responsive.canvasSize(gui: ScreenGui): Vector2
 	return size / compute(size)
 end
 
+-- Convert a viewport point (Camera:WorldToViewportPoint) to offset pixels inside a responsive root of `gui`.
+function Responsive.toCanvas(gui: ScreenGui, viewportPoint: Vector2): Vector2
+	local scale = Responsive.scaleOf(gui)
+	return (viewportPoint - gui.AbsolutePosition) / math.max(scale, 1e-3)
+end
+
 function Responsive.setUserScale(value: number)
 	userScale = math.clamp(value, 0.85, 1.3)
 	for _, entry in roots do
