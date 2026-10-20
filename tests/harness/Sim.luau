@@ -244,8 +244,8 @@ local function installShims()
 	roblox.implementMethod("Player", "Kick", function(inst, message)
 		current.kicked[inst] = message or true
 	end)
-	roblox.implementMethod("Player", "GetRankInGroupAsync", function()
-		return 0
+	roblox.implementMethod("GroupService", "GetGroupsAsync", function()
+		return {}
 	end)
 	roblox.implementMethod("Player", "LoadCharacterAsync", function(inst)
 		current:spawnCharacter(inst)

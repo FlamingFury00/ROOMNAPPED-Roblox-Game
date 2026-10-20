@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
+local CartTimeline = require(Shared.Logic.CartTimeline)
 local MathUtil = require(Shared.Util.MathUtil)
 local Engine = require(Shared.Util.Engine)
 local Net = require(Shared.Net.Net)
@@ -76,32 +77,9 @@ end
 
 -- Cart timeline ----------------------------------------------------------------------------------------
 
--- Lateral offset of a running cart for a cycle phase (triangle wave in [-range, range]).
-function HazardService.cartX(phase: number, range: number): number
-	local f = phase - math.floor(phase)
-	if f < 0.5 then
-		return range * (-1 + 4 * f)
-	end
-	return range * (3 - 4 * f)
-end
-
-local function cartPhaseFor(x: number, range: number, movingPositive: boolean): number
-	local u = math.clamp(x / range, -1, 1)
-	if movingPositive then
-		return (u + 1) / 4
-	end
-	return (3 - u) / 4
-end
-
--- Current lateral offset of a cart (same maths as the client renderer).
+-- Current lateral offset of a cart (shared maths with the client renderer: Logic/CartTimeline).
 function HazardService.cartOffset(state: CartState, now: number): number
-	local range = state.runtime.range
-	if state.pinned ~= 0 then
-		local target = state.pinned * range
-		local speed = state.runtime.speed * state.coldMul
-		return MathUtil.approach(state.x0, target, speed * math.max(0, now - state.t0))
-	end
-	return HazardService.cartX(state.phase0 + state.rate * (now - state.t0), range)
+	return CartTimeline.offset(state :: any, state.runtime.range, state.runtime.speed, now)
 end
 
 local function publishCart(state: CartState)
@@ -150,7 +128,7 @@ local function updateCartModifiers(run: Run, state: CartState)
 	state.t0 = now
 	state.x0 = x
 	state.rate = cart.speed * coldMul / (4 * cart.range)
-	state.phase0 = cartPhaseFor(x, cart.range, wasMovingPositive)
+	state.phase0 = CartTimeline.phaseFor(x, cart.range, wasMovingPositive)
 	publishCart(state)
 	if pinned ~= 0 then
 		Registry.get("Effects").combo(run, "cart_pin")

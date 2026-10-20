@@ -17,6 +17,7 @@
 	  resetprofile                    wipe your own profile (Studio memory store only)
 ]]
 
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -35,6 +36,23 @@ local DebugService = {}
 
 local adminCache: { [Player]: boolean } = {}
 
+-- Rank of a player in a group (0 when not a member or the lookup fails). GroupService:GetGroupsAsync is the
+-- non-deprecated way to read group ranks; one call covers every group the player belongs to.
+local function rankIn(player: Player, groupId: number): number
+	local ok, groups = pcall(function()
+		return GroupService:GetGroupsAsync(player.UserId)
+	end)
+	if not ok or type(groups) ~= "table" then
+		return 0
+	end
+	for _, info in groups do
+		if type(info) == "table" and info.Id == groupId and type(info.Rank) == "number" then
+			return info.Rank
+		end
+	end
+	return 0
+end
+
 function DebugService.isAdmin(player: Player): boolean
 	local cached = adminCache[player]
 	if cached ~= nil then
@@ -48,20 +66,14 @@ function DebugService.isAdmin(player: Player): boolean
 		if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
 			admin = true
 		elseif game.CreatorType == Enum.CreatorType.Group then
-			local ok, rank = pcall(function()
-				return player:GetRankInGroupAsync(game.CreatorId)
-			end)
-			admin = ok and rank >= 254
+			admin = rankIn(player, game.CreatorId) >= 254
 		end
 		if not admin and table.find(Flags.adminUserIds(), player.UserId) then
 			admin = true
 		end
 		local group = Flags.adminGroup()
 		if not admin and group then
-			local ok, rank = pcall(function()
-				return player:GetRankInGroupAsync(group.id)
-			end)
-			admin = ok and rank >= group.minRank
+			admin = rankIn(player, group.id) >= group.minRank
 		end
 	end
 	adminCache[player] = admin

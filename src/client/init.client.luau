@@ -1,0 +1,126 @@
+--!strict
+--[[
+	ROOMNAPPED client bootstrap.
+
+	Core services start first in a fixed order (state mirror, settings, audio, input, UI root). Every other
+	ModuleScript under Controllers/, UI/Hud/ and UI/Screens/ is discovered automatically and started in
+	ascending `priority` (default 100). A failing module is logged and skipped so one bug can never take the
+	whole interface down.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+
+local Shared = ReplicatedStorage.Shared
+local Net = require(Shared.Net.Net)
+local Log = require(Shared.Util.Log)
+
+local log = Log.new("Client")
+
+Net.initClient()
+
+local Core = script.Core
+local Controllers = script.Controllers
+local UI = script.UI
+
+local ClientState = require(Core.ClientState)
+local Device = require(Core.Device)
+local RunInfo = require(Core.RunInfo)
+local SettingsController = require(Controllers.SettingsController)
+local AudioController = require(Controllers.AudioController)
+local InputController = require(Controllers.InputController)
+local UIRoot = require(UI.UIRoot)
+local Toasts = require(UI.Toasts)
+
+local function safeStart(name: string, fn: () -> ())
+	local ok: boolean, err: any = xpcall(fn :: any, function(message: any): string
+		return debug.traceback(tostring(message), 2)
+	end)
+	if not ok then
+		log:Warn("failed to start", name, err)
+	end
+end
+
+-- Core, in dependency order.
+ClientState.init()
+safeStart("RunInfo", RunInfo.start)
+safeStart("Settings", SettingsController.start)
+safeStart("Audio", AudioController.start)
+safeStart("Input", InputController.start)
+UIRoot.setBlockHook(InputController.setBlocked)
+safeStart("Toasts", Toasts.start)
+
+-- Core GUI: hearts replace the health bar; there are no tools; reset means "unstuck me".
+task.spawn(function()
+	local resetEvent = Instance.new("BindableEvent")
+	resetEvent.Event:Connect(function()
+		Net.send("RequestUnstuck")
+	end)
+	for _ = 1, 40 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+			StarterGui:SetCore("ResetButtonCallback", resetEvent)
+		end)
+		if ok then
+			break
+		end
+		task.wait(0.25)
+	end
+end)
+
+-- Discovered modules ----------------------------------------------------------------------------------------
+
+local CORE_NAMES: { [string]: boolean } = {
+	SettingsController = true,
+	AudioController = true,
+	InputController = true,
+}
+
+type Startable = { start: (() -> ())?, priority: number? }
+
+local discovered: { { name: string, module: Startable, priority: number } } = {}
+
+local function collect(folder: Instance?)
+	if not folder then
+		return
+	end
+	for _, child in folder:GetChildren() do
+		if child:IsA("ModuleScript") and not CORE_NAMES[child.Name] then
+			local ok, result = pcall(require, child)
+			if ok and type(result) == "table" then
+				local module = result :: Startable
+				if type(module.start) == "function" then
+					table.insert(discovered, {
+						name = child.Name,
+						module = module,
+						priority = if type(module.priority) == "number" then module.priority :: number else 100,
+					})
+				end
+			elseif not ok then
+				log:Warn("failed to load", child:GetFullName(), result)
+			end
+		end
+	end
+end
+
+collect(Controllers)
+collect(UI:FindFirstChild("Hud"))
+collect(UI:FindFirstChild("Screens"))
+
+table.sort(discovered, function(a, b)
+	if a.priority == b.priority then
+		return a.name < b.name
+	end
+	return a.priority < b.priority
+end)
+
+for _, item in discovered do
+	safeStart(item.name, item.module.start :: () -> ())
+end
+
+-- Tell the server which device family we are on (telemetry, onboarding hints).
+Net.send("ClientReady", Device.kind(), string.sub(Players.LocalPlayer.LocaleId, 1, 12))
+
+log:Debug("client started with", #discovered, "modules")
