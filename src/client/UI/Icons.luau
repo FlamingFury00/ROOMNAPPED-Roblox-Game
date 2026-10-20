@@ -51,11 +51,12 @@ local function ring(parent: Instance, x: number, y: number, d: number, color: Co
 	stroke.Color = color
 	stroke.Thickness = thickness
 	stroke.Parent = frame
-	-- Thickness is in pixels; scale it with the icon size.
+	-- Thickness is in pixels; scale it with the icon size once the icon is laid out (an unparented frame
+	-- has no size yet, so the first real value arrives through this signal).
+	stroke.Thickness = 1
 	frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		stroke.Thickness = math.max(1, frame.AbsoluteSize.X * thickness / 10)
 	end)
-	stroke.Thickness = math.max(1, frame.AbsoluteSize.X * thickness / 10)
 	return frame
 end
 
@@ -321,6 +322,138 @@ builders.hand = function(f, c)
 	shape(f, 0.18, 0.56, 0.11, 0.3, c, -35, 1)
 end
 
+-- Isosceles right triangle: half of a 45-degree square, clipped by an axis-aligned frame (rotated children
+-- are clipped correctly; only a rotated clipping frame would not clip). (bx, by) is the middle of the flat
+-- side, `h` the distance from it to the tip (the flat side is 2h long), `dir` the way the tip points.
+local function triangle(parent: Instance, bx: number, by: number, h: number, color: Color3, dir: string?): Frame
+	local direction = dir or "right"
+	local clip = Instance.new("Frame")
+	clip.Name = "TriangleClip"
+	clip.BackgroundTransparency = 1
+	clip.ClipsDescendants = true
+	local square = Instance.new("Frame")
+	square.Name = "Shape"
+	square.AnchorPoint = Vector2.new(0.5, 0.5)
+	square.BackgroundColor3 = color
+	square.BorderSizePixel = 0
+	square.Rotation = 45
+	local side = math.sqrt(2)
+	if direction == "right" or direction == "left" then
+		clip.Size = UDim2.fromScale(h, 2 * h)
+		clip.Position = UDim2.fromScale(if direction == "right" then bx else bx - h, by - h)
+		square.Size = UDim2.fromScale(side, side / 2)
+		square.Position = UDim2.fromScale(if direction == "right" then 0 else 1, 0.5)
+	else
+		clip.Size = UDim2.fromScale(2 * h, h)
+		clip.Position = UDim2.fromScale(bx - h, if direction == "up" then by - h else by)
+		square.Size = UDim2.fromScale(side / 2, side)
+		square.Position = UDim2.fromScale(0.5, if direction == "up" then 1 else 0)
+	end
+	square.Parent = clip
+	clip.Parent = parent
+	return clip
+end
+
+builders.play = function(f, c)
+	triangle(f, 0.32, 0.5, 0.4, c, "right")
+end
+
+builders.question = function(f, c, a)
+	circle(f, 0.5, 0.5, 0.92, c)
+	glyph(f, "?", a, Theme.Fonts.heading, 0.66)
+end
+
+builders.speaker = function(f, c)
+	shape(f, 0.24, 0.5, 0.18, 0.34, c, 0, 0.15)
+	triangle(f, 0.62, 0.5, 0.32, c, "left")
+	shape(f, 0.74, 0.5, 0.07, 0.3, c, 0, 1)
+	shape(f, 0.87, 0.5, 0.07, 0.5, c, 0, 1)
+end
+
+builders.sparkle = function(f, c)
+	shape(f, 0.5, 0.5, 0.2, 0.92, c, 0, 1)
+	shape(f, 0.5, 0.5, 0.92, 0.2, c, 0, 1)
+	shape(f, 0.5, 0.5, 0.34, 0.34, c, 45, 0.15)
+	circle(f, 0.8, 0.2, 0.16, c)
+end
+
+builders.target = function(f, c, a)
+	circle(f, 0.5, 0.5, 0.92, c)
+	circle(f, 0.5, 0.5, 0.66, a)
+	circle(f, 0.5, 0.5, 0.42, c)
+	circle(f, 0.5, 0.5, 0.18, a)
+end
+
+builders.board = function(f, c, a)
+	shape(f, 0.5, 0.5, 0.92, 0.76, c, 0, 0.12)
+	shape(f, 0.32, 0.4, 0.26, 0.22, a, -6, 0.1)
+	shape(f, 0.66, 0.38, 0.24, 0.2, a, 5, 0.1)
+	shape(f, 0.48, 0.68, 0.34, 0.18, a, 3, 0.1)
+	circle(f, 0.32, 0.31, 0.08, c)
+	circle(f, 0.66, 0.3, 0.08, c)
+end
+
+builders.controller = function(f, c, a)
+	shape(f, 0.5, 0.5, 0.86, 0.46, c, 0, 0.45)
+	shape(f, 0.24, 0.66, 0.24, 0.3, c, 20, 1)
+	shape(f, 0.76, 0.66, 0.24, 0.3, c, -20, 1)
+	shape(f, 0.3, 0.48, 0.18, 0.06, a, 0, 0.2)
+	shape(f, 0.3, 0.48, 0.06, 0.18, a, 0, 0.2)
+	circle(f, 0.68, 0.43, 0.08, a)
+	circle(f, 0.76, 0.52, 0.08, a)
+end
+
+builders.keyboard = function(f, c, a)
+	shape(f, 0.5, 0.52, 0.94, 0.56, c, 0, 0.12)
+	for row = 0, 1 do
+		for col = 0, 4 do
+			shape(f, 0.18 + col * 0.16, 0.38 + row * 0.15, 0.1, 0.09, a, 0, 0.2)
+		end
+	end
+	shape(f, 0.5, 0.7, 0.5, 0.08, a, 0, 0.3)
+end
+
+builders.crate = function(f, c, a)
+	shape(f, 0.5, 0.5, 0.84, 0.84, c, 0, 0.08)
+	shape(f, 0.5, 0.5, 0.66, 0.66, a, 0, 0.04)
+	shape(f, 0.5, 0.5, 0.12, 0.9, c, 45, 0)
+	shape(f, 0.5, 0.5, 0.12, 0.9, c, -45, 0)
+end
+
+builders.arrowDown = function(f, c)
+	shape(f, 0.5, 0.38, 0.2, 0.56, c, 0, 0.3)
+	shape(f, 0.37, 0.64, 0.16, 0.46, c, -45, 1)
+	shape(f, 0.63, 0.64, 0.16, 0.46, c, 45, 1)
+end
+
+builders.flag = function(f, c, a)
+	shape(f, 0.26, 0.5, 0.08, 0.86, c, 0, 1)
+	shape(f, 0.56, 0.32, 0.56, 0.36, c, 0, 0.1)
+	shape(f, 0.56, 0.32, 0.18, 0.12, a, 0, 0.3)
+end
+
+builders.users = function(f, c)
+	circle(f, 0.34, 0.32, 0.3, c)
+	shape(f, 0.34, 0.72, 0.5, 0.36, c, 0, 0.5)
+	circle(f, 0.68, 0.36, 0.26, lighter(c, 0.25))
+	shape(f, 0.7, 0.74, 0.44, 0.32, lighter(c, 0.25), 0, 0.5)
+end
+
+builders.palette = function(f, c, a)
+	circle(f, 0.5, 0.5, 0.9, c)
+	circle(f, 0.62, 0.66, 0.2, a)
+	circle(f, 0.3, 0.4, 0.14, Color3.fromRGB(255, 90, 110))
+	circle(f, 0.48, 0.26, 0.14, Color3.fromRGB(255, 210, 70))
+	circle(f, 0.7, 0.34, 0.14, Color3.fromRGB(90, 200, 255))
+end
+
+builders.elevator = function(f, c, a)
+	shape(f, 0.5, 0.54, 0.82, 0.86, c, 0, 0.08)
+	shape(f, 0.33, 0.58, 0.28, 0.66, a, 0, 0.04)
+	shape(f, 0.67, 0.58, 0.28, 0.66, a, 0, 0.04)
+	triangle(f, 0.5, 0.2, 0.07, a, "up")
+end
+
 -- Room id -> icon name.
 Icons.roomIcon = {
 	Freezer = "snowflake",
@@ -328,6 +461,16 @@ Icons.roomIcon = {
 	Laundry = "drop",
 	Greenhouse = "leaf",
 	Magnet = "magnet",
+}
+
+-- Mission hazard id -> icon name.
+Icons.hazardIcon = {
+	flood = "drop",
+	fire = "flame",
+	gap = "arrowDown",
+	carts = "suitcase",
+	electric = "bolt",
+	crates = "crate",
 }
 
 function Icons.has(name: string): boolean

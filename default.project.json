@@ -1,6 +1,6 @@
 {
   "name": "ROOMNAPPED",
-  "emitLegacyScripts": false,
+  "emitLegacyScripts": true,
   "tree": {
     "$className": "DataModel",
 
