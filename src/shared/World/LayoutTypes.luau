@@ -52,43 +52,41 @@ export type ModuleDef = {
 	note: string?,
 }
 
--- Authored solutions (documentation + the solvability spec in tests/specs/layouts.spec.luau). A solution is
--- how one squad (by default a solo player) crosses every obstacle on the way out and back.
+-- Authored solutions: scripted solo playthroughs (documentation + the solvability spec in
+-- tests/specs/layouts.spec.luau, which replays them step by step against the real effect model, wind lanes,
+-- crate rails, plates, gates and the route's reachability).
 export type CrossingMethod =
 	"ice" -- a Freezer froze the flooded basin / pool
 	| "ledge" -- slow safe ledge along a basin or gap
 	| "beam" -- slow safe beam across a gap
 	| "walkway" -- heat-shielded walkway past a fire
-	| "launch" -- ice + wind launch over a gap (out only)
-	| "crate" -- a pushed / pulled crate became stepping stones in the gap slot
+	| "launch" -- ice + wind launch over a gap (outward only)
+	| "crate" -- a pushed / pulled crate sits in the gap slot as stepping stones
 	| "vine" -- a grown vine bridge
 	| "douse" -- water put the fire out
-	| "power" -- the zone is not electrified (lever cut the power, or it froze)
+	| "power" -- the zone is not electrified (switch off, or frozen)
 	| "pin" -- a Fan blowing across the track pins the cart at the far side
 	| "slow" -- cold slows the cart right down
 	| "timing" -- dodge the running cart
-	| "walk" -- nothing to solve (e.g. unpowered shallow water)
 
-export type Crossing = {
-	zone: string, -- obstacle id (Basin / Gap / Fire / Puddle / Carts module id)
-	by: CrossingMethod,
-	rooms: { [string]: string }?, -- socketId -> "Room" or "Room:Dir" active while crossing
-	levers: { string }?, -- levers pulled (an odd number of times) while crossing
-	way: ("out" | "back")?, -- only valid in one direction (default: both)
-}
-
-export type KeyPlan = {
-	id: string,
-	rooms: { [string]: string }?, -- rooms active when the key is collected (alcove gates)
-	levers: { string }?,
+export type SolutionStep = {
+	deploy: string?, -- socket id (with `room`, and `dir` for directional rooms)
+	room: string?,
+	dir: string?,
+	recall: string?, -- room id to fold back (recall works from anywhere)
+	pull: string?, -- lever id
+	cross: string?, -- obstacle id (Basin / Gap / Fire / powered Puddle / Carts module id)
+	by: CrossingMethod?,
+	capture: boolean?, -- steal the target room (must be standing at the target)
+	escape: boolean?, -- reach the elevator with the suitcase
 }
 
 export type Solution = {
 	name: string,
-	loadout: { string }, -- rooms the squad brings (a solo player: at most two)
-	crossings: { Crossing },
-	keys: { KeyPlan }?,
-	combos: { string }?, -- combos this solution performs (checked against the crossings)
+	loadout: { string }, -- the solo player's two equipped rooms
+	steps: { SolutionStep },
+	combos: { string }?, -- combos the playthrough performs (verified)
+	keys: { string }?, -- keys the playthrough collects (verified)
 }
 
 export type LayoutDef = {
