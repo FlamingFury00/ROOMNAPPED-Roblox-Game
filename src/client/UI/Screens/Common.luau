@@ -204,9 +204,11 @@ function Common.confirmFrame(
 	yesText: string,
 	noText: string,
 	onYes: () -> (),
-	onNo: () -> ()
+	onNo: () -> (),
+	yesVariant: Components.ButtonVariant?,
+	icon: string?
 ): (Frame, ButtonHandle, ButtonHandle)
-	local window = Common.window(name, title, "alert", Vector2.new(620, 330), false)
+	local window = Common.window(name, title, icon or "alert", Vector2.new(620, 330), false)
 	Components.label({
 		text = body,
 		size = UDim2.new(1, 0, 0, 120),
@@ -238,7 +240,7 @@ function Common.confirmFrame(
 	})
 	local yes = Components.button({
 		text = yesText,
-		variant = "danger",
+		variant = yesVariant or "danger",
 		size = UDim2.fromOffset(230, 78),
 		layoutOrder = 2,
 		onClick = onYes,
