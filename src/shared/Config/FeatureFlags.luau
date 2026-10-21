@@ -3,8 +3,9 @@
 	FeatureFlags: release & rollback switches (S32, S35).
 
 	Defaults live here; a live server additionally reads overrides from the "RoomnappedConfig" DataStore
-	(key "flags/<environment>") at startup, so a bad room or mission can be switched off without a
-	republish and without touching player profiles (disabled content stays owned, it is just not offered).
+	(key "flags/<environment>") at startup and every five minutes, so a bad room or mission can be switched
+	off without a republish and without touching player profiles (disabled content stays owned, it is just
+	not offered).
 
 	Environments are chosen by PlaceId: list your test place id(s) in TestPlaceIds. Studio is always "studio".
 ]]

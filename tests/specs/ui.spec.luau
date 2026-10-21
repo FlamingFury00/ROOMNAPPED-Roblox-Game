@@ -407,6 +407,58 @@ return function(ctx)
 			assertClean(client)
 		end)
 
+		it("shows content switched off live as resting and never offers it (S32)", function()
+			local client = boot()
+			local UIRoot = client:module("UI.UIRoot")
+			local MissionBoard = client:module("UI.Screens.MissionBoard")
+			client:patch("global", { "flags" }, {
+				environment = "studio",
+				disabledRooms = { Laundry = true },
+				disabledMissions = { M2 = true },
+				features = { shop = false },
+			})
+			task.wait(0.05)
+			-- Mission board: M2 is closed for maintenance and cannot be chosen.
+			UIRoot.open("MissionBoard")
+			MissionBoard.focus("M2")
+			expect(textOf(client, "FooterText")).toBe("Closed for maintenance")
+			client:press(client:find("Choose"))
+			expect(#client:sentNamed("SelectMission")).toBe(0)
+			UIRoot.close("MissionBoard")
+			-- Collection: Laundry is still owned but resting; its equip buttons do nothing.
+			UIRoot.open("Collection", "Laundry")
+			local function hasText(root, text: string): boolean
+				for _, d in root:GetDescendants() do
+					if d.ClassName == "TextLabel" and d.Text == text then
+						return true
+					end
+				end
+				return false
+			end
+			local collection = client:find("Collection")
+			expect(hasText(collection, "That room is resting for maintenance")).toBe(true)
+			-- (The preview's room model shares the name; the card is the button.)
+			local card = nil
+			for _, candidate in client:findAll("Room_Laundry") do
+				if candidate.ClassName == "TextButton" then
+					card = candidate
+				end
+			end
+			expect(card).toBeTruthy()
+			expect(hasText(card, "Resting")).toBe(true)
+			for _, d in client:find("Actions"):GetChildren() do
+				if d.ClassName == "TextButton" then
+					client:press(d)
+				end
+			end
+			expect(#client:sentNamed("SetLoadout")).toBe(0)
+			-- Back on: the room can be equipped again.
+			client:patch("global", { "flags" }, { environment = "studio", disabledRooms = {}, disabledMissions = {} })
+			task.wait(0.05)
+			expect(hasText(collection, "That room is resting for maintenance")).toBe(false)
+			assertClean(client)
+		end)
+
 		it("hides lobby-only interface during an expedition", function()
 			local client = boot()
 			client:patch("global", { "roster" }, {

@@ -61,6 +61,7 @@ local catalog: { [string]: string } = {
 	["room.unlock.mission"] = "Steal it in: {mission}",
 	["room.locked"] = "Locked",
 	["room.owned"] = "Owned",
+	["room.resting"] = "Resting",
 	["room.equipped"] = "Equipped",
 
 	-- Skins ---------------------------------------------------------------------------------------------

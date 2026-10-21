@@ -157,6 +157,11 @@ function Common.missionDisabled(missionId: string): boolean
 	return type(disabled) == "table" and disabled[missionId] == true
 end
 
+function Common.roomDisabled(roomId: string): boolean
+	local disabled = ClientState.get("global", "flags.disabledRooms")
+	return type(disabled) == "table" and disabled[roomId] == true
+end
+
 function Common.featureOn(name: string): boolean
 	local features = ClientState.get("global", "flags.features")
 	return not (type(features) == "table" and features[name] == false)

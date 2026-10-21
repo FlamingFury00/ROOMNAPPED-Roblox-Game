@@ -16,6 +16,7 @@
 	  tutorial <reset|done>           toggle the tutorial flag
 	  resetprofile                    wipe your own profile (Studio memory store only)
 	  failsaves <n>                   the next n profile store requests fail (Studio memory store only)
+	  flag <room|mission|feature> <on|off>   switch content on or off on this server only (rollback rehearsal)
 ]]
 
 local GroupService = game:GetService("GroupService")
@@ -205,6 +206,12 @@ local function onDebug(player: Player, command: string, a: string?, b: string?)
 			reply(player, "profile reset (memory store)")
 		else
 			reply(player, "resetprofile is only available with the Studio memory store")
+		end
+	elseif command == "flag" then
+		if a and (b == "on" or b == "off") and Registry.get("Flags").setTestOverride(a, b == "on") then
+			reply(player, string.format("%s switched %s on this server", a, b :: string))
+		else
+			reply(player, "usage: flag <room|mission|feature id> <on|off>")
 		end
 	elseif command == "failsaves" then
 		local count = tonumber(a) or 0

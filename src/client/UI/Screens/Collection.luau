@@ -228,7 +228,12 @@ local function showRoomDetail(roomId: string)
 	end
 	detailStatus.Text = if def.starter then Strings.t("room.unlock.starter") else Strings.t("room.owned")
 	detailStatus.TextColor3 = C.green
-	if locked() then
+	-- Switched off live: still owned, just not equippable until it is back.
+	local resting = Common.roomDisabled(roomId)
+	if resting then
+		detailStatus.Text = Strings.t("toast.roomDisabled")
+		detailStatus.TextColor3 = C.orange
+	elseif locked() then
 		detailStatus.Text = Strings.t("collection.lockedInRun")
 		detailStatus.TextColor3 = C.orange
 	end
@@ -241,7 +246,7 @@ local function showRoomDetail(roomId: string)
 				else Strings.t("collection.equipSlot", { index = slot }),
 			if inSlot then "check" else "arrowUp",
 			if inSlot then "success" else "primary",
-			not inSlot and not locked(),
+			not inSlot and not locked() and not resting,
 			slot,
 			function()
 				equipSlot(roomId, slot)
@@ -384,11 +389,13 @@ local function roomCard(def: RoomDefs.RoomDef, order: number, parent: Instance):
 		parent = card,
 	})
 	local slot = table.find(loadout(), def.id)
+	local resting = isOwned and Common.roomDisabled(def.id)
 	local tagText = if slot
 		then Strings.t("collection.slot", { index = slot })
+		elseif resting then Strings.t("room.resting")
 		elseif isOwned then Strings.t("room.owned")
 		else Strings.t("room.locked")
-	local tagColor = if slot then C.gold elseif isOwned then C.greenDark else C.panel
+	local tagColor = if slot then C.gold elseif resting then C.orange elseif isOwned then C.greenDark else C.panel
 	local chip = Components.chip(nil, tagText, tagColor, 0, if slot then C.textDark else C.white)
 	chip.AnchorPoint = Vector2.new(0.5, 0)
 	chip.Position = UDim2.new(0.5, 0, 0, 118)
@@ -950,11 +957,14 @@ function Collection.start()
 			return if no and no:IsA("GuiObject") then no else nil
 		end,
 	})
-	ClientState.observe("me", "profile", function()
+	local function live()
 		if UIRoot.isOpen("Collection") then
 			Collection.refresh()
 		end
-	end)
+	end
+	ClientState.observe("me", "profile", live)
+	-- Rooms or the shop switched off (or back on) live.
+	ClientState.observe("global", "flags", live)
 	RunInfo.PhaseChanged:Connect(function()
 		if RunInfo.isParticipant() then
 			UIRoot.close("BuyConfirm")

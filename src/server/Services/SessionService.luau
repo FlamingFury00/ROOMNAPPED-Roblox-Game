@@ -593,6 +593,17 @@ function SessionService.Start()
 		refreshPreviews(player)
 	end)
 
+	-- A mission switched off live is never launched: the leader's pick falls back to an allowed one.
+	Registry.get("Flags").Changed:Connect(function()
+		if not missionAllowedFor(leader, selectedMission) then
+			selectedMission = defaultMissionFor(leader)
+		end
+		for player in presence do
+			refreshPreviews(player)
+		end
+		publishLobby()
+	end)
+
 	Net.on("ClientReady", onClientReady)
 	Net.on("SetReady", function(player: Player, ready: boolean)
 		SessionService.setReady(player, ready, false)

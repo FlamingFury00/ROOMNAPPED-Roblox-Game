@@ -673,6 +673,15 @@ function MissionBoard.start()
 	end
 	ClientState.observe("global", "lobby", live)
 	ClientState.observe("me", "missions", live)
+	-- Missions switched off (or back on) live.
+	ClientState.observe("global", "flags", function()
+		if UIRoot.isOpen("MissionBoard") then
+			Common.keepSelection(window.frame, function()
+				rebuildList()
+				refreshDetails()
+			end)
+		end
+	end)
 	ClientState.observe("me", "profile", function()
 		if UIRoot.isOpen("MissionBoard") then
 			Common.keepSelection(window.frame, function()

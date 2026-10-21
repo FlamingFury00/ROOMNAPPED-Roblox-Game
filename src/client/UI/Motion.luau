@@ -96,19 +96,39 @@ function Motion.hover(guiObject: GuiObject, over: boolean)
 	TweenService:Create(scale, Theme.Tween.fast, { Scale = if over then 1.05 else 1 }):Play()
 end
 
+-- Rest position of objects mid-shake: a second shake restarts from it instead of from an offset frame, so
+-- repeated taps never leave a button nudged sideways.
+local shaking: { [GuiObject]: { origin: UDim2, token: number } } = setmetatable({}, { __mode = "k" }) :: any
+
 -- Horizontal shake for errors (replaced by a colour flash with reduced motion).
 function Motion.shake(guiObject: GuiObject)
 	if reduced then
 		return
 	end
-	local origin = guiObject.Position
+	local state = shaking[guiObject]
+	if not state then
+		state = { origin = guiObject.Position, token = 0 }
+		shaking[guiObject] = state
+	end
+	state.token += 1
+	local token = state.token
+	local origin = state.origin
 	task.spawn(function()
 		for i = 1, 6 do
+			-- Stop when a newer shake took over or the object was rebuilt away.
+			if state.token ~= token or guiObject.Parent == nil then
+				return
+			end
 			local offset = (if i % 2 == 0 then 1 else -1) * (7 - i)
 			guiObject.Position = origin + UDim2.fromOffset(offset, 0)
 			task.wait(0.03)
 		end
-		guiObject.Position = origin
+		if state.token == token then
+			shaking[guiObject] = nil
+			if guiObject.Parent ~= nil then
+				guiObject.Position = origin
+			end
+		end
 	end)
 end
 

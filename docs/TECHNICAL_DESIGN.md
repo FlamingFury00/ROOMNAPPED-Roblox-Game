@@ -169,9 +169,11 @@ client through roster data and player attributes; `SpectateController` follows l
 ## 10. Live operations (S26, S28, S32)
 
 * **Feature flags** (`FeatureFlags`, `FlagsService`): defaults < environment (studio / test / live by place id)
-  < live overrides from the `RoomnappedConfig` DataStore. Rooms and missions can be disabled without
-  touching profiles; features (pings, feedback prompt, analytics, debug tools, Caretaker, keys, shop) can be
-  switched off. See [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md).
+  < live overrides from the `RoomnappedConfig` DataStore (re-read every five minutes, so running servers
+  follow a rollback) < admin test overrides (`flag <id> <on|off>`, one server). Rooms and missions can be
+  disabled without touching profiles: a disabled mission leaves the lobby's selection, a disabled room
+  leaves loadouts and both show as resting in the menus; features (pings, feedback prompt, analytics, debug
+  tools, Caretaker, keys, shop) can be switched off. See [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md).
 * **Analytics** (`TelemetryService`): onboarding funnel (each whitelisted step logged once per player, the
   steps already sent stored as a bitmask in the profile — schema v4), the recurring `Expedition` funnel keyed by run id, and custom events (room deployed, combo, run
   result, room pair, feedback, ping, key, Caretaker hit) with device and build fields. Every call is
@@ -236,7 +238,7 @@ desktop and phone sizes.
 | S29 | Accessibility & settings | `SettingsController`, `Settings` screen | ui |
 | S30 | Localization readiness | `Strings.luau` catalog, no text in images, layouts tolerate longer strings | ui renders |
 | S31 | Repeat-play content | six layouts + tutorial, challenges, keys, reward targets | layouts, layout_sims |
-| S32 | Release & rollback | `FeatureFlags`, `FlagsService`, publishing checklist | manual (§5 of the checklist) |
+| S32 | Release & rollback | `FeatureFlags`, `FlagsService`, publishing checklist | sim, ui, manual (§5 of the checklist) |
 | S33 | Home display | Deferred to P2 by the brief (§1, §2: showroom waits for G3 evidence) | — |
 | S34 | Cosmetic monetization | P2. This release sells cosmetics for earned credits only; no Robux products | — |
 | S35 | Live content pipeline | P2. Groundwork in place: rooms/missions are config with per-item disable flags | — |

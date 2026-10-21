@@ -365,6 +365,23 @@ function ProfileService.Start()
 		ProfileService.retry(player)
 	end)
 
+	-- A room switched off live leaves every loaded loadout (the room itself stays owned).
+	Registry.get("Flags").Changed:Connect(function()
+		local info = contentInfo()
+		for player, session in sessions do
+			local data = session.data
+			if session.status == "Ready" and data then
+				local before = table.concat(data.loadout, ",")
+				ProfileSchema.fixLoadout(data, info.isRoomKnown, info.isRoomEnabled, info.starterRooms)
+				if table.concat(data.loadout, ",") ~= before then
+					session.dirty = true
+					publish(session)
+					ProfileService.Changed:Fire(player, data)
+				end
+			end
+		end
+	end)
+
 	-- Autosave loop.
 	task.spawn(function()
 		while true do

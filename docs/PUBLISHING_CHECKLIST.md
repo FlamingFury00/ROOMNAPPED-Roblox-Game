@@ -14,8 +14,9 @@ ROOMNAPPED expects two places:
 | **live** | The public experience. | Any other published place id. |
 | studio | Local play in Studio. In-memory saves unless API access is enabled. | `RunService:IsStudio()` |
 
-Both places read live switches from the `RoomnappedConfig` DataStore (key `flags/test` or `flags/live`),
-so a room, a mission or a feature can be turned off without republishing (see §6).
+Both places read live switches from the `RoomnappedConfig` DataStore (key `flags/test` or `flags/live`) at
+start and again every five minutes, so a room, a mission or a feature can be turned off without
+republishing, and running servers follow within five minutes (see §6).
 
 ## 1. Code gates
 
@@ -95,17 +96,19 @@ so a room, a mission or a feature can be turned off without republishing (see §
 - [ ] Analytics: within a day the Creator Dashboard shows the onboarding funnel, the `Expedition` funnel and
       the custom events (DOC04, DOC05). Studio sessions never submit events.
 - [ ] Audio: every music track and loop plays; the logs show no "failed to load" audio warnings.
-- [ ] Feature flags: write `{"rooms": {"Magnet": false}}` to `RoomnappedConfig` / `flags/test`, start a new
-      server, confirm the Magnet room is offered as "resting for maintenance" and profiles still own it; then
-      remove the override.
+- [ ] Feature flags: write `{"rooms": {"Magnet": false}}` to `RoomnappedConfig` / `flags/test`. Within five
+      minutes the Magnet room shows as *Resting* in the collection, leaves any loadout and cannot be
+      equipped, and profiles still own it; remove the override and it comes back. (The admin console command
+      `flag Magnet off` rehearses the same thing on one server instantly.)
 - [ ] Admin tools appear only for the owner (or group rank 254+) and for ids in `adminUserIds`.
 
 ## 6. Rollback
 
 1. **Disable content first.** Bad room or mission: set it to `false` in `RoomnappedConfig` →
-   `flags/live` (for example `{"missions": {"M4": false}}` or `{"rooms": {"Laundry": false}}`). New servers
-   pick it up at start; use *Shut down all servers* or *Migrate to latest update* to apply it everywhere.
-   Players keep everything they own; disabled content is just not offered.
+   `flags/live` (for example `{"missions": {"M4": false}}` or `{"rooms": {"Laundry": false}}`). Every server
+   applies it within five minutes: a disabled mission is no longer selectable (a lobby that had it picked
+   moves to another), a disabled room leaves loadouts and cannot be deployed. Runs already under way finish
+   with what they launched with. Players keep everything they own; disabled content is just not offered.
 2. **Revert the place.** In the Creator Dashboard, open the place's version history and restore the
    previous version, then migrate servers.
 3. **Never** rename or wipe `RoomnappedProfiles_v1` to roll back. Profiles carry a schema version; older
