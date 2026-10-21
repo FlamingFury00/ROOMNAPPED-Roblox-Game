@@ -43,6 +43,7 @@ local THEME_TINT: { [string]: Color3 } = {
 	boiler = Color3.fromRGB(255, 232, 214),
 	greenhouse = Color3.fromRGB(240, 255, 236),
 	vault = Color3.fromRGB(236, 238, 255),
+	frost = Color3.fromRGB(228, 242, 255),
 	lobby = Color3.fromRGB(255, 240, 220),
 }
 

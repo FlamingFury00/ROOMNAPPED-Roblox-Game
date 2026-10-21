@@ -104,6 +104,17 @@ function Overlays.create(parent: Instance): Handle
 		Visible = false,
 		Parent = parent,
 	}, { Create.corner(Theme.Radius.large), Create.stroke(C.red, 3, 0) })
+	-- Below the centre so the downed character stays in view, but always clear of the quickbar (short phone
+	-- canvases would otherwise push it into the slots).
+	local function placeDowned()
+		local gui = parent:FindFirstAncestorOfClass("ScreenGui")
+		local height = if gui then Responsive.canvasSize(gui).Y else 0
+		if height > 0 then
+			downed.Position = UDim2.new(0.5, 0, 0, math.round(math.min(height * 0.62, height - 225)))
+		end
+	end
+	placeDowned()
+	Responsive.Changed:Connect(placeDowned)
 	local downedIcon = Create.new("Frame", {
 		Position = UDim2.fromOffset(20, 22),
 		Size = UDim2.fromOffset(56, 56),
@@ -310,7 +321,7 @@ function Overlays.create(parent: Instance): Handle
 	local cargo = Create.new("Frame", {
 		Name = "Cargo",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0, 92),
+		Position = UDim2.new(1, -16, 0, 122),
 		Size = UDim2.fromOffset(0, 62),
 		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = C.panelDark,

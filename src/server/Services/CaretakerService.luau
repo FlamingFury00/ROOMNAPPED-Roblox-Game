@@ -107,7 +107,7 @@ local function state(run: Run): State?
 	return run.scratch.caretaker
 end
 
-local function publish(run: Run, s: State)
+local function publish(_run: Run, s: State)
 	global:Set({ "caretaker" }, {
 		mode = s.mode,
 		target = if s.target then tostring(s.target) else nil,
@@ -240,7 +240,7 @@ end
 
 -- Movement -------------------------------------------------------------------------------------------------
 
-local function moveToward(run: Run, s: State, goal: Vector3, speed: number, dt: number): boolean
+local function moveToward(_run: Run, s: State, goal: Vector3, speed: number, dt: number): boolean
 	local flatGoal = Vector3.new(goal.X, hoverY(), goal.Z)
 	local delta = flatGoal - s.position
 	local distance = delta.Magnitude

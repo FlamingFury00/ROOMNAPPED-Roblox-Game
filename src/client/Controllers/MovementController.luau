@@ -343,12 +343,10 @@ local function step(dt: number)
 	end
 
 	local nextVelocity: Vector3
+	local knockedNow = knocked and knockVelocity.Magnitude > 0
 	if flying then
 		nextVelocity = flightVelocity
-	elseif knocked and knockVelocity.Magnitude > 0 then
-		-- Start from the knock impulse and let it bleed off.
-		nextVelocity = horizontal + (target - horizontal) * MathUtil.dampAlpha(traction, dt)
-	elseif wind.boost and slippery then
+	elseif wind.boost and slippery and not knockedNow then
 		-- Boosted slide: accelerate along the lane up to the boost speed, steer gently across it.
 		local dir = wind.boost :: Vector3
 		local along = horizontal:Dot(dir)
@@ -359,6 +357,7 @@ local function step(dt: number)
 		nextVelocity = dir * along + lateral
 		maxSpeed = W.SlideBoostSpeed
 	else
+		-- Regular steering. A knock starts from its impulse (already in `horizontal`) and bleeds off the same way.
 		nextVelocity = horizontal + (target - horizontal) * MathUtil.dampAlpha(traction, dt)
 	end
 	nextVelocity = MathUtil.clampMagnitude(nextVelocity, maxSpeed)

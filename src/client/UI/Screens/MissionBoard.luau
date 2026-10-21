@@ -526,7 +526,7 @@ local function build()
 	chipRow = Create.new("Frame", {
 		Name = "Chips",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 2,
 		Parent = body,
@@ -544,7 +544,7 @@ local function build()
 		textSize = Theme.Text.body,
 		color = C.cream,
 		wrap = true,
-		size = UDim2.new(1, 0, 0, 0),
+		size = UDim2.fromScale(1, 0),
 		autoSize = Enum.AutomaticSize.Y,
 		layoutOrder = 3,
 		parent = body,
@@ -553,7 +553,7 @@ local function build()
 	hazardRow = Create.new("Frame", {
 		Name = "Hazards",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 5,
 		Parent = body,
@@ -568,7 +568,7 @@ local function build()
 	challengeList = Create.new("Frame", {
 		Name = "Challenges",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 7,
 		Parent = body,
@@ -584,7 +584,7 @@ local function build()
 	targetPicker = Create.new("Frame", {
 		Name = "TargetPicker",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 9,
 		Parent = body,
@@ -595,7 +595,7 @@ local function build()
 		Name = "Footer",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 0, 1, 0),
+		Position = UDim2.fromScale(0, 1),
 		Size = UDim2.new(1, 0, 0, 100),
 		Parent = details,
 	})

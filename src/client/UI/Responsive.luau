@@ -16,7 +16,8 @@ local userScale = 1
 local roots: { { gui: ScreenGui, frame: Frame, scale: UIScale } } = {}
 Responsive.Changed = Signal.new()
 
-local MIN_SCALE = 0.56
+-- 0.62 keeps small text near 11pt and 80px buttons above the 44pt touch-target minimum on phones.
+local MIN_SCALE = 0.62
 local MAX_SCALE = 1.55
 
 local function compute(size: Vector2): number

@@ -237,6 +237,35 @@ return function(ctx)
 			assertClean(sim)
 		end)
 
+		it("launches one squad of at most four; the fifth player waits for the next run (S17)", function()
+			local sim = boot()
+			local names = { "Ann", "Ben", "Cal", "Dot", "Eli" }
+			local bots = {}
+			for i, name in names do
+				local bot = sim:addBot(name, 2000 + i)
+				sim:snapshot(bot)
+				table.insert(bots, bot)
+			end
+			sim:run(0.6)
+			for _, bot in bots do
+				sim:send(bot, "ClientReady", "keyboard", "en-us")
+				sim:send(bot, "SetReady", true)
+				sim:run(0.05)
+			end
+			expect(sim:state(bots[5], "global", "players.2005.ready")).toBe(false)
+			expect(sim:runUntil(function()
+				return phase(sim, bots[1]) == "Explore"
+			end, 30)).toBe(true)
+			local roster = sim:state(bots[1], "global", "roster")
+			local count = 0
+			for _ in roster do
+				count += 1
+			end
+			expect(count).toBe(4)
+			expect(roster["2005"]).toBe(nil)
+			assertClean(sim)
+		end)
+
 		it("cycles ten runs without growing the instance count (S27)", function()
 			local sim = boot()
 			local bot = sim:addBot("Finn", 2001)

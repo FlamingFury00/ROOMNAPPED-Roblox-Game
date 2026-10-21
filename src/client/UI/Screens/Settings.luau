@@ -206,7 +206,7 @@ local function rebuildControls()
 				textSize = Theme.Text.small,
 				color = C.goldLight,
 				align = Enum.TextXAlignment.Right,
-				size = UDim2.new(1, 0, 1, 0),
+				size = UDim2.fromScale(1, 1),
 				parent = keys,
 			})
 		else
@@ -269,7 +269,7 @@ local function build()
 	controlsList = Create.new("Frame", {
 		Name = "Controls",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = nextOrder(),
 		Parent = scroll,
@@ -279,7 +279,7 @@ local function build()
 	runSection = Create.new("Frame", {
 		Name = "RunActions",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = nextOrder(),
 		Parent = scroll,

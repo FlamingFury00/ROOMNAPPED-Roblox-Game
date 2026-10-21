@@ -7,6 +7,7 @@
 	tag is optional. Skipping is always one tap away.
 ]]
 
+local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
@@ -29,6 +30,10 @@ Feedback.priority = 100
 
 local C = Theme.Colors
 local TAGS = { "fun", "confusing", "hard", "easy" }
+-- The engine's own rounded five-point "favorite" star (white, tinted per state). If it ever fails to load,
+-- the rating falls back to the vector star icon.
+local STAR_IMAGE = "rbxasset://textures/ui/InspectMenu/ico_favorite@3x.png"
+local starImageReady = false
 
 local window: Common.Window
 local stars: { TextButton } = {}
@@ -43,7 +48,22 @@ local function paint()
 	for index, holder in starIcons do
 		holder:ClearAllChildren()
 		local filled = index <= rating
-		Icons.make("star", if filled then C.gold else C.panelLight, C.panelDark).Parent = holder
+		local color = if filled then C.gold else C.panelLight
+		if starImageReady then
+			Create.new("ImageLabel", {
+				Name = "Star",
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.84, 0.84), -- 48px source: keep the upscale modest
+				Image = STAR_IMAGE,
+				ImageColor3 = color,
+				ScaleType = Enum.ScaleType.Fit,
+				Parent = holder,
+			})
+		else
+			Icons.make("star", color, C.panelDark).Parent = holder
+		end
 	end
 	for tag, handle in tagButtons do
 		handle.setVariant(if tag == selectedTag then "primary" else "secondary")
@@ -63,6 +83,21 @@ local function shouldAsk(runs: number): boolean
 		return false
 	end
 	return runs == 1 or runs == 3 or (runs > 0 and runs % 5 == 0)
+end
+
+local function preloadStar()
+	task.spawn(function()
+		local loaded = false
+		pcall(function()
+			ContentProvider:PreloadAsync({ STAR_IMAGE }, function(_contentId: string, status: Enum.AssetFetchStatus)
+				loaded = status == Enum.AssetFetchStatus.Success
+			end)
+		end)
+		if loaded and not starImageReady then
+			starImageReady = true
+			paint()
+		end
+	end)
 end
 
 local function build()
@@ -134,7 +169,7 @@ local function build()
 		Name = "Buttons",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0),
+		Position = UDim2.fromScale(0.5, 1),
 		Size = UDim2.new(1, 0, 0, 90),
 		Parent = content,
 	}, {
@@ -175,6 +210,7 @@ end
 
 function Feedback.start()
 	build()
+	preloadStar()
 	UIRoot.register({
 		name = "Feedback",
 		frame = window.frame,

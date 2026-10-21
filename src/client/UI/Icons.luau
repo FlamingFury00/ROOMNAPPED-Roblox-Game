@@ -495,12 +495,27 @@ function Icons.make(name: string, color: Color3?, accent: Color3?): Frame
 	else
 		glyph(frame, "?", c)
 	end
+	-- Remember which shapes are accent details so tinting the icon keeps them readable.
+	if a ~= c then
+		for _, d in frame:GetDescendants() do
+			local accent = (d:IsA("Frame") and d.BackgroundColor3 == a)
+				or (d:IsA("TextLabel") and d.TextColor3 == a)
+				or (d:IsA("UIStroke") and d.Color == a)
+			if accent then
+				d:SetAttribute("IconAccent", true)
+			end
+		end
+	end
 	return frame
 end
 
--- Recolour every shape of an icon (used for disabled / state changes).
+-- Recolour an icon's main shapes (used for disabled / state changes). Accent details keep their colour so
+-- multi-part icons (boards, faces, suitcases) stay readable.
 function Icons.tint(icon: Instance, color: Color3)
 	for _, d in icon:GetDescendants() do
+		if d:GetAttribute("IconAccent") == true then
+			continue
+		end
 		if d:IsA("Frame") and d.BackgroundTransparency < 1 and d.Name ~= "Shine" then
 			d.BackgroundColor3 = color
 		elseif d:IsA("UIStroke") then

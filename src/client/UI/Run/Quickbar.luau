@@ -13,6 +13,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
@@ -29,11 +30,15 @@ local Create = require(script.Parent.Parent.Create)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local Components = require(script.Parent.Parent.Components)
+local Responsive = require(script.Parent.Parent.Responsive)
 
 local Quickbar = {}
 
 local C = Theme.Colors
 local localPlayer = Players.LocalPlayer
+
+local ACTION_SIZE = 136
+local TOUCH_GAP = 12
 
 export type Handle = { frame: Frame, touch: Frame, setVisible: (boolean) -> () }
 
@@ -63,7 +68,7 @@ local function makeSlot(parent: Instance, index: number): Slot
 	local face = Create.new("Frame", {
 		Name = "Face",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0),
+		Position = UDim2.fromScale(0.5, 1),
 		Size = UDim2.fromOffset(108, 108),
 		BackgroundColor3 = C.panelDark,
 		BackgroundTransparency = 0.08,
@@ -99,21 +104,21 @@ local function makeSlot(parent: Instance, index: number): Slot
 	})
 	local badge = Create.new("Frame", {
 		Name = "Badge",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0, 2),
-		Size = UDim2.fromOffset(0, 24),
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.fromOffset(-4, -4),
+		Size = UDim2.fromOffset(0, 26),
 		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = C.green,
 		Visible = false,
 		ZIndex = 3,
 		Parent = face,
-	}, { Create.corner(Theme.Radius.pill), Create.padding(2, 8), Create.stroke(C.ink, 2, 0) })
+	}, { Create.corner(Theme.Radius.pill), Create.padding(2, 7), Create.stroke(C.ink, 2, 0) })
 	local badgeText = Components.label({
 		text = "",
 		font = Theme.Fonts.bodyHeavy,
-		textSize = 13,
+		textSize = 14,
 		color = C.textDark,
-		size = UDim2.fromOffset(0, 20),
+		size = UDim2.fromOffset(0, 22),
 		autoSize = Enum.AutomaticSize.X,
 		parent = badge,
 	})
@@ -163,7 +168,7 @@ local function roundButton(
 	}, { Create.corner(Theme.Radius.pill), Create.stroke(color, 3, 0) })
 	local holder = Create.new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.42, 0),
+		Position = UDim2.fromScale(0.5, 0.42),
 		Size = UDim2.fromScale(0.46, 0.46),
 		BackgroundTransparency = 1,
 		Parent = button,
@@ -175,7 +180,7 @@ local function roundButton(
 		textSize = math.floor(size * 0.18),
 		align = Enum.TextXAlignment.Center,
 		size = UDim2.new(1, 0, 0, math.floor(size * 0.24)),
-		position = UDim2.new(0, 0, 0.7, 0),
+		position = UDim2.fromScale(0, 0.7),
 		stroke = true,
 		parent = button,
 	})
@@ -259,20 +264,20 @@ function Quickbar.create(parent: Instance): Handle
 	refreshSlots()
 
 	-- Touch action cluster --------------------------------------------------------------------------------------
+	-- Laid out around the Roblox jump button (see layoutTouch): the action button sits right above it, the
+	-- small buttons line up to its left and Ping sits beside the action button.
 	local touch = Create.new("Frame", {
 		Name = "TouchActions",
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -24, 1, -250),
-		Size = UDim2.fromOffset(330, 200),
+		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Visible = false,
 		Parent = parent,
 	})
 	local actionButton = Create.new("TextButton", {
 		Name = "Action",
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, 0, 1, 0),
-		Size = UDim2.fromOffset(136, 136),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(1, -120, 1, -250),
+		Size = UDim2.fromOffset(ACTION_SIZE, ACTION_SIZE),
 		BackgroundColor3 = C.panelDark,
 		BackgroundTransparency = 0.1,
 		Text = "",
@@ -289,7 +294,7 @@ function Quickbar.create(parent: Instance): Handle
 	end
 	local actionIconHolder = Create.new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.4, 0),
+		Position = UDim2.fromScale(0.5, 0.4),
 		Size = UDim2.fromOffset(52, 52),
 		BackgroundTransparency = 1,
 		ZIndex = 3,
@@ -308,11 +313,20 @@ function Quickbar.create(parent: Instance): Handle
 		parent = actionButton,
 	})
 	actionLabel.ZIndex = 3
+	local actionPressed = false
+	local function releaseAction()
+		if actionPressed then
+			actionPressed = false
+			InputController.trigger("Use", "End")
+			Motion.press(actionButton, false)
+		end
+	end
 	actionButton.InputBegan:Connect(function(input: InputObject)
 		if
 			input.UserInputType == Enum.UserInputType.Touch
 			or input.UserInputType == Enum.UserInputType.MouseButton1
 		then
+			actionPressed = true
 			InputController.trigger("Use", "Begin")
 			Motion.press(actionButton, true)
 		end
@@ -322,16 +336,15 @@ function Quickbar.create(parent: Instance): Handle
 			input.UserInputType == Enum.UserInputType.Touch
 			or input.UserInputType == Enum.UserInputType.MouseButton1
 		then
-			InputController.trigger("Use", "End")
-			Motion.press(actionButton, false)
+			releaseAction()
 		end
 	end)
 
 	local small = Create.new("Frame", {
 		Name = "Small",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -150, 1, 0),
-		Size = UDim2.fromOffset(170, 160),
+		Position = UDim2.new(1, -200, 1, -60),
+		Size = UDim2.fromOffset(240, 96),
 		BackgroundTransparency = 1,
 		Parent = touch,
 	}, {
@@ -349,7 +362,56 @@ function Quickbar.create(parent: Instance): Handle
 	local ping, pingLabel = roundButton(touch, "Ping", 64, "pin", C.blue)
 	pingLabel.Text = Strings.t("hud.ping")
 	ping.AnchorPoint = Vector2.new(1, 1)
-	ping.Position = UDim2.new(1, -36, 1, -150)
+
+	-- The jump button lives in screen pixels (Roblox's TouchGui), so its place on our scaled canvas changes with
+	-- the screen: find it, or fall back to the layout the default touch controls use (70px on small screens).
+	local function jumpButton(gui: ScreenGui): GuiObject?
+		-- Roblox's TouchGui sits next to our ScreenGuis in the PlayerGui.
+		local playerGui = gui.Parent
+		local touchGui = playerGui and playerGui:FindFirstChild("TouchGui")
+		local frame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+		local jump = frame and frame:FindFirstChild("JumpButton")
+		return if jump and jump:IsA("GuiObject") then jump else nil
+	end
+	local lastLayout = ""
+	local function layoutTouch()
+		local gui = parent:FindFirstAncestorOfClass("ScreenGui")
+		if not gui then
+			return
+		end
+		local scale = math.max(Responsive.scaleOf(gui), 1e-3)
+		local guiCorner = gui.AbsolutePosition + gui.AbsoluteSize
+		-- Distances (screen px) from the HUD's bottom-right corner to the jump button's bottom-right corner.
+		local right, bottom, size
+		local jump = jumpButton(gui)
+		if jump and jump.AbsoluteSize.X > 0 then
+			local corner = jump.AbsolutePosition + jump.AbsoluteSize
+			right, bottom, size = guiCorner.X - corner.X, guiCorner.Y - corner.Y, jump.AbsoluteSize.X
+		else
+			local camera = Workspace.CurrentCamera
+			local viewport = if camera then camera.ViewportSize else gui.AbsoluteSize
+			local smallScreen = math.min(viewport.X, viewport.Y) <= 500
+			size = if smallScreen then 70 else 120
+			right = if smallScreen then 25 else 50
+			bottom = if smallScreen then 20 else 90
+		end
+		-- Canvas units, rounded (offsets are whole pixels).
+		local r = math.round(math.max(right, 0) / scale)
+		local b = math.round(math.max(bottom, 0) / scale)
+		local s = math.round(size / scale)
+		local signature = r .. ":" .. b .. ":" .. s
+		if signature == lastLayout then
+			return
+		end
+		lastLayout = signature
+		local centerFromRight = r + s // 2
+		local aboveJump = b + s + TOUCH_GAP
+		actionButton.Position = UDim2.new(1, -centerFromRight, 1, -aboveJump)
+		small.Position = UDim2.new(1, -(r + s + TOUCH_GAP), 1, -b)
+		ping.Position = UDim2.new(1, -(centerFromRight + ACTION_SIZE // 2 + TOUCH_GAP), 1, -aboveJump)
+	end
+	layoutTouch()
+	Responsive.Changed:Connect(layoutTouch)
 
 	rotate.Activated:Connect(function()
 		PlacementController.rotate()
@@ -406,6 +468,12 @@ function Quickbar.create(parent: Instance): Handle
 			actionStroke.Color = C.shadow
 			actionButton.BackgroundTransparency = 0.55
 		end
+		-- Nothing to do: no empty ring on screen (it would only cover the world above the jump button). A
+		-- hidden button gets no InputEnded, so let go of a press that is still down.
+		if action == nil then
+			releaseAction()
+		end
+		actionButton.Visible = action ~= nil
 	end
 	InteractionController.ActionChanged:Connect(refreshAction)
 	InteractionController.HoldProgress:Connect(function(progress: number)
@@ -413,9 +481,15 @@ function Quickbar.create(parent: Instance): Handle
 	end)
 	refreshAction(InteractionController.current())
 
-	RunService.Heartbeat:Connect(function()
+	local relayoutClock = 0
+	RunService.Heartbeat:Connect(function(dt: number)
 		if not touch.Visible then
 			return
+		end
+		relayoutClock += dt
+		if relayoutClock >= 0.5 then
+			relayoutClock = 0
+			layoutTouch()
 		end
 		local candidate = PlacementController.candidate()
 		rotate.Visible = candidate ~= nil and candidate.dir ~= nil

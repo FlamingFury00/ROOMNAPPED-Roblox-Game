@@ -11,6 +11,7 @@ return function(ctx)
 	local Spec = ctx.Spec
 	local describe, it, expect = Spec.describe, Spec.it, Spec.expect
 	local V3 = ctx.roblox.Vector3
+	local V2 = ctx.roblox.Vector2
 
 	local function assertClean(sim)
 		local problems = {}
@@ -69,6 +70,27 @@ return function(ctx)
 			local p = sim:position(bot)
 			return p ~= nil and V3.new(p.X - point.X, 0, p.Z - point.Z).Magnitude <= (radius or 1.5)
 		end
+	end
+
+	-- Two players in the tutorial; the client rides along with the first one.
+	local function bootSquad()
+		local sim = Sim.new(ctx.placePath)
+		sim:startServer()
+		sim:run(0.3)
+		local a = sim:addBot("Alice", 1001)
+		local b = sim:addBot("Bob", 1002)
+		sim:snapshot(a)
+		sim:snapshot(b)
+		local client = ClientSim.attach(sim, a)
+		client:start()
+		sim:run(1)
+		sim:send(a, "SetReady", true)
+		sim:send(b, "SetReady", true)
+		expect(sim:runUntil(function()
+			return phase(sim, a) == "Explore"
+		end, 30)).toBe(true)
+		sim:run(1)
+		return sim, a, b, client
 	end
 
 	describe("Client + server play (full stack)", function()
@@ -147,6 +169,155 @@ return function(ctx)
 			expect(sim:state(bot, "global", "run.outcome")).toBe("Success")
 			local UIRoot = client:module("UI.UIRoot")
 			expect(UIRoot.isOpen("Results")).toBe(true)
+		end)
+
+		it("plays on a touch phone: slot buttons, the touch action button and a clear layout", function()
+			local sim = Sim.new(ctx.placePath)
+			sim:startServer()
+			sim:run(0.3)
+			local bot = sim:addBot("Alice", 1001)
+			sim:snapshot(bot)
+			local safeArea = V2.new(750, 311)
+			local client =
+				ClientSim.attach(sim, bot, { device = "touch", viewport = V2.new(844, 390), safeArea = safeArea })
+			client:start()
+			sim:run(1)
+			client:click(client:find("PlayButton"))
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Explore"
+			end, 30)).toBe(true)
+			sim:run(1)
+			local touch = client:find("TouchActions")
+			expect(touch ~= nil and touch.Visible).toBe(true)
+
+			-- The action button sits above the (70px, small-screen) jump button and below the top-right cluster
+			-- (menu bar and cargo card end at y = 184 on the canvas).
+			local scale = client:module("UI.Responsive").scaleOf(client:find("RN_Hud"))
+			expect(scale >= 0.62 - 1e-6).toBe(true)
+			local canvas = safeArea / scale
+			local action = touch:FindFirstChild("Action")
+			local actionBottom = canvas.Y + action.Position.Y.Offset
+			local actionTop = actionBottom - action.Size.Y.Offset
+			local jumpTop = canvas.Y - (20 + 70) / scale
+			expect(actionBottom <= jumpTop).toBe(true)
+			expect(actionTop >= 184).toBe(true)
+			local actionRight = canvas.X + action.Position.X.Offset + action.Size.X.Offset / 2
+			expect(actionRight <= canvas.X).toBe(true)
+
+			-- Tap the Freezer slot at the door, then press and release the action button.
+			local level = sim:state(bot, "global", "level")
+			local s1 = level.sockets.S1.interactPoint
+			local path = route(sim, bot, level, tileIndexAt(level, s1))
+			table.insert(path, s1)
+			sim:walk(bot, path)
+			expect(sim:runUntil(near(sim, bot, s1), 15)).toBe(true)
+			client:click(client:find("Slot1"))
+			sim:run(0.3)
+			expect(client:module("Controllers.PlacementController").selectedSlot()).toBe(1)
+			client:touchDown(action)
+			sim:run(0.1)
+			client:touchUp(action)
+			sim:run(0.5)
+			assertClean(sim)
+			expect(sim:state(bot, "global", "sockets.S1.room")).toBe("Freezer")
+		end)
+
+		it("revives a downed teammate with the context hold", function()
+			local sim, a, b, client = bootSquad()
+			sim:send(b, "Debug", "down")
+			sim:run(0.3)
+			expect(sim:state(a, "global", "roster.1002.status")).toBe("Downed")
+			-- Walk Alice next to Bob.
+			local bobPosition = sim:position(b)
+			sim:walk(a, { bobPosition + V3.new(2, 0, 0) })
+			expect(sim:runUntil(near(sim, a, bobPosition + V3.new(2, 0, 0)), 10)).toBe(true)
+			sim:run(0.2)
+			local action = client:module("Controllers.InteractionController").current()
+			expect(action ~= nil and action.kind).toBe("revive")
+			client:press("RN_Use")
+			sim:run(3.3)
+			client:release("RN_Use")
+			sim:run(0.3)
+			assertClean(sim)
+			expect(sim:state(a, "global", "roster.1002.status")).toBe("Active")
+		end)
+
+		it("locks movement while downed, shows the downed card and recovers when revived", function()
+			local sim, a, b, client = bootSquad()
+			sim:send(a, "Debug", "down")
+			sim:run(0.5)
+			expect(sim:state(a, "global", "roster.1001.status")).toBe("Downed")
+			local humanoid = a.player.Character:FindFirstChildOfClass("Humanoid")
+			expect(humanoid.WalkSpeed).toBe(0)
+			expect(humanoid.Sit).toBe(true)
+			local downedCard = client:find("Downed")
+			expect(downedCard ~= nil and downedCard.Visible).toBe(true)
+			-- Bob revives Alice through the server.
+			sim:walk(b, { sim:position(a) + V3.new(2, 0, 0) })
+			sim:run(3)
+			sim:send(b, "HoldBegin", "revive", "1001")
+			sim:run(3.05)
+			sim:send(b, "HoldEnd", "revive", "1001", true)
+			sim:run(0.5)
+			assertClean(sim)
+			expect(sim:state(a, "global", "roster.1001.status")).toBe("Active")
+			expect(humanoid.WalkSpeed > 0).toBe(true)
+			expect(humanoid.Sit).toBe(false)
+			expect(downedCard.Visible).toBe(false)
+		end)
+
+		it("spectates a teammate after the downed window runs out", function()
+			local sim, a, b, client = bootSquad()
+			sim:send(a, "Debug", "down")
+			sim:run(21.5)
+			assertClean(sim)
+			expect(sim:state(a, "global", "roster.1001.status")).toBe("Eliminated")
+			local Spectate = client:module("Controllers.SpectateController")
+			expect(Spectate.isSpectating()).toBe(true)
+			expect(Spectate.target()).toBe("1002")
+			local bobHumanoid = b.player.Character:FindFirstChildOfClass("Humanoid")
+			expect(client.camera.CameraSubject == bobHumanoid).toBe(true)
+			-- The spectator bar replaces the quickbar.
+			expect(client:find("Spectate").Visible).toBe(true)
+			expect(client:find("Quickbar").Visible).toBe(false)
+		end)
+
+		it("pings, turns a fan before unfolding it and recalls it", function()
+			local sim, a, _, client = bootSquad()
+			local level = sim:state(a, "global", "level")
+			-- Ping where we look.
+			client:tap("RN_Ping")
+			sim:run(0.3)
+			expect(client:find("RN_Ping") ~= nil).toBe(true)
+			-- Walk to S1 (it accepts wind as well as cold), pull out the Fan (slot 2) and turn it.
+			local s1 = level.sockets.S1.interactPoint
+			local path = route(sim, a, level, tileIndexAt(level, s1))
+			table.insert(path, s1)
+			sim:walk(a, path)
+			expect(sim:runUntil(near(sim, a, s1), 30)).toBe(true)
+			client:tap("RN_Slot2")
+			sim:run(0.2)
+			local Placement = client:module("Controllers.PlacementController")
+			local before = Placement.candidate()
+			expect(before ~= nil and before.socketId).toBe("S1")
+			client:tap("RN_Rotate")
+			sim:run(0.2)
+			local after = Placement.candidate()
+			expect(after.dir ~= before.dir).toBe(true)
+			client:tap("RN_Use")
+			sim:run(0.5)
+			expect(sim:state(a, "global", "sockets.S1.room")).toBe("Fan")
+			expect(sim:state(a, "global", "sockets.S1.dir")).toBe(after.dir)
+			-- Select the unfolded slot again: the action becomes Recall, from anywhere.
+			sim:run(1)
+			client:tap("RN_Slot2")
+			sim:run(0.2)
+			local recall = Placement.candidate()
+			expect(recall ~= nil and recall.kind).toBe("recall")
+			client:tap("RN_Use")
+			sim:run(1.5)
+			assertClean(sim)
+			expect(sim:state(a, "global", "sockets.S1")).toBe(nil)
 		end)
 	end)
 end

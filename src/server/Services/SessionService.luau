@@ -95,7 +95,7 @@ end
 
 local function publishLobby()
 	local readyCount, total = 0, 0
-	for player, p in presence do
+	for _, p in presence do
 		if not p.waiting then
 			total += 1
 			if p.ready then
@@ -210,6 +210,18 @@ local function canReady(player: Player): (boolean, string?)
 	if not profile or #profile.loadout ~= 2 then
 		return false, "toast.loadoutInvalid"
 	end
+	-- One squad of up to MaxPlayers per server, whatever the place's player limit is set to.
+	if not p.ready then
+		local readyCount = 0
+		for _, other in presence do
+			if other.ready then
+				readyCount += 1
+			end
+		end
+		if readyCount >= GameConfig.Squad.MaxPlayers then
+			return false, "toast.squadFull"
+		end
+	end
 	return true, nil
 end
 
@@ -285,6 +297,16 @@ local function updateCountdown()
 		end
 		return
 	end
+	-- Never launch more than one squad (first come, first served).
+	if #readyPlayers > GameConfig.Squad.MaxPlayers then
+		table.sort(readyPlayers, function(a: Player, b: Player): boolean
+			return presence[a].joinOrder < presence[b].joinOrder
+		end)
+		for i = #readyPlayers, GameConfig.Squad.MaxPlayers + 1, -1 do
+			table.remove(readyPlayers, i)
+		end
+	end
+	eligible = math.min(eligible, GameConfig.Squad.MaxPlayers)
 	local now = serverNow()
 	local changed = false
 	if countdownEndsAt == nil then

@@ -16,6 +16,7 @@
 local process = require("@lune/process")
 
 local Sim = require("../harness/Sim")
+local ClientSim = require("../harness/ClientSim")
 
 return function(ctx)
 	local Spec = ctx.Spec
@@ -69,6 +70,10 @@ return function(ctx)
 		local bot = sim:addBot("Pat", 3001)
 		local key = "3001"
 		sim:snapshot(bot)
+		-- The shipped client rides along: every visual, HUD and movement module runs against this level.
+		if process.env.RN_LAYOUT_SIMS_NO_CLIENT ~= "1" then
+			ClientSim.attach(sim, bot):start()
+		end
 		sim:run(0.6)
 		sim:send(bot, "ClientReady", "keyboard", "en-us")
 		sim:send(bot, "Debug", "give", "all")
@@ -359,8 +364,18 @@ return function(ctx)
 				end
 			end
 		end
-		if #sim.errors > 0 then
-			fail("server errors")
+		sim:run(4) -- results screen, return to the lobby
+		local clientWarnings = {}
+		for _, w in sim.warnings do
+			if string.find(w, "[Client]", 1, true) then
+				table.insert(clientWarnings, w)
+			end
+		end
+		if #sim.errors > 0 or #clientWarnings > 0 then
+			fail(
+				"server or client errors"
+					.. (if #clientWarnings > 0 then "\n" .. table.concat(clientWarnings, "\n") else "")
+			)
 		end
 		expect(sim:state(bot, "global", "run.outcome")).toBe("Success")
 		expect(hurt()).toBe(false)

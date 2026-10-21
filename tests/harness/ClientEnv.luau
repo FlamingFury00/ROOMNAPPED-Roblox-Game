@@ -153,7 +153,34 @@ function ClientEnv.new(placePath: string)
 	self.snapshot = { global = { seq = 0, data = {} }, me = { seq = 0, data = {} } }
 	self.seq = { global = 0, me = 0 }
 
+	-- GUI objects report a 1280x720 screen at the origin (Lune only returns computed properties once written).
+	local InstanceWrapper = {
+		new = function(className: string, parent: any?)
+			local inst = roblox.Instance.new(className)
+			if inst:IsA("GuiBase2d") then
+				inst.AbsoluteSize = roblox.Vector2.new(1280, 720)
+				inst.AbsolutePosition = roblox.Vector2.zero
+			end
+			if parent then
+				inst.Parent = parent
+			end
+			return inst
+		end,
+	}
 	local loaded = Env.load(placePath, {
+		Instance = InstanceWrapper,
+		-- A client module that fails to start (logged, then skipped by the bootstrap) is a test failure.
+		warn = function(...)
+			local parts = {}
+			for i = 1, select("#", ...) do
+				table.insert(parts, tostring((select(i, ...))))
+			end
+			local text = table.concat(parts, " ")
+			print("[warn]", text)
+			if string.find(text, "failed to start", 1, true) then
+				table.insert(errors0, text)
+			end
+		end,
 		TweenInfo = {
 			new = function(time: number?, style: any?, direction: any?)
 				return { Time = time or 1, EasingStyle = style, EasingDirection = direction }

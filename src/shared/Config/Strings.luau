@@ -29,10 +29,10 @@ local catalog: { [string]: string } = {
 
 	-- Phases & objectives (U02) ----------------------------------------------------------------------
 	["objective.lobby"] = "Pick a mission and press PLAY",
-	["objective.lobbyWaiting"] = "Expedition in progress - you'll join the next one",
+	["objective.lobbyWaiting"] = "Run in progress - you'll join the next one",
 	["objective.launching"] = "Going up...",
 	["objective.explore"] = "Find the {room} Room and steal it",
-	["objective.exploreTutorial"] = "Reach the {room} Room at the end of the hall",
+	["objective.exploreTutorial"] = "Find the {room} Room down the hall",
 	["objective.capture"] = "The room is folding!",
 	["objective.escape"] = "Carry the suitcase to the elevator!",
 	["objective.escapeCarry"] = "Run! Bring the suitcase to the elevator",
@@ -99,9 +99,9 @@ local catalog: { [string]: string } = {
 	["mission.M2.name"] = "Frostbite Floor",
 	["mission.M2.blurb"] = "Slide, launch and dodge runaway luggage carts to snatch a Freezer.",
 	["mission.M3.name"] = "The Boiler Wing",
-	["mission.M3.blurb"] = "Live wires, flames and steam. Cut the power or freeze your way through.",
+	["mission.M3.blurb"] = "Live wires and roaring flames. Cut the power, douse the fires, freeze the floods.",
 	["mission.M4.name"] = "Luggage Line",
-	["mission.M4.blurb"] = "Crates, carts and conveyor chaos. Push your way to a fan room.",
+	["mission.M4.blurb"] = "Runaway carts and heavy crates. Blow your way through the sorting hall to the Fan Room.",
 	["mission.M5.name"] = "Greenhouse Atrium",
 	["mission.M5.blurb"] = "Grow bridges over the pits and steal a living room.",
 	["mission.M6.name"] = "Magnet Vault",
@@ -167,6 +167,7 @@ local catalog: { [string]: string } = {
 	["lobby.walkIn"] = "Step into the elevator or press PLAY",
 	["lobby.profileLoading"] = "Loading your profile...",
 	["lobby.credits"] = "{amount}",
+	["lobby.testServer"] = "Test server - progress is not saved",
 
 	-- Collection (U16) ------------------------------------------------------------------------------------
 	["collection.title"] = "Room Collection",
@@ -361,13 +362,16 @@ local catalog: { [string]: string } = {
 	["hint.capture.gamepad"] = "Hold X to steal the room",
 	["hint.escape"] = "The Caretaker woke up! Carry the suitcase to the elevator!",
 	["hint.recall"] = "Rooms fold back for free - recall them to reuse",
-	["hint.fan"] = "Fans blow along the hall - press R to turn them",
+	["hint.fan.keyboard"] = "Fans blow along the hall - press R to turn them",
+	["hint.fan.touch"] = "Fans blow along the hall - tap Turn to aim them",
+	["hint.fan.gamepad"] = "Fans blow along the hall - press Y to turn them",
 	["hint.ledge"] = "No room for this? Edge along the ledge (slowly)",
 	["hint.revive"] = "Hold to revive your teammate",
 	["hint.slippery"] = "Ice is slippery - wind on ice makes you fly!",
 
 	-- Toasts (U14) ----------------------------------------------------------------------------------------------
 	["toast.runInProgress"] = "An expedition is already running",
+	["toast.squadFull"] = "The squad is full - you'll join the next run",
 	["toast.profileNotReady"] = "Your profile is still loading",
 	["toast.loadoutInvalid"] = "Pick two rooms first",
 	["toast.loadoutLocked"] = "Loadout is locked during an expedition",

@@ -31,6 +31,7 @@ local Components = require(script.Parent.Parent.Components)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local UIRoot = require(script.Parent.Parent.UIRoot)
+local Responsive = require(script.Parent.Parent.Responsive)
 local Common = require(script.Parent.Parent.Screens.Common)
 
 type ButtonHandle = Components.ButtonHandle
@@ -391,11 +392,10 @@ local function refreshNotices()
 		return
 	end
 	if profile.memory == true then
-		local chip = Components.chip("alert", Strings.t("toast.memoryStore"), C.orange, 1, C.textDark)
-		chip.Parent = noticeHolder
+		Components.notice("alert", Strings.t("lobby.testServer"), C.orange, 1, C.textDark).Parent = noticeHolder
 	end
 	if profile.status == "Failed" then
-		Components.chip("cross", Strings.t("lobby.profileFailed"), C.red, 2).Parent = noticeHolder
+		Components.notice("cross", Strings.t("lobby.profileFailed"), C.red, 2).Parent = noticeHolder
 		Components.button({
 			text = Strings.t("lobby.retryProfile"),
 			icon = "refresh",
@@ -409,7 +409,7 @@ local function refreshNotices()
 			parent = noticeHolder,
 		})
 	elseif profile.status == "Newer" then
-		Components.chip("alert", Strings.t("lobby.profileNewer"), C.red, 2).Parent = noticeHolder
+		Components.notice("alert", Strings.t("lobby.profileNewer"), C.red, 2).Parent = noticeHolder
 	end
 end
 
@@ -549,7 +549,7 @@ local function build()
 		font = Theme.Fonts.heading,
 		textSize = Theme.Text.large,
 		color = C.goldLight,
-		size = UDim2.new(0.5, 0, 1, 0),
+		size = UDim2.fromScale(0.5, 1),
 		position = UDim2.fromOffset(40, 0),
 		stroke = true,
 		parent = header,
@@ -561,13 +561,13 @@ local function build()
 		color = C.textDim,
 		align = Enum.TextXAlignment.Right,
 		size = UDim2.new(0.5, -6, 1, 0),
-		position = UDim2.new(0.5, 0, 0, 0),
+		position = UDim2.fromScale(0.5, 0),
 		parent = header,
 	})
 	squadRows = Create.new("Frame", {
 		Name = "Rows",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 1,
 		Parent = squad,
@@ -575,7 +575,7 @@ local function build()
 	noticeHolder = Create.new("Frame", {
 		Name = "Notices",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 2,
 		Parent = squad,
@@ -583,7 +583,7 @@ local function build()
 
 	-- Mission card (bottom left).
 	local stroke: UIStroke
-	missionCard, stroke = Common.card(UDim2.fromOffset(392, 178), C.panelDark)
+	missionCard, stroke = Common.card(UDim2.fromOffset(452, 178), C.panelDark)
 	missionCard.Name = "MissionCard"
 	missionCard.AnchorPoint = Vector2.new(0, 1)
 	missionCard.Position = UDim2.new(0, 14, 1, -14)
@@ -671,6 +671,19 @@ local function build()
 		Components.sound("ui_click")
 		UIRoot.open("MissionBoard")
 	end)
+
+	-- PLAY stays centred, except on narrow canvases (phones) where it slides right to clear the mission card.
+	local function placeCluster()
+		local canvas = Responsive.canvasSize(UIRoot.Guis.Hud)
+		if canvas.X <= 0 then
+			return
+		end
+		local cardRight = missionCard.Position.X.Offset + missionCard.Size.X.Offset
+		local center = math.max(canvas.X / 2, cardRight + 24 + cluster.Size.X.Offset / 2)
+		cluster.Position = UDim2.new(0, math.round(center), 1, -14)
+	end
+	placeCluster()
+	Responsive.Changed:Connect(placeCluster)
 end
 
 function LobbyHud.start()

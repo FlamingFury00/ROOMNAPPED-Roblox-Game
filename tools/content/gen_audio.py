@@ -3,9 +3,10 @@
 
 The catalog lists verified Roblox Creator Store audio (Roblox-owned or Roblox's licensed partner
 libraries ProSoundEffects / APM). Each cue has a primary id plus alternates used as runtime fallbacks
-when an asset fails to load.
+when an asset fails to load. Every entry's "source" must be "roblox" or "partner"; the generator refuses
+anything else so a community upload can never slip into a release (A10).
 """
-import json, os, sys
+import json, os, shutil, subprocess, sys
 root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 catalog = json.load(open(os.path.join(root, "tools/content/audio_catalog.json")))
 lines = [
@@ -24,6 +25,9 @@ lines = [
 ]
 for key in sorted(catalog):
     entry = catalog[key]
+    for item in [entry] + entry.get("alternates", []):
+        if item.get("source") not in ("roblox", "partner"):
+            sys.exit(f"{key}: {item.get('name')} has source {item.get('source')!r}; only roblox/partner audio ships")
     if entry.get("id") is None:
         continue
     alts = ", ".join(str(a["id"]) for a in entry.get("alternates", []) if a.get("id"))
@@ -34,4 +38,10 @@ lines.append("")
 lines.append("return table.freeze(AudioIds)")
 out = os.path.join(root, "src/shared/Config/AudioIds.luau")
 open(out, "w").write("\n".join(lines) + "\n")
+# Match the repository formatting (CI runs `stylua --check`).
+stylua = shutil.which("stylua") or "/opt/rbxtools/bin/stylua"
+if os.path.exists(stylua):
+    subprocess.run([stylua, out], check=True, cwd=root)
+else:
+    print("warning: stylua not found - run `stylua src/shared/Config/AudioIds.luau` before committing")
 print("wrote", out, len(catalog), "cues")

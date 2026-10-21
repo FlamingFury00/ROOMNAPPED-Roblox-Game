@@ -439,7 +439,7 @@ local renderConnection = RunService.RenderStepped:Connect(function(dt: number)
 	animTime += dt
 	progress += (targetProgress - progress) * math.min(1, dt * 3)
 	barFill.Size = UDim2.fromScale(math.clamp(progress, 0.04, 1), 1)
-	shimmer.Position = UDim2.new((animTime * 0.6) % 1.4 - 0.2, 0, 0, 0)
+	shimmer.Position = UDim2.fromScale((animTime * 0.6) % 1.4 - 0.2, 0)
 	if not reducedMotion then
 		emblem.Position = UDim2.fromOffset(500, 20 + math.sin(animTime * 2.2) * 6)
 		emblem.Rotation = math.sin(animTime * 1.3) * 3

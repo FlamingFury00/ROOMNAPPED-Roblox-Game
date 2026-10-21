@@ -151,7 +151,16 @@ end
 
 -- Windows ----------------------------------------------------------------------------------------------
 
-export type Window = { frame: Frame, content: Frame, close: ButtonHandle? }
+export type Window = {
+	frame: Frame,
+	content: Frame,
+	close: ButtonHandle?,
+	-- Calls `callback(contentSize)` now and whenever the window is refitted to the canvas.
+	onResize: (callback: (Vector2) -> ()) -> (),
+}
+
+local WINDOW_PADDING = 22
+local WINDOW_TITLE = 30 -- Components.panel reserves this much above the content for the title ribbon
 
 -- A centred modal window on the menu canvas with a title ribbon and an optional close button.
 function Common.window(name: string, title: string, icon: string?, size: Vector2, closable: boolean?): Window
@@ -162,8 +171,15 @@ function Common.window(name: string, title: string, icon: string?, size: Vector2
 		anchor = Vector2.new(0.5, 0.5),
 		title = title,
 		titleIcon = icon,
-		padding = 22,
+		padding = WINDOW_PADDING,
 	})
+	local resizeCallbacks: { (Vector2) -> () } = {}
+	local function contentSize(): Vector2
+		return Vector2.new(
+			frame.Size.X.Offset - WINDOW_PADDING * 2,
+			frame.Size.Y.Offset - WINDOW_PADDING * 2 - WINDOW_TITLE
+		)
+	end
 	-- Keep windows inside small canvases (phones clamp the scale, so the virtual canvas can be shorter
 	-- than 720): shrink to the canvas with a margin, never grow past the designed size.
 	local function fit()
@@ -171,7 +187,12 @@ function Common.window(name: string, title: string, icon: string?, size: Vector2
 		if canvas.X <= 0 or canvas.Y <= 0 then
 			return
 		end
-		frame.Size = UDim2.fromOffset(math.min(size.X, canvas.X - 32), math.min(size.Y, canvas.Y - 28))
+		-- Phone canvases are fractional; offsets are whole pixels.
+		frame.Size =
+			UDim2.fromOffset(math.floor(math.min(size.X, canvas.X - 32)), math.floor(math.min(size.Y, canvas.Y - 28)))
+		for _, callback in resizeCallbacks do
+			callback(contentSize())
+		end
 	end
 	fit()
 	Responsive.Changed:Connect(fit)
@@ -193,7 +214,15 @@ function Common.window(name: string, title: string, icon: string?, size: Vector2
 		closeButton = close
 	end
 	frame.Parent = UIRoot.Menus
-	return { frame = frame, content = content, close = closeButton }
+	return {
+		frame = frame,
+		content = content,
+		close = closeButton,
+		onResize = function(callback: (Vector2) -> ())
+			table.insert(resizeCallbacks, callback)
+			callback(contentSize())
+		end,
+	}
 end
 
 -- A simple modal confirm dialog. Returns the Screen-ready frame; buttons call the callbacks.
@@ -224,7 +253,7 @@ function Common.confirmFrame(
 		Name = "Buttons",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0),
+		Position = UDim2.fromScale(0.5, 1),
 		Size = UDim2.new(1, 0, 0, 84),
 		Parent = window.content,
 	}, {
@@ -502,7 +531,7 @@ function Common.preview(parent: Instance, size: UDim2, position: UDim2?): Previe
 			angle = 0
 			place()
 			connection = RunService.RenderStepped:Connect(function(dt: number)
-				if not viewport.Visible or not viewport:IsDescendantOf(game) then
+				if not viewport.Visible or not viewport:FindFirstAncestorOfClass("PlayerGui") then
 					return
 				end
 				angle += dt * 0.55

@@ -91,7 +91,7 @@ local function addTarget(part: Instance, tagName: string)
 		Name = "Pill",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(0, 0, 0, 62),
+		Size = UDim2.fromOffset(0, 62),
 		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = C.panelDark,
 		BackgroundTransparency = 0.06,

@@ -135,7 +135,7 @@ end
 
 -- Freezer --------------------------------------------------------------------------------------------
 
-local function buildFreezer(model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
+local function buildFreezer(_model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
 	-- Chest freezer (signature prop) against the back wall.
 	solid(props, "Chest", rp(roomCF, 0, 1.6, 11.6), Vector3.new(7.5, 3.2, 3.2), palette.prop, M.SmoothPlastic)
 	decor(
@@ -183,7 +183,7 @@ local function buildFreezer(model: Model, roomCF: CFrame, palette: Palette, prop
 		end
 	end
 	-- Icicles along the ceiling.
-	for i = 1, 14 do
+	for _ = 1, 14 do
 		local x = -6 + rng() * 12
 		local depth = 1.5 + rng() * 11
 		local len = 0.8 + rng() * 1.8
@@ -438,7 +438,7 @@ local function washer(props: Folder, cf: CFrame, palette: Palette, rng: () -> nu
 	})
 end
 
-local function buildLaundry(model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
+local function buildLaundry(_model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
 	for i = -1, 1 do
 		washer(props, rp(roomCF, i * 3.8, 0, 11.9) * CFrame.Angles(0, math.pi, 0), palette, rng)
 	end
@@ -523,7 +523,7 @@ end
 
 -- Greenhouse -----------------------------------------------------------------------------------------
 
-local function buildGreenhouse(model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
+local function buildGreenhouse(_model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
 	-- Glass roof panes over the shell ceiling.
 	for i = -1, 1 do
 		decor(
@@ -625,7 +625,7 @@ local function buildGreenhouse(model: Model, roomCF: CFrame, palette: Palette, p
 		end
 	elseif palette.style == "zen" then
 		decor(props, "Lantern", rp(roomCF, -2.5, 1.5, 10.5), Vector3.new(1, 3, 1), palette.trim, M.Slate)
-		for i = 1, 4 do
+		for _ = 1, 4 do
 			Kit.ball(props, {
 				name = "Blossom",
 				cf = rp(roomCF, 2 + rng() * 2, 7 + rng() * 3, 11 + rng()),
@@ -639,7 +639,7 @@ end
 
 -- Magnet ---------------------------------------------------------------------------------------------
 
-local function buildMagnet(model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
+local function buildMagnet(_model: Model, roomCF: CFrame, palette: Palette, props: Folder, rng: () -> number)
 	-- Giant horseshoe magnet on the back wall: two arms joined by a curved top.
 	local base = rp(roomCF, 0, 0, 12.3)
 	for _, side in { -1, 1 } do

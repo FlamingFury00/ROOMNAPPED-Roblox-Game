@@ -113,9 +113,15 @@ function Create.list(
 	return layout
 end
 
-function Create.aspect(ratio: number): UIAspectRatioConstraint
+-- Aspect ratio lock. Pass `dominantAxis` when one side is driven by the parent (e.g. a zero-width icon
+-- holder whose height is a fraction of a row): the default FitWithinMaxSize would collapse it to 0x0.
+function Create.aspect(ratio: number, dominantAxis: Enum.DominantAxis?): UIAspectRatioConstraint
 	local constraint = Instance.new("UIAspectRatioConstraint")
 	constraint.AspectRatio = ratio
+	if dominantAxis then
+		constraint.AspectType = Enum.AspectType.ScaleWithParentSize
+		constraint.DominantAxis = dominantAxis
+	end
 	return constraint
 end
 

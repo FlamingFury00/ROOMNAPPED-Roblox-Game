@@ -147,7 +147,7 @@ function Components.panel(props: PanelProps): (Frame, Frame)
 		Name = "Content",
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, -pad * 2, 1, -pad * 2 - (if props.title then 30 else 0)),
-		Position = UDim2.new(0, pad, 0, pad + (if props.title then 30 else 0)),
+		Position = UDim2.fromOffset(pad, pad + (if props.title then 30 else 0)),
 		Parent = frame,
 	})
 	if props.title then
@@ -155,7 +155,7 @@ function Components.panel(props: PanelProps): (Frame, Frame)
 			Name = "TitleRibbon",
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0, 2),
-			Size = UDim2.new(0, 0, 0, 46),
+			Size = UDim2.fromOffset(0, 46),
 			AutomaticSize = Enum.AutomaticSize.X,
 			BackgroundColor3 = C.white,
 			BorderSizePixel = 0,
@@ -325,10 +325,10 @@ function Components.button(props: ButtonProps): ButtonHandle
 		iconHolder = Create.new("Frame", {
 			Name = "IconHolder",
 			BackgroundTransparency = 1,
-			Size = UDim2.new(0, 0, 0.62, 0),
+			Size = UDim2.fromScale(0, 0.62),
 			LayoutOrder = 1,
 			Parent = row,
-		}, { Create.aspect(1) })
+		}, { Create.aspect(1, Enum.DominantAxis.Height) })
 		Icons.make(props.icon :: string, props.iconColor or C.white, C.panelDark).Parent = iconHolder
 	end
 	local label = Components.label({
@@ -337,7 +337,7 @@ function Components.button(props: ButtonProps): ButtonHandle
 		font = Theme.Fonts.heading,
 		textSize = props.textSize or Theme.Text.large,
 		color = C.text,
-		size = UDim2.new(0, 0, 1, 0),
+		size = UDim2.fromScale(0, 1),
 		autoSize = Enum.AutomaticSize.X,
 		align = Enum.TextXAlignment.Center,
 		layoutOrder = 2,
@@ -475,7 +475,7 @@ function Components.iconButton(icon: string, size: number, onClick: () -> (), va
 	})
 	local holder = handle.instance:FindFirstChild("IconHolder", true)
 	if holder and holder:IsA("Frame") then
-		holder.Size = UDim2.new(0, 0, 0.66, 0)
+		holder.Size = UDim2.fromScale(0, 0.66)
 	end
 	return handle
 end
@@ -633,7 +633,7 @@ function Components.toggle(text: string, value: boolean, onChange: (boolean) -> 
 	local function paint()
 		track.BackgroundColor3 = if state then C.green else C.ink
 		Motion.tween(knob, Theme.Tween.fast, { Position = knobPosition() })
-		stateLabel.Position = if state then UDim2.new(0, 6, 0, 0) else UDim2.new(1, -58, 0, 0)
+		stateLabel.Position = if state then UDim2.fromOffset(6, 0) else UDim2.new(1, -58, 0, 0)
 		stateLabel.Text = if state then onText else offText
 		stateLabel.TextColor3 = if state then C.textDark else C.textDim
 	end
@@ -715,7 +715,7 @@ function Components.slider(
 	local bar = Create.new("Frame", {
 		Name = "Track",
 		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0.38, 0, 0.5, 0),
+		Position = UDim2.fromScale(0.38, 0.5),
 		Size = UDim2.new(0.62, -96, 0, 14),
 		BackgroundColor3 = C.ink,
 		Parent = hit,
@@ -874,6 +874,40 @@ function Components.chip(icon: string?, text: string, color: Color3, layoutOrder
 		parent = chip,
 	})
 	return chip
+end
+
+-- Full-width notice block for fixed-width panels: like a chip, but long text wraps instead of overflowing.
+function Components.notice(icon: string, text: string, color: Color3, layoutOrder: number?, textColor: Color3?): Frame
+	local notice = Create.new("Frame", {
+		Name = "Notice",
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = color,
+		BackgroundTransparency = 0.05,
+		LayoutOrder = layoutOrder or 0,
+	}, {
+		Create.corner(Theme.Radius.medium),
+		Create.stroke(C.shadow, 2, 0.4),
+		Create.padding(6, 10),
+		Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center),
+	})
+	local holder = Create.new(
+		"Frame",
+		{ BackgroundTransparency = 1, Size = UDim2.fromOffset(22, 22), LayoutOrder = 1, Parent = notice }
+	)
+	Icons.make(icon, textColor or C.white, color:Lerp(C.black, 0.4)).Parent = holder
+	Components.label({
+		text = text,
+		font = Theme.Fonts.bodyBold,
+		textSize = Theme.Text.small,
+		color = textColor or C.white,
+		size = UDim2.new(1, -30, 0, 0),
+		autoSize = Enum.AutomaticSize.Y,
+		wrap = true,
+		layoutOrder = 2,
+		parent = notice,
+	})
+	return notice
 end
 
 -- Modal backdrop that dims the world behind a screen (click to close optional).

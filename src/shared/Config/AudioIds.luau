@@ -89,7 +89,7 @@ local AudioIds: { [string]: AudioId } = {
 		name = "Ice Freeze Large Piece Crackles Liquid Nitro (SFX)",
 		alternates = { 9125611312, 9114858583 },
 	},
-	heartbeat_loop = { id = 6202853067, name = "Heartbeat (loop)", alternates = { 2867269913, 1836920299 } },
+	heartbeat_loop = { id = 1842342421, name = "Heartbeat (a)", alternates = { 9043365727, 9043365842 } },
 	hotel_ambience_loop = { id = 9112775414, name = "Eerie Ambience 2 (SFX)", alternates = { 9113203785, 9114493195 } },
 	ice_crack = {
 		id = 9114858588,

@@ -140,10 +140,13 @@ local function installShims()
 	end)
 end
 
+-- Size every GuiBase2d reports (the safe-area size of the simulated screen).
+local guiScreen = V2.new(1280, 720)
+
 -- Seed properties the engine computes (Lune only returns values that were written first).
 local function seed(inst: any)
 	if inst:IsA("GuiBase2d") then
-		inst.AbsoluteSize = V2.new(1280, 720)
+		inst.AbsoluteSize = guiScreen
 		inst.AbsolutePosition = V2.zero
 	end
 	if inst:IsA("Sound") then
@@ -170,8 +173,15 @@ local function proxyOf(real: any, fields: { [string]: any }): any
 	})
 end
 
-function ClientSim.attach(sim: any, bot: any)
+-- Options: `device` picks the simulated input family ("keyboard" by default, "touch" or "gamepad");
+-- `viewport` is the screen size (1280x720 by default) and `safeArea` the size the HUD guis get inside the
+-- device and top-bar insets (defaults to the viewport).
+function ClientSim.attach(sim: any, bot: any, options: { device: string?, viewport: any?, safeArea: any? }?)
 	installShims()
+	local opts = options or {}
+	local kind = opts.device or "keyboard"
+	local viewport = opts.viewport or V2.new(1280, 720)
+	guiScreen = opts.safeArea or viewport
 	local self = setmetatable({}, ClientSim)
 	activeClient = self
 	Events.setDispatcher(function(fn, ...)
@@ -199,7 +209,7 @@ function ClientSim.attach(sim: any, bot: any)
 		camera = roblox.Instance.new("Camera")
 		camera.Parent = workspace
 	end
-	camera.ViewportSize = V2.new(1280, 720)
+	camera.ViewportSize = viewport
 	camera.FieldOfView = 70
 	camera.CFrame = CF.new(0, 20, 30)
 	workspace.CurrentCamera = camera
@@ -233,11 +243,15 @@ function ClientSim.attach(sim: any, bot: any)
 		BindToRenderStep = function() end,
 		UnbindFromRenderStep = function() end,
 	})
+	local lastInput = if kind == "touch"
+		then roblox.Enum.UserInputType.Touch
+		elseif kind == "gamepad" then roblox.Enum.UserInputType.Gamepad1
+		else roblox.Enum.UserInputType.Keyboard
 	services.UserInputService = proxyOf(game:GetService("UserInputService"), {
-		TouchEnabled = false,
-		KeyboardEnabled = true,
-		GamepadEnabled = false,
-		MouseEnabled = true,
+		TouchEnabled = kind == "touch",
+		KeyboardEnabled = kind == "keyboard",
+		GamepadEnabled = kind == "gamepad",
+		MouseEnabled = kind == "keyboard",
 		LastInputTypeChanged = signal(),
 		InputBegan = signal(),
 		InputChanged = signal(),
@@ -245,7 +259,7 @@ function ClientSim.attach(sim: any, bot: any)
 		WindowFocusReleased = signal(),
 		WindowFocused = signal(),
 		GetLastInputType = function()
-			return roblox.Enum.UserInputType.Keyboard
+			return lastInput
 		end,
 		GetImageForKeyCode = function()
 			return ""
@@ -504,6 +518,24 @@ end
 
 function ClientSim.click(self: any, button: any)
 	Events.eventFor(button, "Activated"):Fire()
+end
+
+-- Finger down / up on a GUI object (fires its InputBegan / InputEnded with a Touch input).
+local function touchInput(state: any): any
+	return {
+		UserInputType = roblox.Enum.UserInputType.Touch,
+		UserInputState = state,
+		Position = V3.zero,
+		Delta = V3.zero,
+	}
+end
+
+function ClientSim.touchDown(self: any, gui: any)
+	Events.eventFor(gui, "InputBegan"):Fire(touchInput(roblox.Enum.UserInputState.Begin))
+end
+
+function ClientSim.touchUp(self: any, gui: any)
+	Events.eventFor(gui, "InputEnded"):Fire(touchInput(roblox.Enum.UserInputState.End))
 end
 
 -- Per-frame upkeep (called by Sim.run): tag signals and the camera following the character.

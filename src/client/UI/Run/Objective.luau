@@ -26,11 +26,19 @@ local Create = require(script.Parent.Parent.Create)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local Components = require(script.Parent.Parent.Components)
+local Responsive = require(script.Parent.Parent.Responsive)
 
 local Objective = {}
 
 local C = Theme.Colors
 local localPlayer = Players.LocalPlayer
+
+-- Width kept free on each side of the centred objective row: in a run the menu bar has two buttons, in the
+-- lobby the squad panel and a three-button menu bar sit beside it. ROW_CHROME is the row around the text
+-- (icon, padding, gaps and the keys chip).
+local SIDE_RESERVE_RUN = 214
+local SIDE_RESERVE_LOBBY = 334
+local ROW_CHROME = 176
 
 local THREAT_ICON: { [string]: string } = {
 	Dormant = "zzz",
@@ -118,8 +126,23 @@ function Objective.create(parent: Instance): Handle
 		layoutOrder = 2,
 		parent = pill,
 	})
-	Create.new("UISizeConstraint", { MaxSize = Vector2.new(560, 40), Parent = objectiveText })
+	local textLimit = Create.new("UISizeConstraint", { MaxSize = Vector2.new(560, 40), Parent = objectiveText })
 	objectiveText.TextTruncate = Enum.TextTruncate.AtEnd
+	-- The row is centred between the vitals (left) and the menu bar (right): on narrow canvases (phones) the
+	-- text gives up width before it can reach either side.
+	local function fitWidth()
+		local gui = parent:FindFirstAncestorOfClass("ScreenGui")
+		if not gui then
+			return
+		end
+		local canvasWidth = Responsive.canvasSize(gui).X
+		if canvasWidth > 0 then
+			local reserve = if RunInfo.isParticipant() then SIDE_RESERVE_RUN else SIDE_RESERVE_LOBBY
+			textLimit.MaxSize = Vector2.new(math.clamp(canvasWidth - 2 * reserve - ROW_CHROME, 260, 560), 40)
+		end
+	end
+	fitWidth()
+	Responsive.Changed:Connect(fitWidth)
 
 	local keysChip = Create.new("Frame", {
 		Name = "Keys",
@@ -289,6 +312,7 @@ function Objective.create(parent: Instance): Handle
 			return
 		end
 		lastObjectiveKey = full
+		fitWidth()
 		objectiveText.Text = Strings.t(key, params)
 		if objectiveIcon then
 			objectiveIcon:Destroy()

@@ -273,8 +273,9 @@ local function situationalHint(position: Vector3): string?
 		return once("hint.slippery", 5)
 	end
 	local candidate = PlacementController.candidate()
-	if candidate and candidate.dir and not seen["hint.fan"] then
-		return once("hint.fan", 6)
+	local fanKey = deviceKey("hint.fan")
+	if candidate and candidate.dir and not seen[fanKey] then
+		return once(fanKey, 6)
 	end
 	for _, ledge in level.ledges or {} do
 		if MathUtil.pointInBox(ledge.cf, ledge.size, position, 4) and not seen["hint.ledge"] then

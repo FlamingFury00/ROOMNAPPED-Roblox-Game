@@ -38,9 +38,13 @@ Collection.priority = 100
 
 local C = Theme.Colors
 
+local TABS_HEIGHT = 84 -- tab bar above the pages and the detail panel
+local DETAIL_ACTIONS = 94 -- pinned action row at the bottom of the detail panel
+local PREVIEW_HEIGHT = 196
+
 local window: Common.Window
 local tabs: Common.Tabs
-local pages: { [string]: Frame } = {}
+local pages: { [string]: GuiObject } = {}
 local creditsLabel: TextLabel
 -- Rooms page.
 local slotCards: { Frame } = {}
@@ -312,7 +316,18 @@ local function showSkinDetail(skin: SkinDef)
 	end
 end
 
+local detailShown = ""
+
 local function refreshDetail()
+	-- A different item starts at the top of the (scrollable) detail panel.
+	local shown = currentTab .. ":" .. tostring(if currentTab == "rooms" then focusedRoom else focusedSkin)
+	if shown ~= detailShown then
+		detailShown = shown
+		local body = detail:FindFirstChild("Body")
+		if body and body:IsA("ScrollingFrame") then
+			body.CanvasPosition = Vector2.zero
+		end
+	end
 	if currentTab == "rooms" then
 		showRoomDetail(focusedRoom)
 	else
@@ -680,8 +695,8 @@ local function build()
 	local body = Create.new("Frame", {
 		Name = "Body",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 84),
-		Size = UDim2.new(1, 0, 1, -84),
+		Position = UDim2.fromOffset(0, TABS_HEIGHT),
+		Size = UDim2.new(1, 0, 1, -TABS_HEIGHT),
 		Parent = content,
 	})
 	local left = Create.new("Frame", {
@@ -691,9 +706,21 @@ local function build()
 		Parent = body,
 	})
 
-	-- Rooms page.
-	local rooms =
-		Create.new("Frame", { Name = "Rooms", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = left })
+	-- Rooms page (scrolls when the window is shorter than the page, on phones).
+	local rooms = Create.new("ScrollingFrame", {
+		Name = "Rooms",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(1, 1),
+		CanvasSize = UDim2.fromOffset(0, 410),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		ScrollBarThickness = 8,
+		ScrollBarImageColor3 = C.gold,
+		ScrollBarImageTransparency = 0.2,
+		VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
+		Selectable = false,
+		Parent = left,
+	})
 	pages.rooms = rooms
 	Common.heading(rooms, Strings.t("lobby.loadout"), "suitcase").Position = UDim2.fromOffset(0, 0)
 	local slots = Create.new("Frame", {
@@ -762,35 +789,44 @@ local function build()
 	suitcaseGrid = Common.scroll(suitcases, UDim2.fromScale(1, 1))
 	useGrid(suitcaseGrid)
 
-	-- Shared detail panel.
+	-- Shared detail panel: the preview and texts scroll (short phone windows), the actions stay pinned below.
 	detail = Create.new("Frame", {
 		Name = "Detail",
 		BackgroundColor3 = C.ink,
 		BackgroundTransparency = 0.4,
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.fromScale(1, 0),
 		Size = UDim2.new(0, 416, 1, 0),
 		Parent = body,
 	}, { Create.corner(Theme.Radius.medium), Create.stroke(C.goldDark, 2, 0.3) })
-	preview = Common.preview(detail, UDim2.new(1, -20, 0, 196), UDim2.fromOffset(10, 10))
+	local detailBody = Common.scroll(detail, UDim2.new(1, 0, 1, -DETAIL_ACTIONS), UDim2.fromOffset(0, 0), 4)
+	detailBody.Name = "Body"
+	local detailPad = detailBody:FindFirstChildOfClass("UIPadding")
+	if detailPad then
+		detailPad.PaddingTop = UDim.new(0, 10)
+		detailPad.PaddingLeft = UDim.new(0, 10)
+		detailPad.PaddingRight = UDim.new(0, 10)
+	end
+	preview = Common.preview(detailBody, UDim2.new(1, 0, 0, PREVIEW_HEIGHT))
+	preview.frame.LayoutOrder = 1
 	detailName = Components.label({
 		text = "",
 		font = Theme.Fonts.heading,
 		textSize = Theme.Text.large,
 		color = C.goldLight,
-		size = UDim2.new(1, -24, 0, 32),
-		position = UDim2.fromOffset(14, 212),
+		size = UDim2.new(1, -8, 0, 34),
+		layoutOrder = 2,
 		stroke = true,
-		parent = detail,
+		parent = detailBody,
 	})
 	detailName.TextTruncate = Enum.TextTruncate.AtEnd
 	detailSub = Components.label({
 		text = "",
 		font = Theme.Fonts.bodyHeavy,
 		textSize = Theme.Text.body,
-		size = UDim2.new(1, -24, 0, 24),
-		position = UDim2.fromOffset(14, 244),
-		parent = detail,
+		size = UDim2.new(1, -8, 0, 24),
+		layoutOrder = 3,
+		parent = detailBody,
 	})
 	detailDesc = Components.label({
 		text = "",
@@ -799,19 +835,26 @@ local function build()
 		color = C.cream,
 		wrap = true,
 		yAlign = Enum.TextYAlignment.Top,
-		size = UDim2.new(1, -24, 0, 84),
-		position = UDim2.fromOffset(14, 272),
-		parent = detail,
+		size = UDim2.new(1, -8, 0, 0),
+		autoSize = Enum.AutomaticSize.Y,
+		layoutOrder = 4,
+		parent = detailBody,
 	})
 	detailStatus = Components.label({
 		text = "",
 		font = Theme.Fonts.bodyHeavy,
 		textSize = Theme.Text.small,
 		wrap = true,
-		size = UDim2.new(1, -24, 0, 26),
-		position = UDim2.new(0, 14, 1, -112),
-		parent = detail,
+		size = UDim2.new(1, -8, 0, 0),
+		autoSize = Enum.AutomaticSize.Y,
+		layoutOrder = 5,
+		parent = detailBody,
 	})
+	-- Short windows (phones) trade preview height for the name and the start of the description.
+	window.onResize(function(contentSize: Vector2)
+		local visible = contentSize.Y - TABS_HEIGHT - DETAIL_ACTIONS - 10
+		preview.frame.Size = UDim2.new(1, 0, 0, math.clamp(visible - 124, 104, PREVIEW_HEIGHT))
+	end)
 	actionRow = Create.new("Frame", {
 		Name = "Actions",
 		BackgroundTransparency = 1,

@@ -45,7 +45,12 @@ local totalLabel: TextLabel
 local savingRow: Frame
 local savingIcon: Frame
 local savingLabel: TextLabel
+local breakdown: Frame
+local buttonRow: Frame
+local lobbyButton: ButtonHandle
 local replayButton: ButtonHandle
+-- Short windows (phones) use a compact layout: smaller headline, reward art and buttons.
+local compact = false
 
 local shownRunId: string? = nil
 local actedRunId: string? = nil
@@ -167,15 +172,15 @@ local function renderRewardCard(data: any)
 		stroke = true,
 		parent = rewardCard,
 	})
-	bigIcon(rewardCard, icon, color, 116, UDim2.new(0.5, 0, 0, 52))
+	bigIcon(rewardCard, icon, color, if compact then 78 else 116, UDim2.new(0.5, 0, 0, if compact then 48 else 52))
 	local nameLabel = Components.label({
 		text = name,
 		font = Theme.Fonts.heading,
 		textSize = Theme.Text.large,
 		align = Enum.TextXAlignment.Center,
 		wrap = true,
-		size = UDim2.new(1, -24, 0, 64),
-		position = UDim2.fromOffset(12, 176),
+		size = UDim2.new(1, -24, 0, if compact then 36 else 64),
+		position = UDim2.fromOffset(12, if compact then 134 else 176),
 		stroke = true,
 		parent = rewardCard,
 	})
@@ -444,6 +449,7 @@ local function build()
 		Size = UDim2.new(1, -346, 0, 254),
 		Parent = content,
 	}, { Create.corner(Theme.Radius.large) })
+	breakdown = right
 	linesList = Common.scroll(right, UDim2.new(1, -12, 1, -56), UDim2.fromOffset(6, 6), 4)
 	linesList.Name = "Lines"
 	totalLabel = Components.label({
@@ -490,13 +496,14 @@ local function build()
 		Name = "Buttons",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0),
+		Position = UDim2.fromScale(0.5, 1),
 		Size = UDim2.new(1, 0, 0, 96),
 		Parent = content,
 	}, {
 		Create.list(Enum.FillDirection.Horizontal, 20, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center),
 	})
-	Components.button({
+	buttonRow = buttons
+	lobbyButton = Components.button({
 		name = "Lobby",
 		text = Strings.t("results.lobby"),
 		icon = "door",
@@ -524,6 +531,34 @@ local function build()
 		end,
 		parent = buttons,
 	})
+
+	-- Phone-height windows: everything keeps its place, just tighter, so nothing overlaps.
+	window.onResize(function(contentSize: Vector2)
+		-- The content was stretched over the removed title ribbon (frame - 36 instead of frame - 74).
+		local height = contentSize.Y + 38
+		local wasCompact = compact
+		compact = height < 560
+		local top = if compact then 128 else 162
+		local buttonsHeight = if compact then 76 else 96
+		local middle = if compact then math.max(150, height - top - 44 - buttonsHeight) else 254
+		headline.TextSize = if compact then 50 else 66
+		headline.Size = UDim2.new(1, 0, 0, if compact then 56 else 74)
+		subtitle.TextSize = if compact then Theme.Text.body else Theme.Text.medium
+		subtitle.Position = UDim2.fromOffset(0, if compact then 56 else 74)
+		statsRow.Position = UDim2.fromOffset(0, if compact then 84 else 112)
+		rewardCard.Position = UDim2.fromOffset(0, top)
+		rewardCard.Size = UDim2.fromOffset(330, middle)
+		breakdown.Position = UDim2.fromOffset(346, top)
+		breakdown.Size = UDim2.new(1, -346, 0, middle)
+		savingRow.Position = UDim2.fromOffset(0, top + middle + 8)
+		buttonRow.Size = UDim2.new(1, 0, 0, buttonsHeight)
+		lobbyButton.instance.Size = UDim2.fromOffset(300, buttonsHeight - 8)
+		replayButton.instance.Size = UDim2.fromOffset(340, buttonsHeight - 8)
+		local data = payload()
+		if compact ~= wasCompact and data and shownRunId == data.runId then
+			renderRewardCard(data)
+		end
+	end)
 end
 
 function Results.start()

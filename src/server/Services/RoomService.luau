@@ -76,7 +76,7 @@ local function setSocketDoors(run: Run, socketId: string, open: boolean)
 	end
 end
 
-local function publishSocket(run: Run, record: RoomRecord?)
+local function publishSocket(_run: Run, record: RoomRecord?)
 	if not record then
 		return
 	end

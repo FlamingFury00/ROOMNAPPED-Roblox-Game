@@ -146,7 +146,7 @@ local function build()
 		local grid = Create.new("Frame", {
 			Name = "Group_" .. group.title,
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 0),
+			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			LayoutOrder = groupIndex * 2,
 			Parent = left,

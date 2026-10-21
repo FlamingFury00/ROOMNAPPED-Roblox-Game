@@ -65,7 +65,7 @@ local function makeItem(
 	})
 	local holder = button.instance:FindFirstChild("IconHolder", true)
 	if holder and holder:IsA("Frame") then
-		holder.Size = UDim2.new(0, 0, 0.66, 0)
+		holder.Size = UDim2.fromScale(0, 0.66)
 	end
 	Components.label({
 		name = "Caption",

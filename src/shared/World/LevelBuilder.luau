@@ -1945,10 +1945,13 @@ local function buildEffectDefs(ctx: Ctx)
 	local runtime = ctx.runtime
 	local defs = { basins = {}, fires = {}, vines = {}, powers = {}, gates = {}, links = {} }
 	for moduleIndex, mod in ctx.layout.modules do
-		if mod.kind == "Basin" and mod.id then
-			defs.basins[mod.id] = { id = mod.id, baseWet = mod.wet == true, deep = true, power = mod.power }
-		elseif mod.kind == "Puddle" and mod.id then
-			defs.basins[mod.id] = { id = mod.id, baseWet = mod.wet ~= false, deep = false, power = mod.power }
+		-- Ids fall back exactly like the tile builders do, so an id-less basin or puddle still has effects.
+		if mod.kind == "Basin" then
+			local id = mod.id or ("pit" .. moduleIndex)
+			defs.basins[id] = { id = id, baseWet = mod.wet == true, deep = true, power = mod.power }
+		elseif mod.kind == "Puddle" then
+			local id = mod.id or ("P" .. ctx.moduleTiles[moduleIndex][1])
+			defs.basins[id] = { id = id, baseWet = mod.wet ~= false, deep = false, power = mod.power }
 		elseif mod.kind == "Fire" then
 			local id = mod.id or ("F" .. ctx.moduleTiles[moduleIndex][1])
 			defs.basins[id .. "_pool"] = { id = id .. "_pool", baseWet = mod.wet == true, deep = false }

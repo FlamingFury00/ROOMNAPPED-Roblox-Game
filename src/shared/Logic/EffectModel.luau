@@ -195,14 +195,14 @@ function EffectModel.sourcesFor(self: Model, zoneId: string, effect: Effect): { 
 	for _, socketId in sortedKeys(self.sources) do
 		if self.sources[socketId] == effect then
 			local links = self.defs.links[socketId]
-			if links then
-				if effect == "cold" and links.cold and table.find(links.cold, zoneId) then
-					table.insert(out, socketId)
-				elseif effect == "water" and links.water == zoneId then
-					table.insert(out, socketId)
-				elseif effect == "vine" and links.vine == zoneId then
-					table.insert(out, socketId)
-				end
+			local feeds = links ~= nil
+				and (
+					(effect == "cold" and links.cold ~= nil and table.find(links.cold, zoneId) ~= nil)
+					or (effect == "water" and links.water == zoneId)
+					or (effect == "vine" and links.vine == zoneId)
+				)
+			if feeds then
+				table.insert(out, socketId)
 			end
 		end
 	end
@@ -335,12 +335,10 @@ end
 -- Instant (zero-duration) basin transitions. Returns true if anything changed.
 local function basinInstant(self: Model, id: string, b: BasinState, target: BasinPhase): boolean
 	local before = b.phase
-	if b.phase == "Dry" and target ~= "Dry" then
+	if (b.phase == "Dry" or b.phase == "Draining") and target ~= "Dry" then
 		setBasinPhase(self, id, b, "Filling")
 	elseif b.phase == "Filling" and target == "Dry" then
 		setBasinPhase(self, id, b, "Draining")
-	elseif b.phase == "Draining" and target ~= "Dry" then
-		setBasinPhase(self, id, b, "Filling")
 	elseif b.phase == "Water" then
 		if target == "Dry" then
 			setBasinPhase(self, id, b, "Draining")
