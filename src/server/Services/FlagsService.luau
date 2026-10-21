@@ -26,6 +26,8 @@ local FlagsService = {}
 FlagsService.Changed = Signal.new()
 
 local REFRESH_SECONDS = 300
+-- Until the first read succeeds a server retries quickly: a rollback in flags/live must not wait five minutes.
+local FIRST_READ_RETRY_SECONDS = 15
 
 local flags: any = Tables.deepCopy(FeatureFlags.Defaults)
 local environment = "live"
@@ -190,12 +192,14 @@ function FlagsService.Start()
 	end
 	task.spawn(function()
 		local applied = ""
+		local everRead = false
 		while true do
 			local ok, result = pcall(function()
 				local store = DataStoreService:GetDataStore("RoomnappedConfig")
 				return store:GetAsync("flags/" .. environment)
 			end)
 			if ok then
+				everRead = true
 				-- A missing key means "no overrides" (removing an override takes effect too).
 				local live, dropped = cleanOverrides(result)
 				local encoded = HttpService:JSONEncode(live)
@@ -221,7 +225,7 @@ function FlagsService.Start()
 				-- Keep the flags we have; a read failure must never switch content back on or off.
 				log:Warn("could not read live flags:", result)
 			end
-			task.wait(REFRESH_SECONDS)
+			task.wait(if everRead then REFRESH_SECONDS else FIRST_READ_RETRY_SECONDS)
 		end
 	end)
 end

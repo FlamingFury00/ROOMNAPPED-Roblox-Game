@@ -12,10 +12,6 @@ function Engine.velocity(part: BasePart): Vector3
 	return part.AssemblyLinearVelocity
 end
 
-function Engine.floorMaterial(humanoid: Humanoid): Enum.Material
-	return humanoid.FloorMaterial
-end
-
 function Engine.placeId(): number
 	return game.PlaceId
 end

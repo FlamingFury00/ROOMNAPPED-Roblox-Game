@@ -40,6 +40,7 @@ only that input, every prompt shows the right glyphs, and nothing on the HUD ove
 | Any | Reduced motion on | No camera shake or punch, UI pops replaced by fades, game still readable. |
 | Any | Text & UI size 85 % and 130 % | Nothing overlaps; menus still fit. |
 | Any | 300 ms simulated latency (Studio network settings) | Holds still complete (server tolerance), deploy and recall feel responsive, no rubber-banding into hazards. |
+| Any, with an R6 avatar (Avatar settings: Player Choice) | Any | Ice slides, the boosted slide and the Frostbite Floor ice launch work exactly as with R15; the carried suitcase sits in the right hand. |
 | Phone on a weak mobile connection | Touch | A whole run including the Frostbite Floor ice launch, boosted slides and a cart knockback: the movement guard never pulls the player back during ordinary play (it only acts on moves faster than 40 studs/s beyond a 60-stud allowance). |
 
 ## 3. State and save matrix (A12)

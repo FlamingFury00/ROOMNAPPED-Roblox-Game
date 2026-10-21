@@ -5,7 +5,9 @@
 	Hold actions (capture, revive) are verified on the server: a HoldBegin must be valid (phase, roster,
 	state, range and line of sight), the player must stay valid and in range for the whole hold (checked
 	every frame - walking away cancels), and HoldEnd(completed) is only honoured once the nominal duration has
-	actually elapsed on the server (minus a small latency tolerance). Instant actions (cargo pickup, levers)
+	actually elapsed on the server (minus a small latency tolerance). When the client's timer fills first (its
+	HoldBegin reached the server late), the hold finishes on the server's clock instead, as long as the player
+	stays valid until then. Instant actions (cargo pickup, levers)
 	are range and line-of-sight checked. Spoofed or stale requests are rejected without breaking the run.
 ]]
 
@@ -26,6 +28,7 @@ type Hold = {
 	target: string,
 	startedAt: number,
 	duration: number,
+	finishing: boolean, -- the client's timer filled; complete once the server's does
 }
 
 local InteractionService = {}
@@ -179,11 +182,35 @@ local function onHoldBegin(player: Player, kind: string, targetId: string)
 		Net.fire(player, "Effect", "holdRejected", { kind = kind, reason = reason })
 		return
 	end
-	holds[player] = { kind = kind, target = targetId, startedAt = os.clock(), duration = durationFor(kind) }
+	holds[player] = {
+		kind = kind,
+		target = targetId,
+		startedAt = os.clock(),
+		duration = durationFor(kind),
+		finishing = false,
+	}
 	Registry.get("Expedition").fireRun("holdStart", { userId = entry.key, kind = kind, target = targetId })
 	if kind == "capture" then
 		Registry.get("Caretaker").noise(run, run.runtime.target.capturePoint, 30)
 	end
+end
+
+-- End a hold whose time is up: validate once more and act.
+local function finish(player: Player, hold: Hold)
+	holds[player] = nil
+	Registry.get("Expedition").fireRun("holdStop", { userId = tostring(player.UserId), kind = hold.kind })
+	local Expedition = Registry.get("Expedition")
+	local run = Expedition.current()
+	local entry = Expedition.entry(player)
+	if not run or not entry then
+		return
+	end
+	local ok, reason = validate(run, entry, hold.kind, hold.target)
+	if not ok then
+		Net.fire(player, "Effect", "holdRejected", { kind = hold.kind, reason = reason })
+		return
+	end
+	execute(run, entry, hold.kind, hold.target)
 end
 
 local function onHoldEnd(player: Player, kind: string, targetId: string, completed: boolean)
@@ -191,28 +218,25 @@ local function onHoldEnd(player: Player, kind: string, targetId: string, complet
 	if not hold or hold.kind ~= kind or hold.target ~= targetId then
 		return
 	end
-	holds[player] = nil
-	Registry.get("Expedition").fireRun("holdStop", { userId = tostring(player.UserId), kind = kind })
 	if not completed then
+		holds[player] = nil
+		Registry.get("Expedition").fireRun("holdStop", { userId = tostring(player.UserId), kind = kind })
 		return
 	end
 	local elapsed = os.clock() - hold.startedAt
-	if elapsed < hold.duration - I.HoldToleranceSeconds or elapsed > hold.duration + I.MaxHoldDriftSeconds then
+	if elapsed > hold.duration + I.MaxHoldDriftSeconds then
+		holds[player] = nil
+		Registry.get("Expedition").fireRun("holdStop", { userId = tostring(player.UserId), kind = kind })
 		Net.fire(player, "Effect", "holdRejected", { kind = kind, reason = "timing" })
 		return
 	end
-	local Expedition = Registry.get("Expedition")
-	local run = Expedition.current()
-	local entry = Expedition.entry(player)
-	if not run or not entry then
+	if elapsed < hold.duration - I.HoldToleranceSeconds then
+		-- The client's timer filled first (network jitter delayed its HoldBegin): finish on the server's clock,
+		-- still checking every frame that the player stays in range (see step).
+		hold.finishing = true
 		return
 	end
-	local ok, reason = validate(run, entry, kind, targetId)
-	if not ok then
-		Net.fire(player, "Effect", "holdRejected", { kind = kind, reason = reason })
-		return
-	end
-	execute(run, entry, kind, targetId)
+	finish(player, hold)
 end
 
 local function onInteract(player: Player, kind: string, targetId: string)
@@ -239,6 +263,7 @@ end
 
 function InteractionService.step(run: Run, _dt: number)
 	local now = os.clock()
+	local due: { [Player]: Hold } = {}
 	for player, hold in holds do
 		local entry = Registry.get("Expedition").entry(player)
 		if not entry then
@@ -247,7 +272,15 @@ function InteractionService.step(run: Run, _dt: number)
 			local ok = validate(run, entry, hold.kind, hold.target)
 			if not ok or now - hold.startedAt > hold.duration + I.MaxHoldDriftSeconds then
 				InteractionService.cancelFor(player)
+			elseif hold.finishing and now - hold.startedAt >= hold.duration - I.HoldToleranceSeconds then
+				due[player] = hold
 			end
+		end
+	end
+	-- Acting can end the run or change phase, so it happens after the sweep.
+	for player, hold in due do
+		if holds[player] == hold then
+			finish(player, hold)
 		end
 	end
 end

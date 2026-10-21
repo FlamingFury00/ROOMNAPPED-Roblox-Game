@@ -59,7 +59,9 @@ interface down.
   ~0.12 s in the past on clients.
 * **Server checks** on every gameplay action: phase, roster membership and status (downed / eliminated
   players cannot act), distance with latency tolerance (`GameConfig.Interaction`), line of sight, and for
-  holds the full duration measured on the server. Admin commands re-check permissions on the server.
+  holds the full duration measured on the server (when network jitter makes the client's timer fill first, the
+  hold finishes on the server's clock while the player stays in range). Admin commands re-check permissions on
+  the server.
 * **Client-owned characters** (`GameConfig.Integrity`). Roblox lets each client move its own character, so
   distance checks alone would trust a teleporting client. Every frame, before the suitcase, capture and
   Caretaker checks, `HazardService` holds each run member to `MaxMoveSpeed` (40 studs/s) plus a 60-stud
@@ -147,7 +149,10 @@ client through roster data and player attributes; `SpectateController` follows l
 A downed squad member pings Help automatically for their whole revive window (after a fall it moves to the
 spot they are put back on; it clears when they are revived, out or leave), the squad hears and reads when a teammate is out, a solo player sees their extra life
 beside the hearts, spectators keep the Ping button (anywhere inside the level), and "I'm stuck!" never costs
-the last heart. Check-In forgives falls. The server records what landed the last knock-out, so a wipe reads
+the last heart. Check-In forgives falls. A fall puts the player back on the last floor they stood on: the
+server samples that checkpoint five times a second with a short ray down from the character (it cannot read
+`Humanoid.FloorMaterial` for a character the client simulates). The server records what landed the last
+knock-out, so a wipe reads
 "CAUGHT!" only when the Caretaker did it ("KNOCKED OUT!" otherwise, "TIME'S UP!" when the clock ran out),
 with the reason and a tip on the results.
 

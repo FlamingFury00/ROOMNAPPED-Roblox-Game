@@ -62,8 +62,8 @@ republishing, and running servers follow within five minutes (see §6).
 - [ ] Server fill: Roblox optimized.
 
 **Avatar**
-- [ ] R15 or R6 both work (the code looks up `RightHand` or `Right Arm`). Keep player choice unless a
-      playtest shows a problem.
+- [ ] R15 or R6 both work (the code looks up `RightHand` or `Right Arm`, and ground checks allow for R6 legs).
+      Keep player choice unless a playtest shows a problem.
 
 **Security**
 - [ ] *Enable Studio Access to API Services*: on for the test place only (Studio saves).

@@ -38,21 +38,21 @@ local DebugService = {}
 
 local adminCache: { [Player]: boolean } = {}
 
--- Rank of a player in a group (0 when not a member or the lookup fails). GroupService:GetGroupsAsync is the
--- non-deprecated way to read group ranks; one call covers every group the player belongs to.
-local function rankIn(player: Player, groupId: number): number
+-- Rank of a player in a group (0 when not a member) and whether the lookup worked. GroupService:GetGroupsAsync
+-- is the non-deprecated way to read group ranks; one call covers every group the player belongs to.
+local function rankIn(player: Player, groupId: number): (number, boolean)
 	local ok, groups = pcall(function()
 		return GroupService:GetGroupsAsync(player.UserId)
 	end)
 	if not ok or type(groups) ~= "table" then
-		return 0
+		return 0, false
 	end
 	for _, info in groups do
 		if type(info) == "table" and info.Id == groupId and type(info.Rank) == "number" then
-			return info.Rank
+			return info.Rank, true
 		end
 	end
-	return 0
+	return 0, true
 end
 
 function DebugService.isAdmin(player: Player): boolean
@@ -62,13 +62,16 @@ function DebugService.isAdmin(player: Player): boolean
 	end
 	local Flags = Registry.get("Flags")
 	local admin = false
+	local answered = true -- false when a group lookup failed: that is no answer, so it is not remembered
 	if RunService:IsStudio() then
 		admin = true
 	elseif Flags.feature("debugTools") then
 		if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
 			admin = true
 		elseif game.CreatorType == Enum.CreatorType.Group then
-			admin = rankIn(player, game.CreatorId) >= 254
+			local rank, ok = rankIn(player, game.CreatorId)
+			admin = rank >= 254
+			answered = ok
 		end
 		if not admin and table.find(Flags.adminUserIds(), player.UserId) then
 			admin = true
@@ -76,10 +79,14 @@ function DebugService.isAdmin(player: Player): boolean
 		local group = Flags.adminGroup()
 		if not admin and group then
 			-- Members only: rank 0 (outside the group) never qualifies, whatever the configured minimum.
-			admin = rankIn(player, group.id) >= math.max(1, group.minRank)
+			local rank, ok = rankIn(player, group.id)
+			admin = rank >= math.max(1, group.minRank)
+			answered = answered and ok
 		end
 	end
-	adminCache[player] = admin
+	if admin or answered then
+		adminCache[player] = admin
+	end
 	return admin
 end
 
@@ -232,11 +239,17 @@ end
 
 function DebugService.Start()
 	Net.on("Debug", onDebug)
-	local function announce(player: Player)
+	local function announce(player: Player, attempt: number?)
 		task.spawn(function()
 			local admin = DebugService.isAdmin(player)
-			if player.Parent == Players then
-				StateServer.private(player):Set({ "admin" }, admin)
+			if player.Parent ~= Players then
+				return
+			end
+			StateServer.private(player):Set({ "admin" }, admin)
+			-- A group lookup failed (nothing was remembered): ask again in a while.
+			local tries = attempt or 1
+			if adminCache[player] == nil and tries < 5 then
+				task.delay(30, announce, player, tries + 1)
 			end
 		end)
 	end

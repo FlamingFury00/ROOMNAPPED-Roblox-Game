@@ -158,9 +158,13 @@ local function inBoxes(boxes: any, position: Vector3, margin: number): boolean
 	return false
 end
 
+-- An R6 body stands on its 2-stud legs (its HipHeight is 0); R15 builds the leg length into HipHeight.
+local R6_LEGS = 2
+
 local function floorIsIce(r: CharacterRig): boolean
 	local origin = r.root.CFrame.Position
-	local depth = r.humanoid.HipHeight + r.root.Size.Y / 2 + 1.6
+	local legs = if r.humanoid.RigType == Enum.HumanoidRigType.R6 then R6_LEGS else 0
+	local depth = r.humanoid.HipHeight + legs + r.root.Size.Y / 2 + 1.6
 	local result = Workspace:Raycast(origin, Vector3.new(0, -depth, 0), rayParams)
 	if not result then
 		return false

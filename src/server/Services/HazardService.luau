@@ -292,6 +292,20 @@ local function inPitXZ(run: Run, position: Vector3): any?
 	return nil
 end
 
+-- Whether a character stands on something solid. The client simulates its own character, so the server cannot
+-- rely on Humanoid.FloorMaterial (computed where the character is simulated): a short ray down from the root
+-- answers it here. An R6 body stands on its 2-stud legs; R15 builds the legs into HipHeight.
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Exclude
+groundParams.RespectCanCollide = true
+
+local function standing(root: BasePart, humanoid: Humanoid): boolean
+	local legs = if humanoid.RigType == Enum.HumanoidRigType.R6 then 2 else 0
+	local depth = humanoid.HipHeight + legs + root.Size.Y / 2 + 1.5
+	groundParams.FilterDescendantsInstances = { humanoid.Parent :: Instance }
+	return workspace:Raycast(root.CFrame.Position, Vector3.new(0, -depth, 0), groundParams) ~= nil
+end
+
 local function onLedge(run: Run, position: Vector3): boolean
 	for _, ledge in run.runtime.ledges do
 		if MathUtil.pointInBox(ledge.cf, ledge.size, position, 0.3) then
@@ -497,8 +511,7 @@ local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: bool
 	-- Last safe point sampling (S16 checkpoint).
 	if sample and status == "Active" then
 		local humanoid = Characters.humanoid(entry.player)
-		local grounded = humanoid ~= nil and Engine.floorMaterial(humanoid) ~= Enum.Material.Air
-		if grounded and (pit == nil or onLedge(run, position)) then
+		if humanoid and standing(root, humanoid) and (pit == nil or onLedge(run, position)) then
 			for _, floor in run.runtime.safeFloors do
 				if MathUtil.pointInBox(floor.cf, floor.size, position, 0.2) then
 					local look = root.CFrame.LookVector * Vector3.new(1, 0, 1)

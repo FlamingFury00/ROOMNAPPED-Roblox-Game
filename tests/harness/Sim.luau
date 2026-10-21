@@ -278,7 +278,7 @@ local function installShims()
 		return current.time + 1000
 	end)
 	roblox.implementMethod("Workspace", "Raycast", function(_, origin, direction, params)
-		return current:raycast(origin, direction, params, false)
+		return current:raycast(origin, direction, params, params ~= nil and params.RespectCanCollide == true)
 	end)
 	roblox.implementMethod("PhysicsService", "RegisterCollisionGroup", function() end)
 	roblox.implementMethod("PhysicsService", "CollisionGroupSetCollidable", function() end)
@@ -312,7 +312,6 @@ function Sim.new(placePath: string)
 		queryCache = nil,
 		collideCache = nil,
 		velocities = {},
-		falling = {},
 	}, Sim)
 	current = sim
 	sim.scheduler = newScheduler(sim)
@@ -330,13 +329,6 @@ function Sim.new(placePath: string)
 	local engineModule = {
 		velocity = function(part)
 			return sim.velocities[part] or V3.zero
-		end,
-		floorMaterial = function(humanoid)
-			local character = humanoid.Parent
-			if character and sim.falling[character] then
-				return roblox.Enum.Material.Air
-			end
-			return roblox.Enum.Material.Plastic
 		end,
 		stop = function(part)
 			sim.velocities[part] = V3.zero
@@ -481,6 +473,7 @@ function Sim.spawnCharacter(self: any, player: any, at: any?)
 	-- Engine-computed members a client reads (Lune only returns values that were written first).
 	humanoid.MoveDirection = V3.zero
 	humanoid.HipHeight = 2
+	humanoid.RigType = roblox.Enum.HumanoidRigType.R15
 	root.AssemblyLinearVelocity = V3.zero
 	root.AssemblyMass = 14
 	humanoid.Parent = model
@@ -665,9 +658,7 @@ function Sim.stepBots(self: any, dt: number)
 			local y = nextPos.Y
 			if hit and hit.Position.Y >= feet - 0.6 then
 				y = hit.Position.Y + 3
-				self.falling[character] = nil
 			else
-				self.falling[character] = true
 				y = nextPos.Y - 60 * dt
 				if hit and y - 3 < hit.Position.Y then
 					y = hit.Position.Y + 3

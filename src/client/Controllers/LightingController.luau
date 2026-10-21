@@ -31,8 +31,7 @@ type Mood = {
 	ambient: Color3,
 	outdoor: Color3,
 	fog: Color3,
-	fogStart: number,
-	fogEnd: number,
+	density: number, -- Atmosphere density: how quickly a corridor fades into haze
 	tint: Color3,
 	saturation: number,
 	contrast: number,
@@ -59,8 +58,7 @@ local function moodFor(themeId: string, isLobby: boolean): Mood
 		ambient = theme.ambient,
 		outdoor = theme.ambient:Lerp(Color3.new(1, 1, 1), 0.05),
 		fog = theme.fog,
-		fogStart = if isLobby then 90 else 50,
-		fogEnd = if isLobby then 520 else 360,
+		density = if isLobby then 0.28 else 0.34,
 		tint = THEME_TINT[themeId] or Color3.new(1, 1, 1),
 		saturation = if isLobby then 0.12 else 0.08,
 		contrast = 0.1,
@@ -133,15 +131,19 @@ end
 
 local function applyMood(mood: Mood, seconds: number)
 	currentMood = mood
+	-- With an Atmosphere in Lighting, Roblox ignores the legacy Fog* properties: distance haze is the
+	-- Atmosphere's job.
 	tween(Lighting, seconds, {
 		Ambient = mood.ambient,
 		OutdoorAmbient = mood.outdoor,
-		FogColor = mood.fog,
-		FogStart = mood.fogStart,
-		FogEnd = mood.fogEnd,
 		ExposureCompensation = mood.exposure,
 	})
-	tween(atmosphere, seconds, { Haze = mood.haze, Color = mood.atmosphereColor, Decay = mood.fog })
+	tween(atmosphere, seconds, {
+		Density = mood.density,
+		Haze = mood.haze,
+		Color = mood.atmosphereColor,
+		Decay = mood.fog,
+	})
 	tween(grade, seconds, {
 		TintColor = mood.tint,
 		Saturation = if muted then -0.75 else mood.saturation,

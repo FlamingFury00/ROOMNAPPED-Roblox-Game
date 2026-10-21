@@ -100,10 +100,7 @@ local function expedition(run: any, entry: any, step: number, stepName: string)
 	end)
 end
 
-local function custom(player: Player, name: string, value: number, f1: string?, f2: string?, f3: string?)
-	if player.Parent ~= Players then
-		return
-	end
+local function logCustom(player: Player, name: string, value: number, f1: string?, f2: string?, f3: string?)
 	safe("custom " .. name, function()
 		AnalyticsService:LogCustomEvent(player, name, value, {
 			[F1] = f1 or "",
@@ -111,6 +108,12 @@ local function custom(player: Player, name: string, value: number, f1: string?, 
 			[F3] = f3 or GameConfig.Version,
 		})
 	end)
+end
+
+local function custom(player: Player, name: string, value: number, f1: string?, f2: string?, f3: string?)
+	if player.Parent == Players then
+		logCustom(player, name, value, f1, f2, f3)
+	end
 end
 
 -- Hooks ------------------------------------------------------------------------------------------------
@@ -185,7 +188,13 @@ function TelemetryService.runEnded(run: any, summary: any)
 end
 
 function TelemetryService.playerLeftRun(run: any, entry: any, reason: string)
-	custom(entry.player, "LeftRun", 1, reason, run.mission.id)
+	-- A disconnect is logged from PlayerRemoving, which (with deferred signals) runs after the player has left
+	-- Players: skip the presence check for it.
+	if reason == "disconnect" then
+		logCustom(entry.player, "LeftRun", 1, reason, run.mission.id)
+	else
+		custom(entry.player, "LeftRun", 1, reason, run.mission.id)
+	end
 end
 
 function TelemetryService.downed(run: any, entry: any)
