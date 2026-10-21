@@ -1,0 +1,10 @@
+{
+  "name": "roomnapped-preview3d",
+  "private": true,
+  "description": "Offline three.js renders of exported ROOMNAPPED scenes (visual QA only, not shipped).",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "1.56.1",
+    "three": "0.169.0"
+  }
+}

@@ -1,0 +1,285 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ROOMNAPPED preview</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+// Offline approximation of Roblox's Future lighting for exported scenes (tools/preview/three/render3d.mjs).
+// Parts become boxes / wedges / cylinders / balls with world-scaled procedural material textures; Roblox
+// Textures and Decals use the asset's thumbnail image; lights keep colour, brightness, range, angle and
+// shadows; fog, exposure, tone mapping and bloom follow the scene's mood.
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const params = new URLSearchParams(location.search);
+const W = Number(params.get("w") || 1280), H = Number(params.get("h") || 720);
+const scene = new THREE.Scene();
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(70, W / H, 0.1, 2000);
+
+// --- Procedural material detail (grey, multiplied by the part colour) -----------------------------------------
+function canvasTex(draw, size = 256) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  draw(g, size);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+let seed = 1;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+function noise(g, s, base, amp, count, rmin, rmax) {
+  g.fillStyle = `rgb(${base},${base},${base})`; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < count; i++) {
+    const v = base + (rnd() - 0.5) * amp;
+    g.fillStyle = `rgba(${v},${v},${v},0.5)`;
+    const r = rmin + rnd() * (rmax - rmin);
+    g.fillRect(rnd() * s, rnd() * s, r, r);
+  }
+}
+const DETAIL = {
+  Wood: canvasTex((g, s) => { g.fillStyle = "#c8c8c8"; g.fillRect(0, 0, s, s);
+    for (let y = 0; y < s; y += 2) { const v = 180 + Math.sin(y * 0.15 + Math.sin(y * 0.03) * 4) * 30 + (rnd() - 0.5) * 16;
+      g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, y, s, 2); } }),
+  WoodPlanks: canvasTex((g, s) => { g.fillStyle = "#c8c8c8"; g.fillRect(0, 0, s, s);
+    const plank = s / 4; for (let i = 0; i < 4; i++) { const off = (i % 2) * s / 2;
+      for (let y = 0; y < plank; y += 2) { const v = 170 + Math.sin((y + i * 9) * 0.3) * 20 + (rnd() - 0.5) * 20 + i * 6;
+        g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, i * plank + y, s, 2); }
+      g.fillStyle = "rgba(40,40,40,0.8)"; g.fillRect(0, i * plank, s, 2); g.fillRect(off, i * plank, 2, plank); } }),
+  Carpet: canvasTex((g, s) => noise(g, s, 200, 60, 9000, 1, 2)),
+  Fabric: canvasTex((g, s) => { g.fillStyle = "#cfcfcf"; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < s; i += 4) { g.fillStyle = "rgba(90,90,90,0.18)"; g.fillRect(i, 0, 2, s); g.fillRect(0, i, s, 2); } }),
+  Plaster: canvasTex((g, s) => noise(g, s, 215, 30, 3000, 2, 6)),
+  Concrete: canvasTex((g, s) => noise(g, s, 190, 50, 5000, 1, 5)),
+  Marble: canvasTex((g, s) => { g.fillStyle = "#e6e6e6"; g.fillRect(0, 0, s, s); g.strokeStyle = "rgba(120,120,120,0.35)";
+    for (let i = 0; i < 9; i++) { g.lineWidth = 0.5 + rnd() * 2; g.beginPath(); let x = rnd() * s, y = 0; g.moveTo(x, y);
+      while (y < s) { x += (rnd() - 0.5) * 30; y += 10 + rnd() * 20; g.lineTo(x, y); } g.stroke(); } }),
+  Brick: canvasTex((g, s) => { g.fillStyle = "#909090"; g.fillRect(0, 0, s, s); const bh = s / 8, bw = s / 4;
+    for (let r = 0; r < 8; r++) for (let c = -1; c < 5; c++) { const v = 170 + (rnd() - 0.5) * 50;
+      g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(c * bw + (r % 2) * bw / 2 + 2, r * bh + 2, bw - 4, bh - 4); } }),
+  CeramicTiles: canvasTex((g, s) => { g.fillStyle = "#9a9a9a"; g.fillRect(0, 0, s, s); const t = s / 4;
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { const v = 225 + (rnd() - 0.5) * 16;
+      g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(c * t + 2, r * t + 2, t - 4, t - 4); } }),
+  DiamondPlate: canvasTex((g, s) => { g.fillStyle = "#b8b8b8"; g.fillRect(0, 0, s, s); g.fillStyle = "#dedede";
+    for (let y = 0; y < s; y += 16) for (let x = 0; x < s; x += 16) { g.save(); g.translate(x + ((y / 16) % 2) * 8, y);
+      g.rotate(((y / 16) % 2 ? 1 : -1) * 0.7); g.fillRect(-5, -1.5, 10, 3); g.restore(); } }),
+  Metal: canvasTex((g, s) => noise(g, s, 205, 24, 2000, 1, 3)),
+  Slate: canvasTex((g, s) => noise(g, s, 170, 60, 4000, 2, 8)),
+  Granite: canvasTex((g, s) => noise(g, s, 180, 90, 9000, 1, 3)),
+  Ground: canvasTex((g, s) => noise(g, s, 160, 80, 6000, 2, 7)),
+  Leather: canvasTex((g, s) => noise(g, s, 200, 40, 6000, 1, 3)),
+};
+const ROUGH = { SmoothPlastic: 0.45, Plastic: 0.6, Wood: 0.7, WoodPlanks: 0.7, Marble: 0.18, Fabric: 0.95, Carpet: 1,
+  Plaster: 0.92, Concrete: 0.9, Brick: 0.9, CeramicTiles: 0.25, Metal: 0.32, DiamondPlate: 0.35, Foil: 0.15, Glass: 0.04,
+  Ice: 0.08, Neon: 0.5, Slate: 0.85, Granite: 0.6, Ground: 1, Leather: 0.55, Cobblestone: 0.9, Sand: 1, Snow: 0.9 };
+const METAL = { Metal: 0.85, DiamondPlate: 0.85, Foil: 1, CorrodedMetal: 0.6 };
+const TILE = { Wood: 6, WoodPlanks: 8, Carpet: 4, Fabric: 3, Plaster: 8, Concrete: 8, Marble: 10, Brick: 8, CeramicTiles: 6,
+  DiamondPlate: 4, Metal: 6, Slate: 8, Granite: 6, Ground: 8, Leather: 4 };
+
+const matCache = new Map();
+function material(p) {
+  const key = [p.m, p.c.map(v => v.toFixed(3)).join(","), p.t.toFixed(2), (p.r || 0).toFixed(2), p.mv || ""].join("|");
+  if (matCache.has(key)) return matCache.get(key);
+  const color = new THREE.Color(p.c[0], p.c[1], p.c[2]).convertSRGBToLinear();
+  const opts = { color, roughness: ROUGH[p.m] ?? 0.6, metalness: METAL[p.m] ?? 0 };
+  if (DETAIL[p.m]) { opts.map = DETAIL[p.m]; opts.bumpMap = DETAIL[p.m]; opts.bumpScale = 0.6; }
+  if (p.m === "Neon") { opts.emissive = color.clone(); opts.emissiveIntensity = 2.2; }
+  if (p.m === "Glass" || p.m === "Ice" || p.t > 0.01) {
+    opts.transparent = true;
+    opts.opacity = Math.max(0.05, 1 - Math.max(p.t, p.m === "Glass" ? 0.55 : p.m === "Ice" ? 0.25 : 0));
+    opts.depthWrite = p.t < 0.5;
+  }
+  if ((p.r || 0) > 0.05) { opts.roughness = Math.min(opts.roughness, 0.25); opts.metalness = Math.max(opts.metalness, p.r * 0.6); }
+  const m = new THREE.MeshStandardMaterial(opts);
+  matCache.set(key, m);
+  return m;
+}
+
+// Box with UVs scaled to studs so material detail tiles at a constant size.
+function scaledUV(geo, sx, sy, sz, tile) {
+  const uv = geo.attributes.uv, n = geo.attributes.normal;
+  for (let i = 0; i < uv.count; i++) {
+    const nx = Math.abs(n.getX(i)), ny = Math.abs(n.getY(i));
+    let w, h;
+    if (nx > 0.5) { w = sz; h = sy; } else if (ny > 0.5) { w = sx; h = sz; } else { w = sx; h = sy; }
+    uv.setXY(i, uv.getX(i) * w / tile, uv.getY(i) * h / tile);
+  }
+  uv.needsUpdate = true;
+  return geo;
+}
+function wedgeGeometry(sx, sy, sz) {
+  // Roblox wedge: full bottom, full back (+Z) face, slope down to the front (-Z) bottom edge.
+  const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+  const v = [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz], [-hx, hy, hz], [hx, hy, hz]];
+  const f = [[0, 2, 1], [0, 3, 2], [3, 5, 2], [3, 4, 5], [0, 1, 5], [0, 5, 4], [0, 4, 3], [1, 2, 5]];
+  const pos = [];
+  for (const t of f) for (const k of t) pos.push(...v[k]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+const geoCache = new Map();
+function geometry(p) {
+  const [sx, sy, sz] = p.sz;
+  const tile = TILE[p.m] || 6;
+  const key = `${p.s}|${sx.toFixed(2)}|${sy.toFixed(2)}|${sz.toFixed(2)}|${tile}`;
+  if (geoCache.has(key)) return geoCache.get(key);
+  let g;
+  if (p.s === "Cylinder") {
+    const r = Math.min(sy, sz) / 2;
+    g = new THREE.CylinderGeometry(r, r, sx, 20);
+    g.rotateZ(Math.PI / 2);
+  } else if (p.s === "Ball") {
+    g = new THREE.SphereGeometry(Math.min(sx, sy, sz) / 2, 20, 14);
+  } else if (p.s === "Ellipsoid") {
+    g = new THREE.SphereGeometry(0.5, 20, 14);
+    g.scale(sx, sy, sz);
+  } else if (p.s === "Wedge") {
+    g = wedgeGeometry(sx, sy, sz);
+  } else if (p.s === "CornerWedge") {
+    g = wedgeGeometry(sx, sy, sz);
+  } else {
+    g = scaledUV(new THREE.BoxGeometry(sx, sy, sz), sx, sy, sz, tile);
+  }
+  geoCache.set(key, g);
+  return g;
+}
+function matrixOf(cf) {
+  const [x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22] = cf;
+  const m = new THREE.Matrix4();
+  m.set(r00, r01, r02, x, r10, r11, r12, y, r20, r21, r22, z, 0, 0, 0, 1);
+  return m;
+}
+const FACE = { Front: [0, 0, -1], Back: [0, 0, 1], Right: [1, 0, 0], Left: [-1, 0, 0], Top: [0, 1, 0], Bottom: [0, -1, 0] };
+const texLoader = new THREE.TextureLoader();
+const imageCache = new Map();
+function imageTexture(id) {
+  const m = String(id || "").match(/(\d+)/);
+  if (!m) return null;
+  if (imageCache.has(m[1])) return imageCache.get(m[1]);
+  const t = texLoader.load(`./cache/${m[1]}.png`);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  imageCache.set(m[1], t);
+  return t;
+}
+function faceOverlay(p, tex, group) {
+  const texture = imageTexture(tex.id);
+  if (!texture) return;
+  const [sx, sy, sz] = p.sz;
+  const n = FACE[tex.f] || FACE.Front;
+  let w, h, pos, rot = new THREE.Euler();
+  if (n[0] !== 0) { w = sz; h = sy; pos = [n[0] * (sx / 2 + 0.01), 0, 0]; rot.set(0, n[0] > 0 ? Math.PI / 2 : -Math.PI / 2, 0); }
+  else if (n[1] !== 0) { w = sx; h = sz; pos = [0, n[1] * (sy / 2 + 0.01), 0]; rot.set(n[1] > 0 ? -Math.PI / 2 : Math.PI / 2, 0, 0); }
+  else { w = sx; h = sy; pos = [0, 0, n[2] * (sz / 2 + 0.01)]; rot.set(0, n[2] > 0 ? 0 : Math.PI, 0); }
+  const t = texture.clone();
+  t.needsUpdate = true;
+  if (tex.u) t.repeat.set(w / tex.u, h / tex.v);
+  const mat = new THREE.MeshStandardMaterial({ map: t, transparent: true, opacity: 1 - (tex.t || 0), roughness: 0.8,
+    color: new THREE.Color(...(tex.c || [1, 1, 1])) });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  mesh.position.set(...pos);
+  mesh.rotation.copy(rot);
+  mesh.receiveShadow = true;
+  group.add(mesh);
+}
+
+let shadowBudget = 8;
+async function build(data, mood) {
+  for (const p of data.parts) {
+    if (p.t >= 0.99) continue;
+    if (mood.hideTop && mood.hideTop.includes(p.n)) continue;
+    const mesh = new THREE.Mesh(geometry(p), material(p));
+    mesh.matrixAutoUpdate = false;
+    mesh.matrix.copy(matrixOf(p.cf));
+    mesh.castShadow = !!p.cs;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    if (p.tex) {
+      const group = new THREE.Group();
+      group.matrixAutoUpdate = false;
+      group.matrix.copy(matrixOf(p.cf));
+      for (const t of p.tex) faceOverlay(p, t, group);
+      scene.add(group);
+    }
+  }
+  const k = mood.lightScale ?? 1;
+  for (const l of data.lights) {
+    if (l.on === false) continue;
+    const color = new THREE.Color(...l.c);
+    const intensity = l.b * 26 * k;
+    let light;
+    if (l.k === "SpotLight" || l.k === "SurfaceLight") {
+      const n = FACE[l.f] || FACE.Front;
+      const m = matrixOf(l.cf);
+      const origin = new THREE.Vector3(l.p[0], l.p[1], l.p[2]);
+      const dir = new THREE.Vector3(...n).transformDirection(m);
+      light = new THREE.SpotLight(color, intensity * (l.k === "SurfaceLight" ? 0.8 : 1.4), l.r * 1.1,
+        THREE.MathUtils.degToRad(Math.min(89, (l.a || 90) / 2 + 5)), 0.6, 2);
+      light.position.copy(origin.clone().addScaledVector(dir, 0.3));
+      light.target.position.copy(origin.clone().addScaledVector(dir, 10));
+      scene.add(light.target);
+    } else {
+      light = new THREE.PointLight(color, intensity, l.r * 1.15, 2);
+      light.position.set(...l.p);
+    }
+    if (l.sh && shadowBudget > 0) {
+      shadowBudget--;
+      light.castShadow = true;
+      light.shadow.mapSize.set(512, 512);
+      light.shadow.bias = -0.002;
+      light.shadow.radius = 4;
+    }
+    scene.add(light);
+  }
+  scene.add(new THREE.AmbientLight(new THREE.Color(...mood.ambient), mood.ambientIntensity ?? 1.6));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x222222, mood.hemi ?? 0.25));
+  scene.background = new THREE.Color(...mood.fog);
+  scene.fog = new THREE.FogExp2(new THREE.Color(...mood.fog), mood.fogDensity ?? 0.006);
+  renderer.toneMappingExposure = Math.pow(2, mood.exposure ?? 0) * 1.0;
+  // Let image textures arrive.
+  await new Promise(r => setTimeout(r, 400));
+}
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.5, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+window.loadScene = async (data, mood) => { await build(data, mood || {}); bloom.strength = (mood && mood.bloom) ?? 0.55; return true; };
+window.renderView = (v) => {
+  camera.fov = v.fov || 70;
+  camera.updateProjectionMatrix();
+  camera.position.set(...v.pos);
+  camera.lookAt(new THREE.Vector3(...v.target));
+  composer.render();
+  return true;
+};
+window.ready = true;
+</script>
+</body>
+</html>

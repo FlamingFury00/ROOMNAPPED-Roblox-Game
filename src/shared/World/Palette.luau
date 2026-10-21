@@ -33,6 +33,10 @@ export type Theme = {
 	pot: Color3,
 	fog: Color3,
 	ambient: Color3,
+	-- Optional MaterialVariant names (MaterialService) for patterned surfaces: wallpaper, carpet, floor.
+	wallVariant: string?,
+	carpetVariant: string?,
+	floorVariant: string?,
 }
 
 local M = Enum.Material

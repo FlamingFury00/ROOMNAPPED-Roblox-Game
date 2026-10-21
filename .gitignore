@@ -9,3 +9,6 @@ Thumbs.db
 tools/preview/out/
 __pycache__/
 .claude/
+tools/preview/three/node_modules/
+tools/preview/three/package-lock.json
+tools/preview/three/cache/

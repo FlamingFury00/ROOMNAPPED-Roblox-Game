@@ -18,6 +18,10 @@
 	Cold (chilled) adds frost and a blue tint; bracing against wind leans it into the gust.
 
 	Every state has a shape/motion/text cue as well as colour and sound, so it reads without dialogue.
+
+	When the server has published the catalog-dressed R15 Caretaker (Visual/CaretakerHuman) the view animates
+	that character with Roblox's animation packs instead of the part-built bellhop; badges, lights, frost,
+	sounds and effects behave the same for both bodies.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,6 +38,7 @@ local RunInfo = require(script.Parent.Parent.Core.RunInfo)
 local AudioController = require(script.Parent.AudioController)
 local CameraController = require(script.Parent.CameraController)
 local Vfx = require(script.Parent.Parent.Visual.Vfx)
+local CaretakerHuman = require(script.Parent.Parent.Visual.CaretakerHuman)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local CaretakerView = {}
@@ -97,9 +102,23 @@ type Rig = {
 	moveParts: { BasePart }, -- fixed order matching the animation buffer
 }
 
+-- The R15 body and what hangs off it (same cues as the part-built rig).
+type HumanView = {
+	body: CaretakerHuman.HumanRig,
+	highlight: Highlight,
+	frost: ParticleEmitter,
+	sleepy: ParticleEmitter,
+	badge: BillboardGui,
+	badgeLabel: TextLabel,
+	hum: AudioController.LoopHandle?,
+	snore: AudioController.LoopHandle?,
+}
+
 local snapshots: { Snapshot } = {}
 local cframeBuffer: { CFrame } = {}
 local rig: Rig? = nil
+local human: HumanView? = nil
+local humanStride = 0
 local mode = "Gone"
 local modeSince = 0
 local stride = 0
@@ -454,8 +473,21 @@ local function buildRig(): Rig
 end
 
 local function destroyRig()
+	local h = human
+	if h then
+		human = nil
+		if h.hum then
+			h.hum.stop(0.4)
+		end
+		if h.snore then
+			h.snore.stop(0.4)
+		end
+		CaretakerHuman.destroy(h.body)
+	end
 	local r = rig
 	if not r then
+		humVolume, humPitch, snoreVolume = -1, -1, -1
+		spottedShown = false
 		return
 	end
 	rig = nil
@@ -595,6 +627,112 @@ local function applyBadge(r: Rig, style: any)
 	r.badgeLabel.TextColor3 = if spotted then Theme.Colors.red else style.badgeColor or Theme.Colors.gold
 end
 
+-- Shared extras for the R15 body: outline, frost, sleep Zs, the mode badge and the hum / snore loops.
+local function buildHumanView(): HumanView?
+	local body = CaretakerHuman.build(Workspace)
+	if not body then
+		return nil
+	end
+	local model, head, torso = body.model, body.head, body.torso
+	local highlight = Instance.new("Highlight")
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = Theme.Colors.red
+	highlight.OutlineTransparency = 0.2
+	highlight.Enabled = false
+	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	highlight.Parent = model
+	local frostAttachment = Instance.new("Attachment")
+	frostAttachment.Parent = torso
+	local frost = Vfx.emitter(frostAttachment, "frost", { Rate = 16, Speed = NumberRange.new(1, 3) })
+	frost.Enabled = false
+	local sleepyAttachment = Instance.new("Attachment")
+	sleepyAttachment.Position = Vector3.new(0, head.Size.Y * 0.8, 0)
+	sleepyAttachment.Parent = head
+	local sleepy = Vfx.emitter(sleepyAttachment, "magic", {
+		Texture = Vfx.Textures.circle,
+		Rate = 1.5,
+		Size = Vfx.seq(0.2, 0.5),
+		Speed = NumberRange.new(1, 2),
+		SpreadAngle = Vector2.new(15, 15),
+		EmissionDirection = Enum.NormalId.Top,
+		Lifetime = NumberRange.new(1.5, 2),
+		Color = ColorSequence.new(Color3.fromRGB(200, 220, 255)),
+	})
+	sleepy.Enabled = false
+	local badge = Instance.new("BillboardGui")
+	badge.Name = "ModeBadge"
+	badge.Size = UDim2.fromOffset(64, 64)
+	badge.StudsOffsetWorldSpace = Vector3.new(0, head.Size.Y + 1.6, 0)
+	badge.AlwaysOnTop = true
+	badge.LightInfluence = 0
+	badge.MaxDistance = 140
+	badge.Enabled = false
+	badge.Adornee = head
+	badge.Parent = model
+	local badgeLabel = Instance.new("TextLabel")
+	badgeLabel.Size = UDim2.fromScale(1, 1)
+	badgeLabel.BackgroundTransparency = 1
+	badgeLabel.Text = "?"
+	badgeLabel.TextScaled = true
+	badgeLabel.FontFace = Theme.Fonts.display
+	badgeLabel.TextColor3 = Theme.Colors.gold
+	badgeLabel.Parent = badge
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 3
+	stroke.Color = Theme.Colors.ink
+	stroke.Parent = badgeLabel
+	return {
+		body = body,
+		highlight = highlight,
+		frost = frost,
+		sleepy = sleepy,
+		badge = badge,
+		badgeLabel = badgeLabel,
+		hum = AudioController.loop("caretaker_hum_loop", { parent = torso, rolloffMin = 10, rolloffMax = 90 }),
+		snore = AudioController.loop(
+			"caretaker_snore_loop",
+			{ parent = head, volume = 0, rolloffMin = 8, rolloffMax = 75 }
+		),
+	}
+end
+
+local function applyHumanStyle(h: HumanView)
+	local style = MODE_STYLE[mode] or MODE_STYLE.Patrol
+	CaretakerHuman.setEyes(h.body, style.eye, style.lantern)
+	local spotted = os.clock() < spottedUntil
+	h.badge.Enabled = style.badge ~= nil or spotted
+	h.badgeLabel.Text = if spotted then "!" else style.badge or ""
+	h.badgeLabel.TextColor3 = if spotted then Theme.Colors.red else style.badgeColor or Theme.Colors.gold
+	local hunting = mode == "Chase" or mode == "Hunt" or mode == "Lunge" or mode == "Alert"
+	h.highlight.Enabled = hunting
+	local asleep = mode == "Dormant"
+	h.sleepy.Enabled = asleep
+	local hum = if hunting then 1.2 elseif asleep then 0 else 0.7
+	local pitch = if hunting then 1.12 else 1
+	if h.hum and (hum ~= humVolume or pitch ~= humPitch) then
+		humVolume, humPitch = hum, pitch;
+		(h.hum :: AudioController.LoopHandle).setVolume(hum, 0.5);
+		(h.hum :: AudioController.LoopHandle).setPitch(pitch)
+	end
+	local snore = if asleep then 1 else 0
+	if h.snore and snore ~= snoreVolume then
+		snoreVolume = snore;
+		(h.snore :: AudioController.LoopHandle).setVolume(snore, if asleep then 0.8 else 0.15)
+	end
+end
+
+-- Where effects and sounds attach: the body's chest and head, whichever body is showing.
+local function bodyPoints(): (Vector3?, Vector3?)
+	if human then
+		local h = human :: HumanView
+		return h.body.torso.CFrame.Position, h.body.head.CFrame.Position
+	elseif rig then
+		local r = rig :: Rig
+		return r.torso.CFrame.Position, r.head.CFrame.Position
+	end
+	return nil, nil
+end
+
 local function applyModeStyle(r: Rig)
 	local style = MODE_STYLE[mode] or MODE_STYLE.Patrol
 	r.eyeL.Color = style.eye
@@ -630,10 +768,14 @@ local function setMode(newMode: string)
 	local previous = mode
 	mode = newMode
 	modeSince = os.clock()
-	local r = rig
-	if r then
-		applyModeStyle(r)
-		local p = r.torso.CFrame.Position
+	if rig then
+		applyModeStyle(rig :: Rig)
+	elseif human then
+		applyHumanStyle(human :: HumanView)
+	end
+	local torsoPoint, headPoint = bodyPoints()
+	if torsoPoint and headPoint then
+		local p = torsoPoint
 		if newMode == "Alert" then
 			AudioController.at("caretaker_alert", p, { volume = 1.2, rolloffMax = 400 })
 			Vfx.flash(p, Color3.fromRGB(255, 60, 40), 8, 50, 0.8)
@@ -646,7 +788,7 @@ local function setMode(newMode: string)
 			end
 		elseif newMode == "React" then
 			Vfx.burst(
-				r.head.CFrame.Position + Vector3.new(0, 1, 0),
+				headPoint + Vector3.new(0, 1, 0),
 				"magic",
 				14,
 				{ Color = ColorSequence.new(Theme.Colors.goldLight) }
@@ -832,6 +974,88 @@ local function animate(r: Rig, position: Vector3, yaw: number, velocity: Vector3
 	end
 end
 
+-- The R15 body: the same mode cues, posed on top of Roblox's animation packs.
+local function animateHuman(h: HumanView, position: Vector3, yaw: number, velocity: Vector3, dt: number)
+	local now = os.clock()
+	local flat = Vector3.new(velocity.X, 0, velocity.Z)
+	smoothedSpeed += (flat.Magnitude - smoothedSpeed) * MathUtil.dampAlpha(8, dt)
+	local s = smoothedSpeed
+	local caretakerState = ClientState.get("global", "caretaker") or {}
+	local chilled = caretakerState.chilled == true
+	local braced = caretakerState.braced == true
+
+	-- Footsteps on the same cadence as the part-built rig, and the occasional jingle and creak.
+	local strideRate = if s > 0.3 then 1.6 + s * 0.42 else 0
+	humanStride += strideRate * dt
+	local sign = if math.sin(humanStride * math.pi) >= 0 then 1 else -1
+	local camera = Workspace.CurrentCamera
+	local audible = camera ~= nil and (camera.CFrame.Position - position).Magnitude < 150
+	if sign ~= lastStepSign and s > 1 and audible then
+		lastStepSign = sign
+		AudioController.at("caretaker_step", position - Vector3.new(0, HOVER - 0.3, 0), {
+			volume = math.clamp(s / 14, 0.25, 1.1),
+			pitch = if s > 11 then 1.1 else 0.95,
+			rolloffMin = 8,
+			rolloffMax = if s > 11 then 140 else 90,
+		})
+	end
+	if s > 1 and now - lastJingle > 3.5 and audible then
+		lastJingle = now
+		AudioController.at("caretaker_keys", position, { volume = 0.6, rolloffMax = 60 })
+	end
+	if mode == "Search" and now - lastCreak > 2.2 and audible then
+		lastCreak = now
+		AudioController.at("caretaker_search", position, { volume = 0.5, rolloffMax = 60 })
+	end
+
+	local t = now - modeSince
+	local pose: CaretakerHuman.Pose = {
+		mode = mode,
+		modeTime = t,
+		headYaw = 0,
+		headTilt = 0,
+		crouch = 0,
+		reach = 0,
+		lean = math.clamp(s / 16, 0, 1) * 0.18,
+		wobble = 0,
+		chilled = chilled,
+		alpha = 1,
+	}
+	if mode == "Investigate" then
+		pose.headTilt = 0.35 * math.sin(math.min(t * 3, math.pi / 2))
+	elseif mode == "Search" then
+		pose.headYaw = math.sin(now * 1.8) * 0.6
+	elseif mode == "Lunge" then
+		pose.crouch = math.min(1, t / GameConfig.Caretaker.LungeWindupSeconds)
+		pose.reach = 1
+		pose.lean = 0.45
+	elseif mode == "Chase" or mode == "Hunt" then
+		pose.reach = 0.35
+	elseif mode == "Alert" then
+		pose.reach = 1
+		pose.headTilt = -0.4
+	elseif mode == "React" then
+		pose.wobble = math.sin(now * 14) * 0.22 * math.max(0, 1 - t / GameConfig.Caretaker.ReactSeconds)
+		reactSpin += dt * 6
+	end
+	if braced then
+		pose.lean = -0.25 -- leaning into the gust
+	end
+	local targetAlpha = if mode == "Phase" then 0.15 elseif mode == "Off" then 0 else 1
+	visibleAlpha += (targetAlpha - visibleAlpha) * MathUtil.dampAlpha(6, dt)
+	pose.alpha = visibleAlpha
+	CaretakerHuman.animate(h.body, position, HOVER, yaw, s, pose)
+	if chilled ~= appliedChilled then
+		appliedChilled = chilled
+		h.frost.Enabled = chilled
+	end
+	local lift = h.body.head.Size.Y + 1.6
+	h.badge.StudsOffsetWorldSpace = Vector3.new(0, lift + math.sin(now * 3) * 0.15, 0)
+	if mode == "React" then
+		h.badge.StudsOffsetWorldSpace += Vector3.new(math.cos(reactSpin) * 0.8, 0, math.sin(reactSpin) * 0.8)
+	end
+end
+
 -- Lifecycle ----------------------------------------------------------------------------------------------------
 
 local function wanted(): boolean
@@ -855,18 +1079,34 @@ local function step(dt: number)
 	if not position then
 		return
 	end
-	local r: Rig
-	if rig then
-		r = rig :: Rig
-	else
-		r = buildRig()
-		rig = r
-		mode = ""
+	if not rig and not human then
+		-- The catalog-dressed R15 Caretaker when the server published one, else the part-built bellhop.
+		local built = if CaretakerHuman.available() then buildHumanView() else nil
 		local state = ClientState.get("global", "caretaker") or {}
-		setMode(state.mode or "Patrol")
-		applyModeStyle(r)
+		if built then
+			human = built
+			mode = ""
+			setMode(state.mode or "Patrol")
+			applyHumanStyle(built)
+		else
+			local r = buildRig()
+			rig = r
+			mode = ""
+			setMode(state.mode or "Patrol")
+			applyModeStyle(r)
+		end
 	end
 	lastPosition = position
+	if human then
+		local h = human :: HumanView
+		animateHuman(h, position :: Vector3, yaw, velocity, dt)
+		if spottedShown and os.clock() >= spottedUntil then
+			spottedShown = false
+			applyHumanStyle(h)
+		end
+		return
+	end
+	local r = rig :: Rig
 	animate(r, position :: Vector3, yaw, velocity, dt)
 	-- The "!" after a spot: shown by the spot itself, cleared once when it runs out.
 	if spottedShown and os.clock() >= spottedUntil then
@@ -877,7 +1117,7 @@ end
 
 -- Position for other systems (HUD threat arrow, hints). Nil when no caretaker is active.
 function CaretakerView.position(): Vector3?
-	if not rig then
+	if not rig and not human then
 		return nil
 	end
 	return lastPosition
@@ -891,7 +1131,7 @@ function CaretakerView.start()
 	Net.listen("CaretakerSnapshot", onSnapshot)
 	ClientState.observe("global", "caretaker", function(state: any)
 		if type(state) == "table" and type(state.mode) == "string" then
-			if rig then
+			if rig or human then
 				setMode(state.mode)
 			else
 				mode = state.mode
@@ -899,22 +1139,27 @@ function CaretakerView.start()
 		end
 	end)
 	Net.listen("Effect", function(name: any, params: any)
-		local r = rig
-		if not r then
+		local torsoPoint = bodyPoints()
+		if not torsoPoint then
 			return
 		end
 		if name == "caretakerSpotted" then
 			spottedUntil = os.clock() + 1.4
 			spottedShown = true
-			applyModeStyle(r)
-			AudioController.at("caretaker_alert", r.torso.CFrame.Position, { volume = 0.55, pitch = 1.25 })
+			if rig then
+				applyModeStyle(rig :: Rig)
+			elseif human then
+				applyHumanStyle(human :: HumanView)
+				CaretakerHuman.gesture((human :: HumanView).body, "point")
+			end
+			AudioController.at("caretaker_alert", torsoPoint, { volume = 0.55, pitch = 1.25 })
 		elseif name == "caretakerPhase" then
-			Vfx.burst(r.torso.CFrame.Position, "poof", 16, { Color = ColorSequence.new(Color3.fromRGB(170, 130, 255)) })
+			Vfx.burst(torsoPoint, "poof", 16, { Color = ColorSequence.new(Color3.fromRGB(170, 130, 255)) })
 		elseif name == "caretakerReappear" and type(params) == "table" and typeof(params.position) == "Vector3" then
 			Vfx.burst(params.position, "poof", 20, { Color = ColorSequence.new(Color3.fromRGB(170, 130, 255)) })
 			AudioController.at("caretaker_keys", params.position, { volume = 0.9 })
 		elseif name == "caretakerLunge" then
-			AudioController.at("caretaker_grab", r.torso.CFrame.Position, { volume = 0.9 })
+			AudioController.at("caretaker_grab", torsoPoint, { volume = 0.9 })
 		end
 	end)
 	RunService.RenderStepped:Connect(step)

@@ -105,7 +105,7 @@ def triangles_for(part, hide):
         v, f = wedge_mesh(sx, sy, sz)
     elif shape == "Cylinder":
         v, f = cylinder_mesh(sx, sy, sz)
-    elif shape == "Ball":
+    elif shape in ("Ball", "Ellipsoid"):
         v, f = ball_mesh(sx, sy, sz)
     else:
         v, f = box_mesh(sx, sy, sz)

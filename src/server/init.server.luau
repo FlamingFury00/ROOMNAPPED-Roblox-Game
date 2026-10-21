@@ -20,6 +20,7 @@ local ORDER = {
 	"TelemetryService",
 	"ProfileService",
 	"CharacterService",
+	"AssetLibraryService",
 	"LobbyService",
 	"SessionService",
 	"ExpeditionService",

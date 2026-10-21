@@ -9,6 +9,7 @@
 
 local Kit = require(script.Parent.Kit)
 local Palette = require(script.Parent.Palette)
+local Assets = require(script.Parent.Assets)
 
 type Theme = Palette.Theme
 type Rng = () -> number
@@ -30,59 +31,96 @@ local function pick<T>(rng: Rng, list: { T }): T
 end
 
 -- Lighting --------------------------------------------------------------------------------------------
+-- Every light fixture is an asset slot (a curated model or the procedural fixture) plus a light rig kept
+-- outside the slot, so swapping the model in never removes a light. Rig parts carry the RN_Lamp tag the
+-- client uses for flicker and the escape alarm.
+
+local function lightRig(parent: Instance, name: string, cf: CFrame): Part
+	local rig = Kit.part(parent, {
+		name = name,
+		cf = cf,
+		size = Vector3.new(0.3, 0.3, 0.3),
+		transparency = 1,
+		shadow = false,
+	})
+	rig:AddTag("RN_Lamp")
+	return rig
+end
 
 function Props.wallSconce(parent: Instance, cf: CFrame, theme: Theme, light: boolean?, shadows: boolean?): Part
-	local model = Kit.model(parent, "Sconce")
-	decor(model, "Plate", at(cf, 0, 0, 0.1), Vector3.new(0.9, 1.6, 0.2), theme.brass, M.Metal)
-	decor(model, "Arm", at(cf, 0, 0.1, 0.55), Vector3.new(0.25, 0.25, 0.9), theme.brass, M.Metal)
-	local shade = Kit.cylinder(model, {
-		name = "Shade",
-		cf = at(cf, 0, 0.55, 1.0) * CFrame.Angles(0, 0, math.pi / 2),
-		size = Vector3.new(1.1, 1.0, 1.0),
-		color = Color3.fromRGB(255, 236, 200),
-		material = M.Glass,
-		transparency = 0.15,
-	})
-	local bulb = Kit.ball(model, {
-		name = "Bulb",
-		cf = at(cf, 0, 0.45, 1.0),
-		size = Vector3.new(0.55, 0.55, 0.55),
-		color = theme.lamp,
-		material = M.Neon,
-	})
-	bulb:AddTag("RN_Lamp")
+	local slot = Assets.place(parent, "wallSconce", cf, function(model: Model, at0: CFrame)
+		decor(model, "Plate", at(at0, 0, -0.3, 0.06), Vector3.new(0.7, 1.4, 0.12), theme.brass, M.Foil)
+		decor(model, "Arm", at(at0, 0, -0.45, 0.45), Vector3.new(0.16, 0.16, 0.8), theme.brass, M.Foil)
+		Kit.cylinder(model, {
+			name = "Cup",
+			cf = at(at0, 0, -0.32, 0.85) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(0.3, 0.55, 0.55),
+			color = theme.brass,
+			material = M.Foil,
+		})
+		local shade = Kit.cylinder(model, {
+			name = "Shade",
+			cf = at(at0, 0, 0.3, 0.85) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(1.05, 0.95, 0.95),
+			color = Color3.fromRGB(255, 226, 180),
+			material = M.Fabric,
+		})
+		shade.Transparency = 0.12
+		local bulb = Kit.ball(model, {
+			name = "Bulb",
+			cf = at(at0, 0, 0.18, 0.85),
+			size = Vector3.new(0.42, 0.42, 0.42),
+			color = theme.lamp,
+			material = M.Neon,
+		})
+		bulb.CastShadow = false
+	end)
+	local _ = slot
+	local rig = lightRig(parent, "SconceLight", at(cf, 0, 0.2, 0.9))
 	if light ~= false then
-		local l = Kit.pointLight(bulb, theme.lamp, theme.lampBrightness * 0.75, 11, shadows)
+		local l = Kit.pointLight(rig, theme.lamp, theme.lampBrightness * 0.7, 12, shadows)
 		l.Name = "Light"
 	end
-	shade:SetAttribute("Decor", true)
-	return bulb
+	return rig
 end
 
 function Props.ceilingLamp(parent: Instance, cf: CFrame, theme: Theme, shadows: boolean?): Part
-	-- `cf` is the ceiling mount point; the lamp hangs down.
-	local model = Kit.model(parent, "CeilingLamp")
-	decor(model, "Rose", cf * CFrame.new(0, -0.1, 0), Vector3.new(1.4, 0.2, 1.4), theme.brass, M.Metal)
-	decor(model, "Rod", cf * CFrame.new(0, -0.9, 0), Vector3.new(0.18, 1.6, 0.18), theme.brass, M.Metal)
-	Kit.cylinder(model, {
-		name = "Shade",
-		cf = cf * CFrame.new(0, -1.95, 0) * CFrame.Angles(0, 0, math.pi / 2),
-		size = Vector3.new(0.9, 2.6, 2.6),
-		color = Color3.fromRGB(250, 232, 196),
-		material = M.Fabric,
-		shadow = false,
-	})
-	local bulb = Kit.ball(model, {
-		name = "Bulb",
-		cf = cf * CFrame.new(0, -2.35, 0),
-		size = Vector3.new(0.9, 0.9, 0.9),
-		color = theme.lamp,
-		material = M.Neon,
-	})
-	bulb:AddTag("RN_Lamp")
-	local light = Kit.pointLight(bulb, theme.lamp, theme.lampBrightness, 22, shadows)
-	light.Name = "Light"
-	return bulb
+	-- `cf` is the ceiling mount point; the lamp hangs down. A downward spot pools light on the carpet and a
+	-- soft point light makes the fixture glow.
+	Assets.place(parent, "ceilingLamp", cf, function(model: Model, mount: CFrame)
+		decor(model, "Canopy", mount * CFrame.new(0, -0.12, 0), Vector3.new(0.9, 0.24, 0.9), theme.brass, M.Foil)
+		decor(model, "Rod", mount * CFrame.new(0, -0.9, 0), Vector3.new(0.14, 1.5, 0.14), theme.brass, M.Foil)
+		Kit.cylinder(model, {
+			name = "Shade",
+			cf = mount * CFrame.new(0, -1.95, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(0.85, 2.4, 2.4),
+			color = Color3.fromRGB(250, 228, 190),
+			material = M.Fabric,
+			shadow = false,
+		})
+		Kit.cylinder(model, {
+			name = "Band",
+			cf = mount * CFrame.new(0, -2.36, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(0.12, 2.46, 2.46),
+			color = theme.brass,
+			material = M.Foil,
+			shadow = false,
+		})
+		local bulb = Kit.ball(model, {
+			name = "Bulb",
+			cf = mount * CFrame.new(0, -2.3, 0),
+			size = Vector3.new(0.8, 0.8, 0.8),
+			color = theme.lamp,
+			material = M.Neon,
+		})
+		bulb.CastShadow = false
+	end)
+	local rig = lightRig(parent, "CeilingLight", cf * CFrame.new(0, -2.6, 0))
+	local spot = Kit.spotLight(rig, theme.lamp, theme.lampBrightness * 1.5, 20, 120, Enum.NormalId.Bottom, shadows)
+	spot.Name = "Light"
+	local glow = Kit.pointLight(rig, theme.lamp, theme.lampBrightness * 0.45, 10, false)
+	glow.Name = "Glow"
+	return rig
 end
 
 function Props.chandelier(parent: Instance, cf: CFrame, theme: Theme, scale: number?): Part
@@ -257,62 +295,73 @@ function Props.roomNumber(parent: Instance, cf: CFrame, theme: Theme, number: st
 	})
 end
 
--- Decorative hotel door, recessed into a wall. `cf` = bottom-centre on the wall's inner face.
+-- Decorative hotel door on a wall. `cf` = bottom-centre on the wall's inner face. The wall's lower trim
+-- leaves a gap of 6.1 studs for it (LevelBuilder DOOR_GAP): casing with plinth blocks, a head and cornice,
+-- a four-panel slab with brass knob, kick plate, number plaque and peephole.
 function Props.decorDoor(parent: Instance, cf: CFrame, theme: Theme, number: string, rng: Rng)
 	local model = Kit.model(parent, "Door")
 	local w, h = 5, 8.6
-	decor(
-		model,
-		"FrameL",
-		at(cf, -w / 2 - 0.25, h / 2, 0.15),
-		Vector3.new(0.5, h + 0.5, 0.3),
-		theme.doorFrame,
-		theme.trimMaterial
-	)
-	decor(
-		model,
-		"FrameR",
-		at(cf, w / 2 + 0.25, h / 2, 0.15),
-		Vector3.new(0.5, h + 0.5, 0.3),
-		theme.doorFrame,
-		theme.trimMaterial
-	)
-	decor(
-		model,
-		"FrameTop",
-		at(cf, 0, h + 0.25, 0.15),
-		Vector3.new(w + 1, 0.5, 0.3),
-		theme.doorFrame,
-		theme.trimMaterial
-	)
-	local panel = decor(model, "Panel", at(cf, 0, h / 2, 0.06), Vector3.new(w, h, 0.12), theme.door, theme.doorMaterial)
-	panel.CastShadow = false
-	for i = 0, 1 do
-		local py = h * (0.28 + i * 0.42)
-		decor(
-			model,
-			"Inset",
-			at(cf, 0, py, 0.14),
-			Vector3.new(w - 1.4, h * 0.3, 0.06),
-			theme.door:Lerp(Color3.new(0, 0, 0), 0.18),
-			theme.doorMaterial
-		)
+	local casing = theme.doorFrame
+	local slabColor = theme.door
+	local panelColor = theme.door:Lerp(Color3.new(0, 0, 0), 0.14)
+	local raise = theme.door:Lerp(Color3.new(1, 1, 1), 0.06)
+	local trim = theme.trimMaterial
+	local function piece(
+		name: string,
+		x: number,
+		y: number,
+		z: number,
+		size: Vector3,
+		color: Color3,
+		material: Enum.Material?
+	): Part
+		local part = decor(model, name, at(cf, x, y, z), size, color, material or theme.doorMaterial)
+		part.CastShadow = false
+		return part
 	end
+	-- Slab, flush with the wall.
+	piece("Slab", 0, h / 2, 0.06, Vector3.new(w, h, 0.12), slabColor)
+	-- Four sunk panels with raised fields.
+	for _, column in { -1, 1 } do
+		for row, spec in { { 1.15, 3.2 }, { 4.85, 7.75 } } do
+			local y0, y1 = spec[1], spec[2]
+			local px = column * (w / 4 + 0.05)
+			piece("Panel" .. row, px, (y0 + y1) / 2, 0.135, Vector3.new(w / 2 - 0.75, y1 - y0, 0.03), panelColor)
+			piece("Raise" .. row, px, (y0 + y1) / 2, 0.165, Vector3.new(w / 2 - 1.15, y1 - y0 - 0.4, 0.04), raise)
+		end
+	end
+	-- Casing: jambs on plinth blocks, a head and a cornice.
+	for _, side in { -1, 1 } do
+		piece("Casing", side * (w / 2 + 0.27), (h + 0.55) / 2, 0.14, Vector3.new(0.54, h + 0.55, 0.28), casing, trim)
+		piece("Plinth", side * (w / 2 + 0.27), 0.5, 0.17, Vector3.new(0.62, 1, 0.34), casing, trim)
+	end
+	piece("Head", 0, h + 0.55, 0.15, Vector3.new(w + 1.3, 0.6, 0.3), casing, trim)
+	piece("Cornice", 0, h + 0.97, 0.2, Vector3.new(w + 1.7, 0.24, 0.4), casing, trim)
+	-- Brass: knob on its plate, kick plate, number plaque, peephole.
+	piece("KnobPlate", w / 2 - 0.62, h * 0.47, 0.135, Vector3.new(0.34, 0.9, 0.03), theme.brass, M.Foil)
 	Kit.ball(model, {
 		name = "Knob",
-		cf = at(cf, w / 2 - 0.6, h * 0.46, 0.25),
-		size = Vector3.new(0.35, 0.35, 0.35),
+		cf = at(cf, w / 2 - 0.62, h * 0.47, 0.32),
+		size = Vector3.new(0.36, 0.36, 0.36),
 		color = theme.brass,
 		material = M.Foil,
 	})
-	Props.roomNumber(model, at(cf, 0, h * 0.82, 0.12), theme, number)
-	if rng() < 0.22 then
+	piece("KickPlate", 0, 0.55, 0.13, Vector3.new(w - 0.5, 0.8, 0.02), theme.brass, M.Foil)
+	Kit.cylinder(model, {
+		name = "Peephole",
+		cf = at(cf, 0, 5.9, 0.14) * CFrame.Angles(0, math.pi / 2, 0),
+		size = Vector3.new(0.06, 0.22, 0.22),
+		color = theme.brass,
+		material = M.Foil,
+	})
+	Props.roomNumber(model, at(cf, 0, 7.05, 0.12), theme, number)
+	if rng() < 0.2 then
 		local hanger = decor(
 			model,
 			"DoNotDisturb",
-			at(cf, w / 2 - 0.6, h * 0.36, 0.3),
-			Vector3.new(0.6, 1.3, 0.04),
-			Color3.fromRGB(200, 40, 50)
+			at(cf, w / 2 - 0.62, h * 0.38, 0.2),
+			Vector3.new(0.62, 1.3, 0.04),
+			Color3.fromRGB(176, 32, 44)
 		)
 		Kit.surfaceText(hanger, {
 			face = Enum.NormalId.Front,
@@ -323,7 +372,8 @@ function Props.decorDoor(parent: Instance, cf: CFrame, theme: Theme, number: str
 	end
 	-- Light leaking under the door (some rooms are "occupied").
 	if rng() < 0.35 then
-		decor(model, "Glow", at(cf, 0, 0.05, 0.2), Vector3.new(w - 0.4, 0.08, 0.3), theme.lamp, M.Neon)
+		local glow = decor(model, "Glow", at(cf, 0, 0.03, 0.18), Vector3.new(w - 0.5, 0.06, 0.24), theme.lamp, M.Neon)
+		glow.CastShadow = false
 	end
 end
 

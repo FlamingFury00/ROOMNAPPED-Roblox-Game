@@ -27,11 +27,11 @@ local WorldController = {}
 WorldController.priority = 30
 
 type DoorRecord = { part: BasePart, closed: CFrame, offset: Vector3, open: boolean, tween: Tween? }
+-- Every light a lamp part holds (a ceiling lamp pools light with a spot and glows with a point light).
+type LampLight = { light: Light, color: Color3, brightness: number }
 type LampRecord = {
 	part: BasePart,
-	light: Light?,
-	color: Color3?,
-	brightness: number,
+	lights: { LampLight },
 	flicker: boolean,
 	seed: number,
 	alarmed: boolean,
@@ -135,22 +135,27 @@ local function addLamp(instance: Instance)
 		return
 	end
 	local part = instance
-	local light = part:FindFirstChildWhichIsA("Light")
+	local lights: { LampLight } = {}
+	for _, child in part:GetChildren() do
+		if child:IsA("Light") then
+			table.insert(lights, { light = child, color = child.Color, brightness = child.Brightness })
+		end
+	end
 	-- Roughly one lamp in twelve flickers (stable per lamp so it does not change on rejoin).
 	local seed = MathUtil.hash(part:GetFullName()) % 1000
 	local levelModel = RunInfo.levelModel()
-	local alarmed = alarm and light ~= nil and levelModel ~= nil and part:IsDescendantOf(levelModel)
+	local alarmed = alarm and #lights > 0 and levelModel ~= nil and part:IsDescendantOf(levelModel)
 	lamps[part] = {
 		part = part,
-		light = light,
-		color = if light then light.Color else nil,
-		brightness = if light then light.Brightness else 0,
-		flicker = seed % 12 == 0 and light ~= nil,
+		lights = lights,
+		flicker = seed % 12 == 0 and #lights > 0,
 		seed = seed,
 		alarmed = alarmed,
 	}
-	if alarmed and light then
-		light.Color = light.Color:Lerp(ALARM_COLOR, 0.65)
+	if alarmed then
+		for _, entry in lights do
+			entry.light.Color = entry.color:Lerp(ALARM_COLOR, 0.65)
+		end
 	end
 end
 
@@ -167,16 +172,17 @@ local function setAlarm(enabled: boolean)
 	alarm = enabled
 	local levelModel = RunInfo.levelModel()
 	for part, record in lamps do
-		local light = record.light
-		if light and record.color then
+		if #record.lights > 0 then
 			local inLevel = levelModel ~= nil and part:IsDescendantOf(levelModel)
 			-- Only the hotel's lamps raise the alarm; the lobby stays calm for players waiting there.
 			record.alarmed = enabled and inLevel
-			if record.alarmed then
-				light.Color = (record.color :: Color3):Lerp(ALARM_COLOR, 0.65)
-			else
-				light.Color = record.color :: Color3
-				light.Brightness = record.brightness
+			for _, entry in record.lights do
+				if record.alarmed then
+					entry.light.Color = entry.color:Lerp(ALARM_COLOR, 0.65)
+				else
+					entry.light.Color = entry.color
+					entry.light.Brightness = entry.brightness
+				end
 			end
 		end
 	end
@@ -192,14 +198,17 @@ local function stepLamps(dt: number)
 	local t = os.clock()
 	local pulse = 0.55 + 0.45 * math.sin(t * 5.2)
 	for part, record in lamps do
-		local light = record.light
-		if light and part.Parent then
+		if part.Parent and (record.alarmed or record.flicker) then
+			local factor = 1
 			if record.alarmed then
-				light.Brightness = record.brightness * (0.45 + 0.75 * pulse)
-			elseif record.flicker then
+				factor = 0.45 + 0.75 * pulse
+			else
 				-- Mostly steady with short stutters.
 				local n = math.sin(t * 13 + record.seed) * math.sin(t * 7.7 + record.seed * 0.37)
-				light.Brightness = if n > 0.82 then record.brightness * 0.15 else record.brightness
+				factor = if n > 0.82 then 0.15 else 1
+			end
+			for _, entry in record.lights do
+				entry.light.Brightness = entry.brightness * factor
 			end
 		end
 	end

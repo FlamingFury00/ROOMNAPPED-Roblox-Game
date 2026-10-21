@@ -48,6 +48,8 @@ local HEADINGS: { [number]: Vector3 } = {
 }
 
 local PIT_KINDS: { [string]: boolean } = { Basin = true, Gap = true }
+-- Decorative room doors (Props.decorDoor) are centred on their tile's wall and bring their own casing.
+local DOOR_GAP = { -3.05, 3.05 }
 -- Floors that can hurt (fire, live puddles, cart tracks) are never respawn checkpoints; their safe lanes are.
 local HAZARD_FLOOR_KINDS: { [string]: boolean } = { Fire = true, Puddle = true, Carts = true }
 local SINGLE_TILE: { [string]: boolean } = {
@@ -168,11 +170,24 @@ end
 export type Opening = { from: number, to: number, height: number }
 
 --[[
-	Build one straight wall in tile space.
-	axis = "x": side wall at x = pos running along a in [from, to]
-	axis = "a": end wall at a = pos running along x in [from, to]
-	bottom: lowest y of the wall (pits extend walls downwards)
+	Hotel wall architecture (studs above the floor; "depth" = distance out of the wall into the corridor):
+
+	  14.00 ┐ crown: frieze 12.45-13.15, a sloped cove under the ceiling and a top fillet
+	  11.20 ┤ picture rail
+	        │ wallpaper (the structural wall's own surface)
+	   4.35 ┤ chair rail (two steps)
+	   3.95 ┤ wood wainscot with a raised panel every ~3.2 studs
+	   0.80 ┤ baseboard with a cap
+	   0.00 ┘
+	Pilasters (with a base block and a capital) mark the tile boundaries. The lower trim stops at doorways
+	and at decorative doors (`decorGaps`, the doors bring their own casing); the upper trim runs over them.
 ]]
+local WAINSCOT_TOP = 3.95
+local PANEL = { bottom = 1.15, top = 3.45, pitch = 3.2, margin = 0.32 }
+local PICTURE_RAIL = 11.2
+local FRIEZE = { bottom = 12.45, top = 13.15 }
+local COVE_TOP = 13.86
+
 local function wall(
 	ctx: Ctx,
 	cf: CFrame,
@@ -181,7 +196,9 @@ local function wall(
 	from: number,
 	to: number,
 	openings: { Opening },
-	bottom: number?
+	bottom: number?,
+	decorGaps: { { number } }?,
+	pilasters: { number }?
 )
 	local theme = ctx.theme
 	local yb = bottom or 0
@@ -190,6 +207,22 @@ local function wall(
 	local holes = {}
 	for _, o in openings do
 		table.insert(holes, { o.from, o.to })
+	end
+	local lowerHoles = table.clone(holes)
+	local gaps: { { number } } = decorGaps or {}
+	for _, gap in gaps do
+		table.insert(lowerHoles, gap)
+	end
+	local panelColor = theme.wainscot:Lerp(Color3.new(1, 1, 1), 0.07)
+	local baseColor = theme.wainscot:Lerp(Color3.new(0, 0, 0), 0.32)
+	local trimColor = theme.trim
+
+	local function frameAt(u: number, y: number, depth: number): CFrame
+		local d = innerFace + inward * depth
+		if axis == "x" then
+			return tcf(cf, d, y, u)
+		end
+		return tcf(cf, u, y, d)
 	end
 
 	-- A layer spans from `outer` to `inner`, measured from the wall's inner face (positive = into the
@@ -205,10 +238,10 @@ local function wall(
 		material: Enum.Material,
 		isSolid: boolean,
 		name: string
-	)
+	): Part?
 		local len = u1 - u0
 		if len <= 0.01 or y1 - y0 <= 0.01 then
-			return
+			return nil
 		end
 		local mid = (u0 + u1) / 2
 		local thickness = inner - outer
@@ -222,40 +255,114 @@ local function wall(
 			partCF = tcf(cf, mid, (y0 + y1) / 2, centre)
 		end
 		if isSolid then
-			Kit.solid(ctx.structure, name, partCF, size, color, material)
-		else
-			Kit.decor(ctx.decor, name, partCF, size, color, material)
+			local part = Kit.solid(ctx.structure, name, partCF, size, color, material)
+			if name == "Wall" and theme.wallVariant then
+				part.MaterialVariant = theme.wallVariant
+			end
+			return part
 		end
+		local part = Kit.decor(ctx.decor, name, partCF, size, color, material)
+		part.CastShadow = false
+		return part
 	end
 
+	-- Sloped cove under the ceiling: flat against the wall and the ceiling, the slope facing down and out.
+	local function cove(u0: number, u1: number)
+		local len = u1 - u0
+		if len <= 0.01 then
+			return
+		end
+		local depth = 0.56
+		local mid = (u0 + u1) / 2
+		local centre = frameAt(mid, (FRIEZE.top + COVE_TOP) / 2, depth / 2).Position
+		local towardWall = (frameAt(mid, 0, 0).Position - frameAt(mid, 0, 1).Position).Unit
+		local up = Vector3.new(0, -1, 0) -- the wedge's full bottom face goes against the ceiling
+		local right = up:Cross(towardWall)
+		local wedge = Kit.wedge(ctx.decor, {
+			name = "CrownCove",
+			cf = CFrame.fromMatrix(centre, right, up, towardWall),
+			size = Vector3.new(len, COVE_TOP - FRIEZE.top, depth),
+			color = trimColor,
+			material = theme.trimMaterial,
+		})
+		wedge.CastShadow = false
+	end
+
+	-- Structure: the wall itself (with the wallpaper) around full openings, lintels above them, pit walls.
 	for _, seg in subtract(from, to, holes) do
 		if yb < 0 then
 			place(seg[1], seg[2], yb, 0, -1, 0, theme.pitWall, theme.pitMaterial, true, "PitWall")
 		end
 		place(seg[1], seg[2], 0, CEIL, -1, 0, theme.wall, theme.wallMaterial, true, "Wall")
-		place(seg[1], seg[2], 0, 4.2, 0, 0.25, theme.wainscot, theme.wainscotMaterial, false, "Wainscot")
-		place(seg[1], seg[2], 4.2, 4.55, 0, 0.42, theme.trim, theme.trimMaterial, false, "ChairRail")
-		place(
-			seg[1],
-			seg[2],
-			0,
-			0.75,
-			0,
-			0.36,
-			theme.wainscot:Lerp(Color3.new(0, 0, 0), 0.25),
-			theme.wainscotMaterial,
-			false,
-			"Baseboard"
-		)
-		place(seg[1], seg[2], CEIL - 0.7, CEIL, 0, 0.5, theme.trim, theme.trimMaterial, false, "Crown")
 	end
 	for _, o in openings do
 		if o.height < CEIL then
 			place(o.from, o.to, o.height, CEIL, -1, 0, theme.wall, theme.wallMaterial, true, "Lintel")
-			place(o.from, o.to, CEIL - 0.7, CEIL, 0, 0.5, theme.trim, theme.trimMaterial, false, "Crown")
 		end
 		if yb < 0 then
 			place(o.from, o.to, yb, 0, -1, 0, theme.pitWall, theme.pitMaterial, true, "PitWall")
+		end
+	end
+
+	-- Lower trim: wainscot with raised panels, baseboard, chair rail.
+	for _, seg in subtract(from, to, lowerHoles) do
+		local u0, u1 = seg[1], seg[2]
+		place(u0, u1, 0, WAINSCOT_TOP, 0, 0.16, theme.wainscot, theme.wainscotMaterial, false, "Wainscot")
+		local len = u1 - u0
+		local count = math.max(1, math.round(len / PANEL.pitch))
+		local pitch = len / count
+		if pitch > PANEL.margin * 2 + 0.6 then
+			for i = 0, count - 1 do
+				place(
+					u0 + i * pitch + PANEL.margin,
+					u0 + (i + 1) * pitch - PANEL.margin,
+					PANEL.bottom,
+					PANEL.top,
+					0.16,
+					0.24,
+					panelColor,
+					theme.wainscotMaterial,
+					false,
+					"WainscotPanel"
+				)
+			end
+		end
+		place(u0, u1, 0, 0.7, 0.16, 0.32, baseColor, theme.wainscotMaterial, false, "Baseboard")
+		place(u0, u1, 0.7, 0.8, 0.16, 0.36, baseColor, theme.wainscotMaterial, false, "BaseboardCap")
+		place(u0, u1, WAINSCOT_TOP, 4.25, 0, 0.36, trimColor, theme.trimMaterial, false, "ChairRail")
+		place(u0, u1, 4.25, 4.35, 0, 0.28, trimColor, theme.trimMaterial, false, "ChairRailLip")
+	end
+
+	-- Upper trim runs the whole wall (every doorway is lower than the picture rail).
+	place(from, to, PICTURE_RAIL, PICTURE_RAIL + 0.14, 0, 0.1, trimColor, theme.trimMaterial, false, "PictureRail")
+	place(from, to, FRIEZE.bottom, FRIEZE.top, 0, 0.14, trimColor, theme.trimMaterial, false, "Crown")
+	cove(from, to)
+	place(from, to, COVE_TOP, CEIL, 0, 0.64, trimColor, theme.trimMaterial, false, "CrownFillet")
+
+	-- Pilasters between bays (skipped where a doorway or a decorative door is).
+	local pilasterList: { number } = pilasters or {}
+	for _, u in pilasterList do
+		local blocked = false
+		for _, hole in lowerHoles do
+			if u > hole[1] - 0.7 and u < hole[2] + 0.7 then
+				blocked = true
+			end
+		end
+		if not blocked and u >= from - 0.01 and u <= to + 0.01 then
+			place(u - 0.5, u + 0.5, 4.35, FRIEZE.bottom, 0, 0.26, trimColor, theme.trimMaterial, false, "Pilaster")
+			place(u - 0.62, u + 0.62, 4.35, 4.95, 0, 0.32, trimColor, theme.trimMaterial, false, "PilasterBase")
+			place(
+				u - 0.66,
+				u + 0.66,
+				12.05,
+				FRIEZE.bottom,
+				0,
+				0.34,
+				trimColor,
+				theme.trimMaterial,
+				false,
+				"PilasterCap"
+			)
 		end
 	end
 end
@@ -291,23 +398,54 @@ end
 
 local function ceilingTile(ctx: Ctx, cf: CFrame, a0: number, a1: number)
 	local len = a1 - a0
+	local theme = ctx.theme
 	Kit.solid(
 		ctx.structure,
 		"Ceiling",
 		tcf(cf, 0, CEIL + 0.5, (a0 + a1) / 2),
 		Vector3.new(T, 1, len),
-		ctx.theme.ceiling,
-		ctx.theme.ceilingMaterial
+		theme.ceiling,
+		theme.ceilingMaterial
 	)
+	-- Coffers: a beam across the corridor at the start of every tile, lining up with the pilasters.
+	local beamColor = theme.ceiling:Lerp(theme.trim, 0.35):Lerp(Color3.new(0, 0, 0), 0.08)
+	local beam = Kit.decor(
+		ctx.decor,
+		"CeilingBeam",
+		tcf(cf, 0, CEIL - 0.4, a0 + 0.45),
+		Vector3.new(INNER * 2, 0.8, 0.9),
+		beamColor,
+		theme.trimMaterial
+	)
+	beam.CastShadow = false
+	for _, side in { -1, 1 } do
+		local rail = Kit.decor(
+			ctx.decor,
+			"CofferRail",
+			tcf(cf, side * (INNER - 1.4), CEIL - 0.15, (a0 + a1) / 2),
+			Vector3.new(0.3, 0.3, len),
+			beamColor,
+			theme.trimMaterial
+		)
+		rail.CastShadow = false
+	end
 end
 
 local function lampAt(ctx: Ctx, cf: CFrame, a: number)
 	-- A few lamps per wing cast shadows for depth; every shadowed light costs every frame on the GPU.
 	local shadows = false
-	if ctx.shadowLights < 4 and ctx.rng() < 0.6 then
+	if ctx.shadowLights < 5 and ctx.rng() < 0.6 then
 		shadows = true
 		ctx.shadowLights += 1
 	end
+	local medallion = Kit.cylinder(ctx.decor, {
+		name = "Medallion",
+		cf = tcf(cf, 0, CEIL - 0.08, a) * CFrame.Angles(0, 0, math.pi / 2),
+		size = Vector3.new(0.16, 3.2, 3.2),
+		color = ctx.theme.trim,
+		material = ctx.theme.trimMaterial,
+	})
+	medallion.CastShadow = false
 	Props.ceilingLamp(ctx.decor, tcf(cf, 0, CEIL, a), ctx.theme, shadows)
 end
 
@@ -770,9 +908,20 @@ local function buildHallTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef, allowDoor
 	lampAt(ctx, tile.cf, 0)
 	for _, side in { "L", "R" } do
 		local feature = (feats :: any)[side]
-		wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, sideOpenings(feature))
+		local hasDoor = feature == nil and allowDoors and ctx.rng() < 0.7
+		wall(
+			ctx,
+			tile.cf,
+			"x",
+			sideSign(side) * 7.5,
+			-HALF,
+			HALF,
+			sideOpenings(feature),
+			nil,
+			if hasDoor then { DOOR_GAP } else nil,
+			{ -HALF }
+		)
 		if feature == nil then
-			local hasDoor = allowDoors and ctx.rng() < 0.7
 			decorateWall(ctx, tile, side, hasDoor)
 			if mod.kind == "Hall" and not ctx.runtime.tiles[tile.index].hazard and ctx.rng() < 0.32 then
 				local a = if ctx.rng() < 0.5 then 5.2 else -5.2
@@ -801,7 +950,7 @@ local function buildTurnTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef)
 	ceilingTile(ctx, tile.cf, -HALF, HALF)
 	lampAt(ctx, tile.cf, 0)
 	local outerSide = if mod.dir == "R" then "L" else "R"
-	wall(ctx, tile.cf, "x", sideSign(outerSide) * 7.5, -HALF, HALF, {})
+	wall(ctx, tile.cf, "x", sideSign(outerSide) * 7.5, -HALF, HALF, {}, nil, nil, { -HALF })
 	wall(ctx, tile.cf, "a", 7.5, -HALF, HALF, {})
 	-- Corner dressing: a big plant in the outer corner and a painting on the front wall.
 	local s = sideSign(outerSide)
@@ -839,7 +988,7 @@ local function buildElevator(ctx: Ctx, tile: TileInfo)
 	ceilingTile(ctx, tile.cf, -HALF, HALF)
 	lampAt(ctx, tile.cf, 2)
 	for _, side in { "L", "R" } do
-		wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, {})
+		wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, {}, nil, nil, { HALF })
 	end
 	wall(
 		ctx,
@@ -1017,7 +1166,7 @@ local function buildTarget(ctx: Ctx, tile: TileInfo, mod: ModuleDef)
 	ceilingTile(ctx, tile.cf, -HALF, HALF)
 	lampAt(ctx, tile.cf, -2)
 	for _, side in { "L", "R" } do
-		wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, {})
+		wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, {}, nil, nil, { -HALF })
 		local s = sideSign(side)
 		local p = tpt(tile.cf, s * INNER, 6.4, 3)
 		Props.wallSconce(
@@ -1127,7 +1276,7 @@ local function buildPitModule(ctx: Ctx, moduleIndex: number, mod: ModuleDef)
 	for _, index in indices do
 		local tile = ctx.runtime.tiles[index]
 		for _, side in { "L", "R" } do
-			wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, {}, -deep - 1)
+			wall(ctx, tile.cf, "x", sideSign(side) * 7.5, -HALF, HALF, {}, -deep - 1, nil, { -HALF })
 		end
 		ceilingTile(ctx, tile.cf, -HALF, HALF)
 		lampAt(ctx, tile.cf, 0)

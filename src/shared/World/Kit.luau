@@ -109,7 +109,23 @@ function Kit.post(parent: Instance?, props: PostProps): Part
 	})
 end
 
+-- Ellipsoid of any proportions: a block whose sphere mesh fills its size (Roblox forces a Ball-shaped part
+-- to a perfect sphere, which turned flat discs and teardrops into blobs).
+function Kit.ellipsoid(parent: Instance?, props: PartProps): Part
+	local part = Instance.new("Part")
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = part
+	apply(part, props, parent)
+	return part
+end
+
+-- A sphere; any other proportions become an ellipsoid (Kit.ellipsoid).
 function Kit.ball(parent: Instance?, props: PartProps): Part
+	local s = props.size
+	if math.abs(s.X - s.Y) > 1e-3 or math.abs(s.X - s.Z) > 1e-3 then
+		return Kit.ellipsoid(parent, props)
+	end
 	local part = Instance.new("Part")
 	part.Shape = Enum.PartType.Ball
 	apply(part, props, parent)

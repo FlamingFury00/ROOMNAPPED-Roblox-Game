@@ -23,6 +23,7 @@ export type Flags = {
 		caretaker: boolean,
 		keys: boolean,
 		shop: boolean,
+		assets: boolean,
 	},
 	adminUserIds: { number },
 	adminGroup: { id: number, minRank: number }?,
@@ -43,6 +44,8 @@ local FeatureFlags = {
 			caretaker = true,
 			keys = true,
 			shop = true,
+			-- Curated Creator Store models dressing the hotel (AssetLibraryService); off = procedural props.
+			assets = true,
 		},
 		-- Extra admins besides the experience owner (or group owner rank).
 		adminUserIds = {},
