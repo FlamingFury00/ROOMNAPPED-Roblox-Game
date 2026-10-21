@@ -22,6 +22,8 @@ republishing, and running servers follow within five minutes (see §6).
 
 - [ ] All CI jobs are green on the release commit (`verify`, `playthroughs` and `chaos`).
 - [ ] `tools/check.sh` passes locally (StyLua, luau-lsp strict analysis, build, headless tests).
+- [ ] `release/ROOMNAPPED.rbxl` is rebuilt from the release commit (`tools/build.sh release/ROOMNAPPED.rbxl`)
+      and that is the file opened in Studio to publish.
 - [ ] `GameConfig.Version` is bumped. If the profile shape changed, `GameConfig.SaveSchemaVersion` is bumped
       and `ProfileSchema` has a migration with a unit test from the previous version.
 - [ ] `docs/CONTENT_OWNERSHIP.md` is current: `python3 tools/content/gen_audio.py` ran cleanly and every

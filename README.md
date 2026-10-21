@@ -30,8 +30,12 @@ fonts are the ones bundled with the Roblox client, and nothing is synthesized or
 
 ## Getting started
 
-The toolchain is pinned in [rokit.toml](rokit.toml): Rojo 7.7.1, Lune 0.11.0, selene 0.32.0,
-StyLua 2.6.0 and luau-lsp 1.70.1.
+A ready-built place is committed at [release/ROOMNAPPED.rbxl](release/ROOMNAPPED.rbxl): open it in Roblox
+Studio and press Play, or publish it (see the [publishing checklist](docs/PUBLISHING_CHECKLIST.md)). CI also
+attaches a fresh build of every commit as the `ROOMNAPPED-place` artifact.
+
+To build from source, the toolchain is pinned in [rokit.toml](rokit.toml): Rojo 7.7.1, Lune 0.11.0,
+selene 0.32.0, StyLua 2.6.0 and luau-lsp 1.70.1.
 
 ```bash
 rokit install                      # install the pinned tools
