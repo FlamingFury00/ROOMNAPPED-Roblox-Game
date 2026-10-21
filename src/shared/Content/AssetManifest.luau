@@ -325,9 +325,10 @@ local entries: { [string]: Entry } = {
 		credit = "BonnieGamez101 (Electric Fan)",
 	},
 	cardboardBoxes = {
-		ids = { 5128298696, 110825748556023 },
+		-- A pile against a side wall (a row of boxes runs along the wall); kept clear of it at 2.4 wide.
+		ids = { 5128298696, 110825748556023 }, -- pile of three taped boxes; big box with a row of small ones
 		mount = "floor",
-		size = V(3.2, 3.2, 3),
+		size = V(2.4, 3.2, 4),
 		fit = "contain",
 		facing = "any",
 		credit = "Xitral (Cardboard Boxes Mesh); nyaalchemi (CardBoard_Boxes)",

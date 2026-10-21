@@ -406,29 +406,49 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 			)
 		end
 	end
-	-- Stacked boxes by the side walls (a desk fan on the left stack) and air ducts along the ceiling.
+	-- Boxes by the side walls: a neat stack exactly 3.2 high with a desk fan on top on the left, a pile on the
+	-- right (the curated piles have no flat top to stand a fan on); air ducts along the ceiling.
+	local cardboard = Color3.fromRGB(186, 146, 98)
+	local stack = facingDoor(roomCF, -5.8, 0, 9)
+	local stackRng = subRng(rng)
+	local stackTop = 0
+	for i, height in { 1.1, 1.1, 1 } do
+		decor(
+			props,
+			"Box",
+			stack
+				* CFrame.new((stackRng() - 0.5) * 0.3, stackTop + height / 2, 0)
+				* CFrame.Angles(0, (stackRng() - 0.5) * 0.4, 0),
+			Vector3.new(2.6 - i * 0.3, height, 2.2 - i * 0.2),
+			cardboard,
+			M.Cardboard
+		).CastShadow =
+			true
+		stackTop += height
+	end
+	collider(props, stack * CFrame.new(0, stackTop / 2, 0), Vector3.new(2.4, stackTop, 2.2))
+	local pile = facingDoor(roomCF, 5.8, 0, 9)
+	local pileRng = subRng(rng)
+	Assets.place(props, "cardboardBoxes", pile, function(slot: Model, cf: CFrame)
+		local y = 0
+		for i = 1, 2 + math.floor(pileRng() * 2) do
+			local size = Vector3.new(2.6 - i * 0.3, 1.1, 2.2 - i * 0.2)
+			decor(
+				slot,
+				"Box",
+				cf
+					* CFrame.new((pileRng() - 0.5) * 0.4, y + size.Y / 2, 0)
+					* CFrame.Angles(0, (pileRng() - 0.5) * 0.5, 0),
+				size,
+				cardboard,
+				M.Cardboard
+			).CastShadow =
+				true
+			y += size.Y
+		end
+	end, { variant = if rng() < 0.5 then 1 else 2 })
+	collider(props, pile * CFrame.new(0, 1.5, 0), Vector3.new(2.4, 3, 3.6))
 	for _, side in { -1, 1 } do
-		local boxes = facingDoor(roomCF, side * 5.8, 0, 9)
-		local boxRng = subRng(rng)
-		Assets.place(props, "cardboardBoxes", boxes, function(slot: Model, cf: CFrame)
-			local y = 0
-			for i = 1, 2 + math.floor(boxRng() * 2) do
-				local size = Vector3.new(2.6 - i * 0.3, 1.1, 2.2 - i * 0.2)
-				decor(
-					slot,
-					"Box",
-					cf
-						* CFrame.new((boxRng() - 0.5) * 0.4, y + size.Y / 2, 0)
-						* CFrame.Angles(0, (boxRng() - 0.5) * 0.5, 0),
-					size,
-					Color3.fromRGB(186, 146, 98),
-					M.Cardboard
-				).CastShadow =
-					true
-				y += size.Y
-			end
-		end, { variant = if side < 0 then 1 else 2 })
-		collider(props, boxes * CFrame.new(0, 1.5, 0), Vector3.new(3, 3, 2.8))
 		Assets.place(
 			props,
 			"ventDuct",
@@ -458,7 +478,7 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 	Assets.place(
 		props,
 		"deskFan",
-		facingDoor(roomCF, -5.8, 3.2, 9) * CFrame.Angles(0, 0.5, 0),
+		facingDoor(roomCF, -5.8, stackTop, 9) * CFrame.Angles(0, 0.5, 0),
 		function(slot: Model, cf: CFrame)
 			Kit.cylinder(slot, {
 				name = "FanBase",
@@ -489,18 +509,35 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 		)
 	end
 	if palette.style == "tropical" then
-		for _, x in { -5.5, 5.5 } do
-			decor(props, "PalmTrunk", rp(roomCF, x, 3.5, 10), Vector3.new(0.8, 7, 0.8), palette.prop, M.Wood)
-			for k = 0, 4 do
-				decor(
-					props,
-					"Frond",
-					rp(roomCF, x, 7.2, 10) * CFrame.Angles(0, k * 1.25, 0.9) * CFrame.new(0, 1.6, 0),
-					Vector3.new(0.9, 3.4, 0.1),
-					palette.trim,
-					M.LeafyGrass
-				)
-			end
+		-- Potted palms against the side walls in front of the vents (clear of the boxes, the fan and the walls).
+		for i, x in { -5.1, 5.1 } do
+			Assets.place(props, "bigPlant", facingDoor(roomCF, x, 0, 4.2), function(slot: Model, cf: CFrame)
+				Kit.cylinder(slot, {
+					name = "Pot",
+					cf = cf * CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, math.pi / 2),
+					size = Vector3.new(1.4, 1.7, 1.7),
+					color = darker(palette.prop, 0.25),
+					material = M.Concrete,
+				})
+				Kit.cylinder(slot, {
+					name = "Trunk",
+					cf = cf * CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.pi / 2),
+					size = Vector3.new(3.4, 0.45, 0.45),
+					color = palette.prop,
+					material = M.Wood,
+				})
+				for k = 0, 5 do
+					decor(
+						slot,
+						"Frond",
+						cf * CFrame.new(0, 4.6, 0) * CFrame.Angles(0, k * math.pi / 3 + i, 0.85) * CFrame.new(0, 1.2, 0),
+						Vector3.new(0.7, 2.5, 0.08),
+						palette.trim,
+						M.LeafyGrass
+					)
+				end
+			end, { variant = i, scale = 0.85 })
+			collider(props, rp(roomCF, x, 1, 4.2), Vector3.new(1.7, 2, 1.7))
 		end
 	elseif palette.style == "retro" then
 		local sign = decor(props, "Diner", rp(roomCF, 0, 12.4, 12.85), Vector3.new(6, 1.2, 0.2), palette.accent, M.Neon)
@@ -911,8 +948,13 @@ local function buildMagnet(_model: Model, roomCF: CFrame, palette: Palette, prop
 			M.SmoothPlastic
 		)
 	end
-	-- Scrap heaps, oil drums, a toolbox, gears on the walls and a crane magnet hanging over it all.
-	for k, spot in { Vector3.new(-4.6, 0, 6.2), Vector3.new(4.4, 0, 3.6) } do
+	-- Scrap heaps, oil drums, a toolbox, gears on the walls and a crane magnet hanging over it all. (The lab's
+	-- bench stands where the second heap would.)
+	local heaps = { Vector3.new(-4.6, 0, 6.2), Vector3.new(4.4, 0, 3.6) }
+	if palette.style == "lab" then
+		table.remove(heaps, 2)
+	end
+	for k, spot in heaps do
 		local scrapRng = subRng(rng)
 		Assets.place(
 			props,

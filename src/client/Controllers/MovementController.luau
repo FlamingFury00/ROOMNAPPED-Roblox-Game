@@ -296,7 +296,12 @@ local function step(dt: number)
 	if downed then
 		walk = GameConfig.Movement.DownedWalkSpeed
 	end
-	setHumanoidLimits(r, walk, if downed then 0 else GameConfig.Movement.JumpHeight)
+	-- Hold still while a cinematic shot has the camera (movement keys would steer relative to the shot).
+	local filming = CameraController.isCinematic()
+	if filming then
+		walk = 0
+	end
+	setHumanoidLimits(r, walk, if downed or filming then 0 else GameConfig.Movement.JumpHeight)
 	if downed ~= wasDowned then
 		wasDowned = downed
 		r.humanoid.Sit = downed

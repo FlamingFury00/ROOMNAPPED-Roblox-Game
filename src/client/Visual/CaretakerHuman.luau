@@ -217,7 +217,9 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 		table.insert(parts, p)
 	end
 
-	-- Animations (Roblox's own: they play in every experience).
+	-- Animations (Roblox's own: they play in every experience). An Animator only loads tracks once its model is
+	-- inside the game, so the body is parented first.
+	model.Parent = parent
 	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator")
 	animator.Parent = humanoid
 	local tracks: { [string]: AnimationTrack } = {}
@@ -231,6 +233,8 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 			track.Looped = name ~= "point"
 			track.Priority = if name == "point" then Enum.AnimationPriority.Action else Enum.AnimationPriority.Movement
 			tracks[name] = track
+		else
+			warn("[Caretaker] animation " .. name .. " did not load: " .. tostring(track))
 		end
 	end
 
@@ -265,9 +269,8 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 		eyeL = eyes[1],
 		eyeR = eyes[2],
 		eyeLight = eyeLight,
-		headTop = (head.Position.Y + headSize.Y / 2) - root.Position.Y,
+		headTop = (head.CFrame.Position.Y + headSize.Y / 2) - root.CFrame.Position.Y,
 	}
-	model.Parent = parent
 	return rig
 end
 

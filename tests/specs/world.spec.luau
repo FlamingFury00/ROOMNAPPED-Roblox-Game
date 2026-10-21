@@ -12,6 +12,7 @@ return function(ctx)
 	local GameConfig = ctx.module("ReplicatedStorage.Shared.Config.GameConfig")
 	local Geometry = ctx.module("ReplicatedStorage.Shared.World.Geometry")
 	local CF = ctx.roblox.CFrame
+	local Vector3 = ctx.roblox.Vector3
 
 	describe("Layouts build cleanly (S10/S31/R11)", function()
 		local ids = {}
@@ -158,6 +159,94 @@ return function(ctx)
 				end
 			end
 			expect(seen > 0).toBe(true)
+		end)
+
+		it("takes a curated model into a slot and gives the built-in prop back when switched off", function()
+			local Assets = ctx.module("ReplicatedStorage.Shared.World.Assets")
+			local Instance = ctx.roblox.Instance
+			local storage = ctx.game:GetService("ReplicatedStorage")
+			local library = storage:FindFirstChild(Assets.FOLDER) or Instance.new("Folder")
+			library.Name = Assets.FOLDER
+			library.Parent = storage
+			local world = Instance.new("Folder")
+			world.Parent = ctx.game:GetService("Workspace")
+			local built = 0
+			local slot = Assets.place(world, "bench", CF.new(5, 0, 5), function(into, cf)
+				built += 1
+				local part = Instance.new("Part")
+				part.Name = "Fallback"
+				part.CFrame = cf
+				part.Parent = into
+			end)
+			expect(slot:GetAttribute("Asset")).toBe(false)
+			expect(slot:FindFirstChild("Fallback") ~= nil).toBe(true)
+			-- The model arrives: the slot takes it, in place.
+			local holder = Instance.new("Folder")
+			holder.Name = "bench"
+			local template = Instance.new("Model")
+			template.Name = "01"
+			local real = Instance.new("Part")
+			real.Name = "Real"
+			real.Parent = template
+			template.Parent = holder
+			holder.Parent = library
+			expect(Assets.upgrade("bench")).toBe(1)
+			expect(slot:GetAttribute("Asset")).toBe(true)
+			expect(slot:FindFirstChild("Fallback")).toBe(nil)
+			local placed = slot:FindFirstChildWhichIsA("Model")
+			expect(placed and placed:FindFirstChild("Real") ~= nil).toBe(true)
+			expect(((placed :: any).Real.CFrame.Position - Vector3.new(5, 0, 5)).Magnitude < 1e-3).toBe(true)
+			-- The library is switched off: the template goes and the built-in prop comes back.
+			holder:Destroy()
+			expect(Assets.revert("bench")).toBe(1)
+			expect(slot:GetAttribute("Asset")).toBe(false)
+			expect(slot:FindFirstChild("Fallback") ~= nil).toBe(true)
+			expect(slot:FindFirstChildWhichIsA("Model")).toBe(nil)
+			expect(built).toBe(2)
+			-- Nothing to put back twice.
+			expect(Assets.revert("bench")).toBe(0)
+			world:Destroy()
+		end)
+
+		it("cleans a loaded model into one flat, inert model without invisible parts", function()
+			local Library = ctx.module("ServerScriptService.Server.Services.AssetLibraryService")
+			local Instance = ctx.roblox.Instance
+			local function part(name: string, parent: any, transparency: number?): any
+				local p = Instance.new("Part")
+				p.Name = name
+				p.Transparency = transparency or 0
+				p.Parent = parent
+				return p
+			end
+			local loaded = Instance.new("Model")
+			local root = Instance.new("Model")
+			root.Parent = loaded
+			local body = part("Body", root)
+			Instance.new("Script").Parent = body
+			Instance.new("Sound").Parent = body
+			local hitbox = part("Hitbox", root, 1)
+			part("Nested", hitbox) -- visible, inside the invisible hitbox
+			local label = part("Label", root, 1)
+			Instance.new("Decal").Parent = label
+			local entry = { ids = { 1 }, mount = "floor", size = Vector3.one, fit = "contain", facing = "any" }
+			local model = Library.clean(loaded, entry, "test")
+			expect(model ~= nil).toBe(true)
+			local kept = {}
+			for _, child in (model :: any):GetChildren() do
+				kept[child.Name] = child
+			end
+			expect(kept.Body ~= nil).toBe(true)
+			expect(kept.Nested ~= nil).toBe(true)
+			expect(kept.Label ~= nil).toBe(true)
+			expect(kept.Hitbox).toBe(nil)
+			expect(kept.Body.Anchored).toBe(true)
+			expect(kept.Body.CanCollide).toBe(false)
+			expect(kept.Body.CanQuery).toBe(false)
+			expect(#kept.Body:GetChildren()).toBe(0)
+			-- Nothing visible at all: no template.
+			local ghost = Instance.new("Model")
+			part("Ghost", ghost, 1)
+			expect(Library.clean(ghost, entry, "test")).toBe(nil)
 		end)
 	end)
 

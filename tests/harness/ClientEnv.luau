@@ -93,6 +93,7 @@ local function installShims()
 	Events.install({
 		{ "Instance", "Destroying" },
 		{ "Instance", "ChildAdded" },
+		{ "Instance", "ChildRemoved" },
 		{ "Instance", "DescendantAdded" },
 		{ "Instance", "AncestryChanged" },
 	})

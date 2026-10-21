@@ -253,7 +253,7 @@ local function installShims()
 	roblox.implementProperty("Humanoid", "Died", function(inst)
 		return signalFor(inst, "Died")
 	end)
-	for _, event in { "DescendantAdded", "ChildAdded", "Destroying", "AncestryChanged" } do
+	for _, event in { "DescendantAdded", "ChildAdded", "ChildRemoved", "Destroying", "AncestryChanged" } do
 		roblox.implementProperty("Instance", event, function(inst)
 			return signalFor(inst, event)
 		end)

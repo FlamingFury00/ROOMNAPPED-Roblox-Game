@@ -10,8 +10,9 @@
 	  escaped    a cheer when the squad gets out (Roblox's own R15 emote, which plays in every experience)
 
 	Poses blend onto the animated joints every frame (Motor6D.Transform, written after the Animator has run),
-	on every client and for every character it can see, so teammates see each other's poses. R6 bodies get
-	the arm and lean parts of each pose. Nothing here replicates or touches physics.
+	on every client and for every character it can see, so teammates see each other's poses. R6 bodies have
+	no waist, elbows or knees to pose: they only stop swinging their arms while carrying or downed. Nothing
+	here replicates or touches physics.
 ]]
 
 local Players = game:GetService("Players")
@@ -42,7 +43,7 @@ type Rig = {
 	cheered: boolean,
 }
 
-local rigs: { [Model]: Rig } = setmetatable({}, { __mode = "k" }) :: any
+local rigs: { [Model]: Rig } = {}
 
 local function rad(degrees: number): number
 	return math.rad(degrees)
@@ -114,7 +115,7 @@ end
 
 local function poseTargets(rig: Rig, pose: Pose, t: number): { [string]: CFrame }
 	if not rig.r15 then
-		-- R6 shoulder joints turn about their own X axis (out from the body): arms down and still.
+		-- R6 shoulders swing about their own Z axis (out of the body's side); no turn holds the arms down.
 		if pose == "carry" or pose == "carryLight" or pose == "downed" then
 			return { rightShoulder = CFrame.new(), leftShoulder = CFrame.new() }
 		end
@@ -178,6 +179,10 @@ end
 -- What the player is doing -------------------------------------------------------------------------------
 
 local function poseFor(player: Player, character: Model): Pose?
+	-- Results belong to the escape cheer (and whatever Roblox's own animations do), not to carrying.
+	if RunInfo.phase() == "Results" then
+		return nil
+	end
 	if player:GetAttribute("Downed") == true then
 		return "downed"
 	end
@@ -271,9 +276,28 @@ end
 
 -- Frame ----------------------------------------------------------------------------------------------------
 
+-- Forget characters that left the game (respawns, departed players): the cache holds them strongly.
+local function prune()
+	for character, rig in rigs do
+		if not character.Parent then
+			if rig.stars then
+				(rig.stars :: BillboardGui):Destroy()
+			end
+			rigs[character] = nil
+		end
+	end
+end
+
+local pruneClock = 0
+
 local function step(dt: number)
 	local t = os.clock()
 	local blend = math.clamp(dt * BLEND_RATE, 0, 1)
+	pruneClock += dt
+	if pruneClock > 2 then
+		pruneClock = 0
+		prune()
+	end
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		if not character or not character.Parent then

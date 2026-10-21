@@ -5,7 +5,8 @@
 	Defaults < environment overrides < live overrides from the "RoomnappedConfig" DataStore < admin test
 	overrides (this server only). Live overrides are read at startup and re-read every few minutes, so a
 	rollback reaches running servers too. Disabling a room or mission hides it from new runs only; profiles
-	keep everything they own. `Changed` fires whenever the resolved flags change.
+	keep everything they own. `Changed` fires whenever the resolved flags change; the flags are "ready" once
+	the first live read has been tried (at once in Studio and unpublished places, which have none).
 ]]
 
 local DataStoreService = game:GetService("DataStoreService")
@@ -33,6 +34,7 @@ local flags: any = Tables.deepCopy(FeatureFlags.Defaults)
 local environment = "live"
 local liveOverrides: any = nil
 local testOverrides: any = {}
+local ready = false
 
 local function merge(target: any, source: any)
 	if type(source) ~= "table" then
@@ -73,6 +75,20 @@ end
 
 function FlagsService.all(): any
 	return flags
+end
+
+function FlagsService.isReady(): boolean
+	return ready
+end
+
+-- Wait up to `timeout` seconds for the first live read (whether it worked or not); returns whether it was tried.
+-- For startup work a live switch must be able to stop before it begins (loading third-party models).
+function FlagsService.waitReady(timeout: number): boolean
+	local deadline = os.clock() + timeout
+	while not ready and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	return ready
 end
 
 -- Live overrides come from a hand-edited DataStore entry: keep only known flags with values of the right type,
@@ -188,6 +204,7 @@ end
 function FlagsService.Start()
 	publish()
 	if environment == "studio" or game.PlaceId == 0 then
+		ready = true
 		return
 	end
 	task.spawn(function()
@@ -225,6 +242,7 @@ function FlagsService.Start()
 				-- Keep the flags we have; a read failure must never switch content back on or off.
 				log:Warn("could not read live flags:", result)
 			end
+			ready = true
 			task.wait(if everRead then REFRESH_SECONDS else FIRST_READ_RETRY_SECONDS)
 		end
 	end)

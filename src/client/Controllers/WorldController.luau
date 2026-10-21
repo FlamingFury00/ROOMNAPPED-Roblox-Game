@@ -269,7 +269,7 @@ local function track(tag: string, add: (Instance) -> (), remove: (Instance) -> (
 end
 
 -- Models that finish loading on the server after this client built its own slots (moving carts) replace
--- those slots' fallbacks here too.
+-- those slots' fallbacks here too, and the built-in props come back if the library is switched off.
 local function watchAssets()
 	local Assets = require(Shared.World.Assets)
 	local function onKey(child: Instance)
@@ -277,8 +277,14 @@ local function watchAssets()
 			Assets.upgrade(child.Name, true)
 		end)
 	end
+	local function onKeyRemoved(child: Instance)
+		task.defer(function()
+			Assets.revert(child.Name, true)
+		end)
+	end
 	local function attach(folder: Instance)
 		folder.ChildAdded:Connect(onKey)
+		folder.ChildRemoved:Connect(onKeyRemoved)
 	end
 	local existing = ReplicatedStorage:FindFirstChild(Assets.FOLDER)
 	if existing then

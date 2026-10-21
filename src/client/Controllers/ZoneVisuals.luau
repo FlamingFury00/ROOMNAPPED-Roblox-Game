@@ -98,7 +98,16 @@ type VineVis = {
 	shown: number,
 }
 
-type CartVis = { id: string, model: Model, tileCF: CFrame, range: number, speed: number, frost: ParticleEmitter? }
+type CartVis = {
+	id: string,
+	model: Model,
+	beacon: BasePart,
+	beaconOffset: CFrame,
+	tileCF: CFrame,
+	range: number,
+	speed: number,
+	frost: ParticleEmitter?,
+}
 type CrateVis = { real: BasePart, visual: BasePart, loop: LoopHandle? }
 type KeyVis = { id: string, model: Model, glow: BasePart, base: Vector3, taken: boolean, seed: number }
 type LeverVis = { part: BasePart, base: CFrame, lamp: Part, id: string }
@@ -791,34 +800,19 @@ local function buildCart(s: Session, id: string, info: any, theme: Palette.Theme
 	model.WorldPivot = tileCF
 	model.Parent = s.folder
 	holder:Destroy()
-	-- One shadow from the biggest piece (the cart moves every frame; small parts would only cost).
-	local biggest: BasePart? = nil
-	for _, d in model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.CanCollide = false
-			d.CanQuery = false
-			d.CanTouch = false
-			d.CastShadow = false
-			if not biggest or d.Size.Magnitude > (biggest :: BasePart).Size.Magnitude then
-				biggest = d
-			end
-		end
-	end
-	if biggest then
-		(biggest :: BasePart).CastShadow = true
-	end
 	-- A warning light on top (whatever model the cart is), so carts read as hazards even in the dark; frost
-	-- drifts from it while the cart is chilled.
-	local boxCF, boxSize = model:GetBoundingBox()
+	-- drifts from under it while the cart is chilled. Both ride on their own part that follows the cart, so the
+	-- real model arriving (which empties the slot) never takes them away.
 	local beacon = visualPart(
-		model,
-		"Beacon",
+		s.folder,
+		"CartBeacon_" .. id,
 		Vector3.new(0.5, 0.5, 0.5),
-		CFrame.new(boxCF.Position + Vector3.new(0, boxSize.Y / 2 + 0.35, 0)),
+		tileCF,
 		Color3.fromRGB(255, 120, 40),
 		Enum.Material.Neon
 	)
 	beacon.Shape = Enum.PartType.Ball
+	beacon.CastShadow = false
 	local light = Instance.new("PointLight")
 	light.Color = Color3.fromRGB(255, 140, 60)
 	light.Range = 10
@@ -826,13 +820,48 @@ local function buildCart(s: Session, id: string, info: any, theme: Palette.Theme
 	light.Shadows = false
 	light.Parent = beacon
 	local a = Instance.new("Attachment")
-	a.Position = Vector3.new(0, -boxSize.Y / 2, 0)
 	a.Parent = beacon
 	local frost: ParticleEmitter? = Vfx.emitter(a, "frost", { Rate = 14 })
 	if frost then
 		(frost :: ParticleEmitter).Enabled = false
 	end
-	s.carts[id] = { id = id, model = model, tileCF = tileCF, range = info.range, speed = info.speed, frost = frost }
+	local cart: CartVis = {
+		id = id,
+		model = model,
+		beacon = beacon,
+		beaconOffset = CFrame.new(),
+		tileCF = tileCF,
+		range = info.range,
+		speed = info.speed,
+		frost = frost,
+	}
+	-- Fit the cart to whatever model fills it: no collisions and one shadow from the biggest piece (the cart
+	-- moves every frame; small parts would only cost), the beacon just above its top and frost from its middle.
+	local function fit()
+		local biggest: BasePart? = nil
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") then
+				d.CanCollide = false
+				d.CanQuery = false
+				d.CanTouch = false
+				d.CastShadow = false
+				if not biggest or d.Size.Magnitude > (biggest :: BasePart).Size.Magnitude then
+					biggest = d
+				end
+			end
+		end
+		if biggest then
+			(biggest :: BasePart).CastShadow = true
+		end
+		local pivot = model:GetPivot()
+		local boxCF, boxSize = model:GetBoundingBox()
+		cart.beaconOffset = pivot:ToObjectSpace(CFrame.new(boxCF.Position + Vector3.new(0, boxSize.Y / 2 + 0.35, 0)))
+		a.Position = Vector3.new(0, -boxSize.Y / 2, 0)
+		beacon.CFrame = pivot * cart.beaconOffset
+	end
+	fit()
+	s.trove:Connect(model:GetAttributeChangedSignal("Asset"), fit)
+	s.carts[id] = cart
 end
 
 local function renderCarts(s: Session, now: number)
@@ -845,7 +874,9 @@ local function renderCarts(s: Session, now: number)
 		if type(timeline) == "table" then
 			local x = CartTimeline.offset(timeline :: any, cart.range, cart.speed, now)
 			local rattle = if timeline.pinned == 0 then math.sin(now * 30) * 0.03 else 0
-			cart.model:PivotTo(cart.tileCF * CFrame.new(x, rattle, 0))
+			local pivot = cart.tileCF * CFrame.new(x, rattle, 0)
+			cart.model:PivotTo(pivot)
+			cart.beacon.CFrame = pivot * cart.beaconOffset
 			if cart.frost then
 				(cart.frost :: ParticleEmitter).Enabled = (timeline.coldMul or 1) < 1
 			end

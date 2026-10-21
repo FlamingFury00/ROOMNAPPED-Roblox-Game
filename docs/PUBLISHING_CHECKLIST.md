@@ -126,6 +126,9 @@ republishing, and running servers follow within five minutes (see §6).
       minutes the Magnet room shows as *Resting* in the collection, leaves any loadout and cannot be
       equipped, and profiles still own it; remove the override and it comes back. (The admin console command
       `flag Magnet off` rehearses the same thing on one server instantly.)
+- [ ] Model kill switch: the admin command `flag assets off` turns every curated model in the lobby (and a
+      running corridor's carts) back into the built-in props within a second, and `flag assets on` brings
+      them back after a reload.
 - [ ] Admin tools appear only for the owner (or group rank 254+) and for ids in `adminUserIds`. On the live
       place they stay hidden for everyone until `flags/live` switches `debugTools` on.
 
@@ -136,6 +139,9 @@ republishing, and running servers follow within five minutes (see §6).
    applies it within five minutes: a disabled mission is no longer selectable (a lobby that had it picked
    moves to another), a disabled room leaves loadouts and cannot be deployed. Runs already under way finish
    with what they launched with. Players keep everything they own; disabled content is just not offered.
+   A Creator Store model that changed into something unsuitable: `{"features": {"assets": false}}` puts the
+   built-in props back everywhere (new servers never load the models); then replace the id in
+   `AssetManifest.luau` and switch the flag back on.
 2. **Revert the place.** In the Creator Dashboard, open the place's version history and restore the
    previous version, then migrate servers.
 3. **Never** rename or wipe `RoomnappedProfiles_v1` to roll back. Profiles carry a schema version: older

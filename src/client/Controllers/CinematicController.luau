@@ -15,6 +15,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
@@ -59,8 +60,18 @@ end
 
 local captureUntil = 0
 
+-- In-run shots: for squad members on their feet (not downed or watching a teammate as a spectator).
 local function shotsAllowed(): boolean
-	return RunInfo.isParticipant() and not Motion.isReduced()
+	local me = Players.LocalPlayer
+	return RunInfo.isParticipant()
+		and not Motion.isReduced()
+		and me:GetAttribute("Downed") ~= true
+		and me:GetAttribute("Spectating") ~= true
+end
+
+-- Results shots: anyone who was in this run.
+local function resultShotsAllowed(): boolean
+	return RunInfo.inThisRun() and not Motion.isReduced()
 end
 
 local function myRoot(): BasePart?
@@ -135,12 +146,17 @@ local function captureShot()
 	}, GameConfig.Capture.FoldCinematicSeconds - 0.8)
 end
 
--- The Caretaker wakes: a quick push in on it, then back to the player.
+-- The Caretaker wakes: a quick push in on it, then back to the player. During a theft it waits for the
+-- pull-back to finish, so the two shots play as one sequence ending as the escape starts.
 local function wakeShot()
 	if not shotsAllowed() then
 		return
 	end
-	task.wait(0.1)
+	local wait = if os.clock() < captureUntil then captureUntil - os.clock() - 1.35 else 0.1
+	task.wait(math.max(0.1, wait))
+	if not shotsAllowed() then
+		return
+	end
 	local position = CaretakerView.position()
 	local root = myRoot()
 	if not position or not root then
@@ -154,7 +170,7 @@ local function wakeShot()
 	if not finish then
 		return
 	end
-	-- Coming straight off the capture shot, the camera is already looking at the doorway.
+	-- Coming off the capture shot, the camera is already looking at the doorway: push in from there.
 	local fromCapture = os.clock() < captureUntil
 	local shots: { CameraController.Shot } = {}
 	if not fromCapture then
@@ -174,9 +190,9 @@ local function wakeShot()
 	CameraController.cinematic(shots, 0)
 end
 
--- Escaped: the doors close on the squad, seen from the corridor.
+-- Escaped: the doors close on the squad, seen from the corridor (handing back just before the fade).
 local function extractionShot()
-	if not shotsAllowed() then
+	if not resultShotsAllowed() then
 		return
 	end
 	local inside = elevatorPoint(0, 4.2, -12)
@@ -187,17 +203,28 @@ local function extractionShot()
 	end
 	CameraController.cinematic({
 		{ cframe = CFrame.lookAt(near :: Vector3, inside :: Vector3), seconds = 0.01 },
-		{ cframe = CFrame.lookAt(back :: Vector3, inside :: Vector3), seconds = 1.9, style = Enum.EasingStyle.Sine },
-	}, 0.4)
+		{ cframe = CFrame.lookAt(back :: Vector3, inside :: Vector3), seconds = 1.7, style = Enum.EasingStyle.Sine },
+	}, 0.1)
 end
 
--- Caught or out of time: a slow sinking zoom while the banner shows.
+-- Caught or out of time: a slow sinking push in while the banner shows (handing back before the fade).
 local function failureShot()
-	if not shotsAllowed() then
+	if not resultShotsAllowed() then
 		return
 	end
-	CameraController.punchFov(-10, 1.6)
-	CameraController.shake(0.25, 0.8, 6)
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return
+	end
+	local from = camera.CFrame
+	CameraController.cinematic({
+		{
+			cframe = from * CFrame.new(0, -0.5, -3) * CFrame.Angles(math.rad(-4), 0, math.rad(3)),
+			seconds = 1.55,
+			fov = 58,
+			style = Enum.EasingStyle.Quad,
+		},
+	}, 0.05)
 end
 
 local function stopRide()
@@ -242,7 +269,7 @@ local function onPhase(phase: string, previous: string)
 			AudioController.play("elevator_ding", { volume = 1 })
 			task.spawn(extractionShot)
 		elseif outcome == "Wiped" or outcome == "TimeUp" then
-			failureShot()
+			task.spawn(failureShot)
 		end
 		task.delay(if outcome == "Success" then 2.1 else 1.7, function()
 			if RunInfo.phase() == "Results" then

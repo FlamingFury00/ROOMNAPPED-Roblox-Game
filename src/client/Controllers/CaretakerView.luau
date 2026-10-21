@@ -164,7 +164,12 @@ local function newPart(
 	part.Material = material
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
-	if shape then
+	if shape == Enum.PartType.Ball and (math.abs(size.X - size.Y) > 1e-3 or math.abs(size.X - size.Z) > 1e-3) then
+		-- Ball parts are always round: an egg-shaped piece (the head, the nose) is a block with a sphere mesh.
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = part
+	elseif shape then
 		part.Shape = shape
 	end
 	part.Parent = model
@@ -486,7 +491,11 @@ local function destroyRig()
 	end
 	local r = rig
 	if not r then
+		-- The next body starts from scratch.
 		humVolume, humPitch, snoreVolume = -1, -1, -1
+		appliedTransparency = -1
+		appliedChilled = nil
+		visibleAlpha = 1
 		spottedShown = false
 		return
 	end
@@ -1067,7 +1076,7 @@ end
 
 local function step(dt: number)
 	if not wanted() then
-		if rig then
+		if rig or human then
 			destroyRig()
 		end
 		table.clear(snapshots)

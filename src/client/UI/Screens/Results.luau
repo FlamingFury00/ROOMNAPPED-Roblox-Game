@@ -772,6 +772,10 @@ function Results.start()
 			stopSpinner()
 			stopRays()
 			countToken += 1
+			if rewardPreview then
+				(rewardPreview :: Common.Preview).destroy()
+				rewardPreview = nil
+			end
 		end,
 		defaultSelection = function(): GuiObject?
 			return replayButton.instance

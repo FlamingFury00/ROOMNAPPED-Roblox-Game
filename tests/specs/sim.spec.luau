@@ -688,6 +688,9 @@ return function(ctx)
 		it("keeps only well-formed live flag overrides (S32)", function()
 			local sim = boot()
 			local Flags = sim:module("ServerScriptService.Server.Services.FlagsService")
+			-- Studio has no live flags to wait for (startup work that waits on them never stalls there).
+			expect(Flags.isReady()).toBe(true)
+			expect(Flags.waitReady(0)).toBe(true)
 			local clean, dropped = Flags.cleanOverrides({
 				rooms = false,
 				missions = { M3 = false, M99 = false, M2 = "no" },

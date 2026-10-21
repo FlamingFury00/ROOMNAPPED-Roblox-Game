@@ -108,6 +108,17 @@ local function installShims()
 	roblox.implementMethod("Instance", "IsPropertyModified", function()
 		return false
 	end)
+	-- Tag queries walk the DataModel (the headless DOM keeps tags but has no tag index). The client harnesses
+	-- wrap CollectionService in proxies of their own.
+	roblox.implementMethod("CollectionService", "GetTagged", function(service: any, tag: string)
+		local out = {}
+		for _, d in service.Parent:GetDescendants() do
+			if d:HasTag(tag) then
+				table.insert(out, d)
+			end
+		end
+		return out
+	end)
 end
 
 -- A do-nothing RBXScriptSignal stand-in used where modules only connect for runtime behaviour.

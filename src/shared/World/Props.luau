@@ -484,13 +484,16 @@ end
 
 -- Floor props ---------------------------------------------------------------------------------------
 
+-- A potted plant. Under scale 0.9 it is one of the small plants at their own size; bigger, a big plant scaled
+-- by `scale`. The procedural fallback scales either way.
 function Props.plant(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, scale: number?)
 	local s = scale or 1
+	local small = s < 0.9
 	local variant = variantOf(rng)
 	local leafRng = subRng(rng)
-	Assets.place(parent, if s < 0.9 then "smallPlant" else "bigPlant", cf, function(slot: Model, at0: CFrame)
+	Assets.place(parent, if small then "smallPlant" else "bigPlant", cf, function(slot: Model, at0: CFrame)
 		Props.plantFallback(slot, at0, theme, leafRng, s)
-	end, { variant = variant, scale = s })
+	end, { variant = variant, scale = if small then 1 else s })
 end
 
 function Props.plantFallback(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, scale: number?)

@@ -18,7 +18,8 @@
 	A slot's pivot is its WorldPivot: a slot the client moves (a spinning key) is refilled where it is now.
 
 	Without the library (offline tests, a server that could not load a model, the `assets` flag off) every
-	slot simply keeps its fallback, so the world is always complete.
+	slot simply keeps its fallback, so the world is always complete. Switching the library off live puts the
+	fallbacks back: Assets.revert(key).
 ]]
 
 local CollectionService = game:GetService("CollectionService")
@@ -38,6 +39,9 @@ export type PlaceOptions = {
 }
 
 local enabled = true
+
+-- Each slot's fallback, to put back if the library is switched off (weak: slots come and go with levels).
+local fallbacks: { [Model]: Fallback } = setmetatable({}, { __mode = "k" }) :: any
 
 -- Switch real models off (the `assets` live flag): slots keep or get their fallbacks.
 function Assets.setEnabled(value: boolean)
@@ -117,12 +121,16 @@ function Assets.place(parent: Instance, key: string, cf: CFrame, fallback: Fallb
 	slot:SetAttribute("Variant", opts.variant or 1)
 	slot:SetAttribute("Scale", opts.scale or 1)
 	slot.WorldPivot = cf
-	-- Slots a client builds for itself (moving carts, previews) are upgraded by that client only.
-	local okClient, isClient = pcall(function()
-		return RunService:IsClient()
+	-- Slots a client builds for itself (moving carts, previews) are upgraded by that client only. (Studio's Run
+	-- mode is client and server at once: there the server's library fills every slot.)
+	local okClient, isLocal = pcall(function()
+		return RunService:IsClient() and not RunService:IsServer()
 	end)
-	if okClient and isClient then
+	if okClient and isLocal then
 		slot:SetAttribute("Local", true)
+	end
+	if fallback then
+		fallbacks[slot] = fallback
 	end
 	if not Assets.fill(slot) then
 		slot:SetAttribute("Asset", false)
@@ -144,6 +152,27 @@ function Assets.upgrade(key: string?, localOnly: boolean?): number
 		if own and slot:IsA("Model") and slot:GetAttribute("Asset") ~= true then
 			local slotKey = slot:GetAttribute("AssetKey")
 			if (key == nil or slotKey == key) and Assets.fill(slot) then
+				count += 1
+			end
+		end
+	end
+	return count
+end
+
+-- Put the fallback back in every slot for `key` (or every key) that holds a real model: the library was
+-- switched off. Same ownership rule as upgrade.
+function Assets.revert(key: string?, localOnly: boolean?): number
+	local count = 0
+	for _, slot in CollectionService:GetTagged(Assets.TAG) do
+		local own = (slot:GetAttribute("Local") == true) == (localOnly == true)
+		if own and slot:IsA("Model") and slot:GetAttribute("Asset") == true then
+			if key == nil or slot:GetAttribute("AssetKey") == key then
+				slot:ClearAllChildren()
+				local fallback = fallbacks[slot]
+				if fallback then
+					fallback(slot, slot.WorldPivot)
+				end
+				slot:SetAttribute("Asset", false)
 				count += 1
 			end
 		end

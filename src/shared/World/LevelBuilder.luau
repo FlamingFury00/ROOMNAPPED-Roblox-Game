@@ -545,16 +545,136 @@ local function nextRoomNumber(ctx: Ctx): string
 	return tostring(ctx.roomNumber)
 end
 
-local function decorateWall(ctx: Ctx, tile: TileInfo, side: string, hasDoor: boolean)
+-- Floor props along a hall wall, picked by one roll: how deep each stands out from the wall, its collision
+-- proxy, and whether it reaches up to the sconces (which then make way).
+type FloorProp = {
+	upTo: number,
+	depth: number,
+	collider: Vector3,
+	tall: boolean?,
+	build: (ctx: Ctx, cf: CFrame, variant: number) -> (),
+}
+
+local FLOOR_PROPS: { FloorProp } = {
+	{
+		upTo = 0.22,
+		depth = 1.9,
+		collider = Vector3.new(4.6, 2.4, 1.9),
+		build = function(ctx, cf, variant)
+			Props.bench(ctx.decor, cf, ctx.theme, variant)
+		end,
+	},
+	{
+		upTo = 0.4,
+		depth = 1.4,
+		collider = Vector3.new(2.4, 2.7, 1.4),
+		build = function(ctx, cf)
+			Props.sideTable(ctx.decor, cf, ctx.theme, ctx.rng)
+		end,
+	},
+	{
+		-- The pot collides; the fronds (up to 4 studs across) stand far enough out to clear the wall.
+		upTo = 0.48,
+		depth = 3.6,
+		collider = Vector3.new(1.8, 2, 1.8),
+		tall = true,
+		build = function(ctx, cf)
+			Props.plant(ctx.decor, cf, ctx.theme, ctx.rng)
+		end,
+	},
+	{
+		upTo = 0.56,
+		depth = 3,
+		collider = Vector3.new(1.6, 1.8, 1.6),
+		build = function(ctx, cf)
+			Props.plant(ctx.decor, cf, ctx.theme, ctx.rng, 0.7)
+		end,
+	},
+	{
+		upTo = 0.66,
+		depth = 2.6,
+		collider = Vector3.new(4.6, 6, 2.4),
+		tall = true,
+		build = function(ctx, cf)
+			Props.luggageCart(ctx.decor, cf, ctx.theme, ctx.rng)
+		end,
+	},
+	{
+		upTo = 0.72,
+		depth = 1.2,
+		collider = Vector3.new(1.8, 2.4, 1.2),
+		build = function(ctx, cf)
+			Props.umbrellaStand(ctx.decor, cf, ctx.theme)
+		end,
+	},
+	{
+		upTo = 0.79,
+		depth = 2.8,
+		collider = Vector3.new(3.4, 7, 2.8),
+		tall = true,
+		build = function(ctx, cf, variant)
+			Props.vendingMachine(ctx.decor, cf, ctx.theme, variant)
+		end,
+	},
+	{
+		upTo = 0.85,
+		depth = 1.6,
+		collider = Vector3.new(1.6, 5, 1.6),
+		build = function(ctx, cf)
+			Props.waterCooler(ctx.decor, cf)
+		end,
+	},
+	{
+		upTo = 0.9,
+		depth = 1.6,
+		collider = Vector3.new(1.6, 2.4, 1.6),
+		build = function(ctx, cf)
+			Props.trashBin(ctx.decor, cf, ctx.theme)
+		end,
+	},
+	{
+		upTo = 0.96,
+		depth = 2.2,
+		collider = Vector3.new(3.4, 3.2, 2.2),
+		build = function(ctx, cf, variant)
+			Props.roomServiceCart(ctx.decor, cf, ctx.theme, variant)
+		end,
+	},
+	{
+		upTo = math.huge,
+		depth = 2.2,
+		collider = Vector3.new(2.6, 4.2, 2.2),
+		build = function(ctx, cf, variant)
+			Props.suitcaseStack(ctx.decor, cf, variant)
+		end,
+	},
+}
+
+local function floorPropFor(roll: number): FloorProp
+	for _, prop in FLOOR_PROPS do
+		if roll < prop.upTo then
+			return prop
+		end
+	end
+	return FLOOR_PROPS[#FLOOR_PROPS]
+end
+
+-- `tallAt`: where along the wall a tall floor prop stands; the sconces on that side of the wall make way.
+local function decorateWall(ctx: Ctx, tile: TileInfo, side: string, hasDoor: boolean, tallAt: number?)
 	local s = sideSign(side)
 	local function onWall(a: number, y: number): CFrame
 		-- Wall-mounted prop frame: LookVector into the corridor.
 		local p = tpt(tile.cf, s * INNER, y, a)
 		return CFrame.lookAt(p, p + (tile.cf.Position - tpt(tile.cf, s * INNER, 0, 0)).Unit)
 	end
+	local function sconce(a: number, light: boolean)
+		if not (tallAt and a * tallAt > 0) then
+			Props.wallSconce(ctx.decor, onWall(a, 6.4), ctx.theme, light)
+		end
+	end
 	if hasDoor then
 		Props.decorDoor(ctx.decor, onWall(0, 0), ctx.theme, nextRoomNumber(ctx), ctx.rng)
-		Props.wallSconce(ctx.decor, onWall(3.6, 6.4), ctx.theme, ctx.rng() < 0.5)
+		sconce(3.6, ctx.rng() < 0.5)
 	else
 		if ctx.rng() < 0.55 then
 			Props.painting(ctx.decor, onWall(0, 7.6), ctx.theme, ctx.rng, 4 + ctx.rng() * 1.5, 3)
@@ -563,68 +683,23 @@ local function decorateWall(ctx: Ctx, tile: TileInfo, side: string, hasDoor: boo
 		else
 			Props.wallClock(ctx.decor, onWall(0, 8.5), ctx.theme)
 		end
-		Props.wallSconce(ctx.decor, onWall(-4.5, 6.4), ctx.theme, true)
-		Props.wallSconce(ctx.decor, onWall(4.5, 6.4), ctx.theme, false)
+		sconce(-4.5, true)
+		sconce(4.5, false)
 	end
 end
 
-local function floorProp(ctx: Ctx, tile: TileInfo, side: string, a: number)
+local function floorProp(ctx: Ctx, tile: TileInfo, side: string, a: number, roll: number)
+	local prop = floorPropFor(roll)
 	local s = sideSign(side)
-	local roll = ctx.rng()
 	local inward = (tile.cf.Position - tpt(tile.cf, s * INNER, 0, 0)).Unit
-	local function standing(depth: number): CFrame
-		local p = tpt(tile.cf, s * (INNER - depth / 2 - 0.2), 0, a)
-		return CFrame.lookAt(p, p + inward)
-	end
-	local proxySize: Vector3
-	local cf: CFrame
-	local variant = math.floor(roll * 997) + 1
-	if roll < 0.22 then
-		cf = standing(1.9)
-		Props.bench(ctx.decor, cf, ctx.theme, variant)
-		proxySize = Vector3.new(4.6, 2.4, 1.9)
-	elseif roll < 0.4 then
-		cf = standing(1.4)
-		Props.sideTable(ctx.decor, cf, ctx.theme, ctx.rng)
-		proxySize = Vector3.new(2.4, 2.7, 1.4)
-	elseif roll < 0.56 then
-		cf = standing(2)
-		Props.plant(ctx.decor, cf, ctx.theme, ctx.rng)
-		proxySize = Vector3.new(1.8, 2, 1.8)
-	elseif roll < 0.66 then
-		cf = standing(2.4)
-		Props.luggageCart(ctx.decor, cf, ctx.theme, ctx.rng)
-		proxySize = Vector3.new(4.6, 6, 2.4)
-	elseif roll < 0.72 then
-		cf = standing(1.2)
-		Props.umbrellaStand(ctx.decor, cf, ctx.theme)
-		proxySize = Vector3.new(1.8, 2.4, 1.2)
-	elseif roll < 0.79 then
-		cf = standing(2.8)
-		Props.vendingMachine(ctx.decor, cf, ctx.theme, variant)
-		proxySize = Vector3.new(3.4, 7, 2.8)
-	elseif roll < 0.85 then
-		cf = standing(1.6)
-		Props.waterCooler(ctx.decor, cf)
-		proxySize = Vector3.new(1.6, 5, 1.6)
-	elseif roll < 0.9 then
-		cf = standing(1.6)
-		Props.trashBin(ctx.decor, cf, ctx.theme)
-		proxySize = Vector3.new(1.6, 2.4, 1.6)
-	elseif roll < 0.96 then
-		cf = standing(2.2)
-		Props.roomServiceCart(ctx.decor, cf, ctx.theme, variant)
-		proxySize = Vector3.new(3.4, 3.2, 2.2)
-	else
-		cf = standing(2.2)
-		Props.suitcaseStack(ctx.decor, cf, variant)
-		proxySize = Vector3.new(2.6, 4.2, 2.2)
-	end
+	local p = tpt(tile.cf, s * (INNER - prop.depth / 2 - 0.2), 0, a)
+	local cf = CFrame.lookAt(p, p + inward)
+	prop.build(ctx, cf, math.floor(roll * 997) + 1)
 	-- One invisible collision proxy per floor prop keeps physics cheap (S27).
 	Kit.part(ctx.structure, {
 		name = "PropCollider",
-		cf = cf * CFrame.new(0, proxySize.Y / 2, 0),
-		size = proxySize,
+		cf = cf * CFrame.new(0, prop.collider.Y / 2, 0),
+		size = prop.collider,
 		transparency = 1,
 		solid = true,
 		shadow = false,
@@ -974,12 +1049,19 @@ local function buildHallTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef, allowDoor
 			{ -HALF }
 		)
 		if feature == nil then
-			decorateWall(ctx, tile, side, hasDoor)
+			-- The floor prop is chosen first: a tall one makes the sconce above it give way.
+			local propAt: number? = nil
+			local propRoll = 0
 			if mod.kind == "Hall" and not ctx.runtime.tiles[tile.index].hazard and ctx.rng() < 0.32 then
 				local a = if ctx.rng() < 0.5 then 5.2 else -5.2
 				if not propBlocksRoute(ctx, tile, a) then
-					floorProp(ctx, tile, side, a)
+					propAt, propRoll = a, ctx.rng()
 				end
+			end
+			local tall = propAt ~= nil and floorPropFor(propRoll).tall == true
+			decorateWall(ctx, tile, side, hasDoor, if tall then propAt else nil)
+			if propAt then
+				floorProp(ctx, tile, side, propAt, propRoll)
 			end
 		end
 	end
@@ -1187,6 +1269,17 @@ local function buildElevator(ctx: Ctx, tile: TileInfo)
 		local s2 = tpt(tile.cf, side * INNER, 6.2, 5)
 		Props.wallSconce(ctx.decor, CFrame.lookAt(s2, s2 + inward), theme, true)
 	end
+	-- A fire extinguisher against the wall beside the car doors.
+	local extinguisher = tpt(tile.cf, INNER - 0.75, 0, -6)
+	Props.fireExtinguisher(ctx.decor, CFrame.lookAt(extinguisher, extinguisher - tile.cf.RightVector))
+	Kit.part(ctx.structure, {
+		name = "PropCollider",
+		cf = CFrame.new(extinguisher + Vector3.new(0, 1.3, 0)),
+		size = Vector3.new(1.1, 2.6, 1.1),
+		transparency = 1,
+		solid = true,
+		shadow = false,
+	})
 	-- Sliding car doors (clients animate; server toggles collision).
 	for _, side in { -1, 1 } do
 		local door = Kit.part(ctx.movers, {

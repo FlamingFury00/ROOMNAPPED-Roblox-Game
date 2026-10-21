@@ -337,7 +337,7 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 		end
 	end
 	for _, x in { -30, 30 } do
-		for _, z in { -18, 0, 18 } do
+		for _, z in { -18, -6, 6, 18 } do -- the coffer centres, between the cross beams
 			Props.ceilingLamp(decor, at(x, H, z), theme, false)
 		end
 	end
@@ -585,8 +585,8 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 		lightInfluence = 0.2,
 	})
 	boardGui.Name = "BoardGui"
-	-- Busts on pedestals guard the departures.
-	for _, x in { -18, 18 } do
+	-- Statues guard the departures (outside the palms beside the elevator portals).
+	for _, x in { -21, 21 } do
 		Assets.place(decor, "statue", facing(x, 0, D / 2 - 3, x, 0), function(slot: Model, cf: CFrame)
 			Kit.decor(
 				slot,
@@ -847,7 +847,7 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 	end
 	for _, spec in { { 14, 18 }, { 6, 22 } } do
 		Props.luggageCart(decor, facing(spec[1], 0, spec[2], 0, spec[2]), theme, rng)
-		collider("CartCollider", at(spec[1], 3, spec[2]), Vector3.new(4.6, 6, 2.4))
+		collider("CartCollider", facing(spec[1], 3, spec[2], 0, spec[2]), Vector3.new(4.6, 6, 2.4))
 	end
 
 	-- Spawn: facing the elevators.

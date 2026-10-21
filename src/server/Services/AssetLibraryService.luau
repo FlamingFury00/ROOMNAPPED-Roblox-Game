@@ -18,8 +18,11 @@
 	Slots the builders already filled with procedural fallbacks are upgraded as each key arrives
 	(World/Assets.upgrade), so the lobby that exists before any model loads is dressed too. Loading needs the
 	experience's Security setting "Allow Loading Third Party Assets"; when models cannot load the hotel keeps
-	its procedural props and admins are told why (publishing checklist). The `assets` feature flag switches
-	the whole library off live.
+	its procedural props and admins are told why (publishing checklist).
+
+	The `assets` feature flag is the kill switch for this third-party content: loading waits for the server's
+	first read of the live flags, and switching the flag off on a running server drops every template and puts
+	every slot's built-in prop back (switching it on again reloads).
 ]]
 
 local AssetService = game:GetService("AssetService")
@@ -53,6 +56,13 @@ local failures: { [string]: string } = {}
 local finished = false
 local loadedCount, failedCount = 0, 0
 local root: Folder
+-- Bumped whenever loading starts or the library is switched off: a load from an older generation drops its
+-- results instead of publishing them.
+local generation = 0
+
+local function current(gen: number): boolean
+	return gen == generation and Registry.get("Flags").feature("assets")
+end
 
 -- Cleaning ----------------------------------------------------------------------------------------------------
 
@@ -105,8 +115,26 @@ local function shouldRemove(instance: Instance, entry: AssetManifest.Entry): boo
 	return false
 end
 
+-- An invisible part (a hitbox, a collision proxy, an empty root) would only stretch the bounds the model is
+-- fitted by. Keep the ones that carry something visible: a decal, or the lights and effects the entry wants.
+local function invisible(part: BasePart, entry: AssetManifest.Entry): boolean
+	if part.Transparency < 0.99 then
+		return false
+	end
+	for _, d in part:GetDescendants() do
+		if d:IsA("Decal") or d:IsA("Light") or d:IsA("ParticleEmitter") then
+			return false
+		end
+		-- Beams and trails may hang between attachments on parts of their own.
+		if d:IsA("Attachment") and entry.particles == true then
+			return false
+		end
+	end
+	return true
+end
+
 -- Move every part (and what hangs off it) into one flat model; drop everything else.
-local function clean(loaded: Instance, entry: AssetManifest.Entry): Model?
+local function clean(loaded: Instance, entry: AssetManifest.Entry, label: string): Model?
 	local model = Instance.new("Model")
 	for _, d in loaded:GetDescendants() do
 		if d.Parent ~= nil and shouldRemove(d, entry) then
@@ -119,10 +147,8 @@ local function clean(loaded: Instance, entry: AssetManifest.Entry): Model?
 			table.insert(parts, d)
 		end
 	end
-	if #parts == 0 then
-		loaded:Destroy()
-		return nil
-	end
+	local kept = 0
+	local legacyMeshes = 0
 	for _, part in parts do
 		part.Anchored = true
 		part.CanCollide = false
@@ -134,16 +160,37 @@ local function clean(loaded: Instance, entry: AssetManifest.Entry): Model?
 		if part:IsA("Seat") or part:IsA("VehicleSeat") then
 			(part :: any).Disabled = true
 		end
-		part.Parent = model
+		part.Parent = model -- flattened first, so dropping a part below never takes a nested one with it
+	end
+	for _, part in parts do
+		if invisible(part, entry) then
+			part:Destroy()
+		else
+			kept += 1
+			local mesh = part:FindFirstChildOfClass("SpecialMesh")
+			if mesh and mesh.MeshType == Enum.MeshType.FileMesh then
+				legacyMeshes += 1
+			end
+		end
+	end
+	loaded:Destroy()
+	if kept == 0 then
+		model:Destroy()
+		return nil
+	end
+	if legacyMeshes > 0 then
+		-- Legacy meshes ignore their part's size: worth a look when such a model renders at an odd scale.
+		log:Debug(string.format("%s: %d part(s) with legacy file meshes", label, legacyMeshes))
 	end
 	for _, d in model:GetDescendants() do
 		if d:IsA("Light") then
 			d.Shadows = false
 		end
 	end
-	loaded:Destroy()
 	return model
 end
+
+AssetLibraryService.clean = clean -- exposed for tests
 
 -- Bounds --------------------------------------------------------------------------------------------------------
 
@@ -348,7 +395,7 @@ local function fetch(id: number): (Instance?, string?)
 	return nil, problem
 end
 
-local function loadKey(key: string)
+local function loadKey(key: string, gen: number)
 	local entry = AssetManifest.get(key)
 	if not entry then
 		return
@@ -359,6 +406,9 @@ local function loadKey(key: string)
 	local made = 0
 	local lastProblem = "no ids"
 	for index, id in entry.ids do
+		if not current(gen) then
+			break
+		end
 		local loaded, problem = nil, nil
 		for attempt = 1, ATTEMPTS do
 			loaded, problem = fetch(id)
@@ -372,7 +422,7 @@ local function loadKey(key: string)
 		if loaded then
 			local ok, result = pcall(function(): Model?
 				local thumbnail = thumbnailFront(loaded :: Instance)
-				local model = clean(loaded :: Instance, entry)
+				local model = clean(loaded :: Instance, entry, key .. " " .. id)
 				return if model then normalise(model, entry, id, thumbnail) else nil
 			end)
 			if ok and result then
@@ -386,6 +436,12 @@ local function loadKey(key: string)
 		else
 			lastProblem = problem or "unknown"
 		end
+	end
+	if not current(gen) then
+		-- Switched off (or restarted) while this key loaded: the slots keep their built-in props.
+		holder:Destroy()
+		status[key] = "pending"
+		return
 	end
 	if made > 0 then
 		holder.Parent = root
@@ -487,7 +543,7 @@ end
 
 -- Dress an R15 model from CaretakerLook and publish it for the clients' CaretakerView. A catalog piece that
 -- fails takes the whole build down, so each failure retries with fewer user-made pieces.
-local function buildCaretaker()
+local function buildCaretaker(gen: number)
 	if not CaretakerLook.enabled then
 		return
 	end
@@ -517,6 +573,10 @@ local function buildCaretaker()
 		if d:IsA("LuaSourceContainer") or d:IsA("Sound") then
 			d:Destroy()
 		end
+	end
+	if not current(gen) then
+		model:Destroy()
+		return
 	end
 	model.Name = CARETAKER_TEMPLATE
 	local existing = ReplicatedStorage:FindFirstChild(CARETAKER_TEMPLATE)
@@ -556,6 +616,92 @@ function AssetLibraryService.Init()
 	root.Parent = ReplicatedStorage
 end
 
+-- Load every manifest key (a few at a time) and dress the Caretaker.
+local function loadAll()
+	generation += 1
+	local gen = generation
+	finished = false
+	loadedCount, failedCount = 0, 0
+	table.clear(status)
+	table.clear(failures)
+	task.spawn(buildCaretaker, gen)
+	local keys = AssetManifest.keys()
+	local started = os.clock()
+	local queue = table.clone(keys)
+	local done = 0
+	local function nextKey()
+		local key = table.remove(queue, 1)
+		if not key then
+			return
+		end
+		task.spawn(function()
+			local ok, problem = pcall(function(): any
+				loadKey(key, gen)
+				return nil
+			end)
+			if not ok and gen == generation then
+				status[key] = "failed"
+				failures[key] = tostring(problem)
+				failedCount += 1
+			end
+			done += 1
+			if current(gen) then
+				nextKey()
+			end
+		end)
+	end
+	for _ = 1, CONCURRENCY do
+		nextKey()
+	end
+	while done < #keys and current(gen) do
+		task.wait(0.1)
+	end
+	if not current(gen) then
+		return
+	end
+	finished = true
+	local failedKeys = {}
+	for key in failures do
+		table.insert(failedKeys, key)
+	end
+	table.sort(failedKeys)
+	log:Info(
+		string.format(
+			"asset library: %d/%d props ready in %.1fs%s",
+			loadedCount,
+			#keys,
+			os.clock() - started,
+			if #failedKeys > 0 then " (fallbacks: " .. table.concat(failedKeys, ", ") .. ")" else ""
+		)
+	)
+	if AssetLibraryService.blocked() then
+		local sample = failures[failedKeys[1]] or ""
+		log:Warn(
+			"no Creator Store model could load ("
+				.. sample
+				.. "). Turn on Game Settings > Security > "
+				.. "Allow Loading Third Party Assets, then restart the server; until then the hotel uses its "
+				.. "built-in props."
+		)
+	end
+	AssetLibraryService.Finished:Fire(keys, failedKeys)
+end
+
+-- The `assets` flag went off on a running server: drop every template (clients put their own slots back as
+-- the templates disappear), put the built-in props back in the server's slots and retire the Caretaker's
+-- outfit (runs from now on use the built-in rig).
+local function switchOff()
+	generation += 1
+	finished = true
+	root:ClearAllChildren()
+	local reverted = Assets.revert()
+	local rig = ReplicatedStorage:FindFirstChild(CARETAKER_TEMPLATE)
+	if rig then
+		rig:Destroy()
+	end
+	log:Info(string.format("asset library switched off: %d slot(s) back to built-in props", reverted))
+end
+
 function AssetLibraryService.Start()
 	local flags = Registry.get("Flags")
 	local function applyFlag()
@@ -563,82 +709,37 @@ function AssetLibraryService.Start()
 	end
 	applyFlag()
 	flags.Changed:Connect(applyFlag)
-	if not flags.feature("assets") then
-		finished = true
-		log:Info("asset library off (feature flag)")
-		return
-	end
-	local keys = AssetManifest.keys()
 	-- Headless test engines have no asset loading at all: they keep the procedural props.
 	local canLoad = pcall(function(): any
 		return (AssetService :: any).LoadAssetAsync
 	end)
-	if canLoad and RunService:IsServer() then
-		task.spawn(buildCaretaker)
-	end
-	if #keys == 0 or not canLoad or not RunService:IsServer() then
+	if #AssetManifest.keys() == 0 or not canLoad or not RunService:IsServer() then
 		finished = true
 		AssetLibraryService.Finished:Fire({}, {})
 		return
 	end
 	task.spawn(function()
-		local started = os.clock()
-		local queue = table.clone(keys)
-		local running = 0
-		local done = 0
-		local function nextKey()
-			local key = table.remove(queue, 1)
-			if not key then
-				return
-			end
-			running += 1
-			task.spawn(function()
-				local ok, problem = pcall(function(): any
-					loadKey(key)
-					return nil
-				end)
-				if not ok then
-					status[key] = "failed"
-					failures[key] = tostring(problem)
-					failedCount += 1
+		-- A kill switch already thrown must stop the very first load: wait for this server's first read of the
+		-- live flags (a moment; the hotel shows its built-in props meanwhile).
+		flags.waitReady(8)
+		local on = flags.feature("assets")
+		flags.Changed:Connect(function()
+			local now = flags.feature("assets")
+			if now ~= on then
+				on = now
+				if now then
+					task.spawn(loadAll)
+				else
+					switchOff()
 				end
-				running -= 1
-				done += 1
-				nextKey()
-			end)
+			end
+		end)
+		if on then
+			loadAll()
+		else
+			finished = true
+			log:Info("asset library off (feature flag)")
 		end
-		for _ = 1, CONCURRENCY do
-			nextKey()
-		end
-		while done < #keys do
-			task.wait(0.1)
-		end
-		finished = true
-		local failedKeys = {}
-		for key in failures do
-			table.insert(failedKeys, key)
-		end
-		table.sort(failedKeys)
-		log:Info(
-			string.format(
-				"asset library: %d/%d props ready in %.1fs%s",
-				loadedCount,
-				#keys,
-				os.clock() - started,
-				if #failedKeys > 0 then " (fallbacks: " .. table.concat(failedKeys, ", ") .. ")" else ""
-			)
-		)
-		if AssetLibraryService.blocked() then
-			local sample = failures[failedKeys[1]] or ""
-			log:Warn(
-				"no Creator Store model could load ("
-					.. sample
-					.. "). Turn on Game Settings > Security > "
-					.. "Allow Loading Third Party Assets, then restart the server; until then the hotel uses its "
-					.. "built-in props."
-			)
-		end
-		AssetLibraryService.Finished:Fire(keys, failedKeys)
 	end)
 end
 

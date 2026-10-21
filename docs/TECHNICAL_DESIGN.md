@@ -200,7 +200,11 @@ with the reason and a tip on the results.
   front faces the slot (its seats, else the side its thumbnail shows, which follows from its pivot), scaled
   it into the slot's box (a "stretch" fit makes tables and desks exactly the right height) and published it
   to `ReplicatedStorage.RN_Assets`; slots then swap the fallback for a clone in place. Real models never
-  collide: builders place invisible boxes. Wallpapers, carpets, parquet, marble, tiles, brick, concrete and
+  collide: builders place invisible boxes. Invisible parts (hitboxes, collision proxies) are dropped before a
+  model is fitted, so they never shrink or shift it. The `assets` feature flag is the kill switch for this
+  third-party content: loading waits for the server's first read of the live flags, and switching the flag
+  off on a running server drops every template and puts each slot's built-in prop back (`Assets.revert`),
+  clients' own slots (moving carts, previews) included; switching it on again reloads. Wallpapers, carpets, parquet, marble, tiles, brick, concrete and
   ice are MaterialVariants in the place file (`src/MaterialService`) that themes and room skins put on their
   surfaces (`Palette.dress`). Picture frames hang public-domain paintings shaped to each canvas.
 * **Bodies** (`PoseController`): every client blends poses onto every visible player's animated joints after
@@ -260,7 +264,7 @@ with the reason and a tip on the results.
   whenever flags change. Rooms and missions can be
   disabled without touching profiles: a disabled mission leaves the lobby's selection, a disabled room
   leaves loadouts and both show as resting in the menus; features (pings, feedback prompt, analytics, debug
-  tools, Caretaker, keys, shop) can be switched off. See [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md).
+  tools, Caretaker, keys, shop, the curated models) can be switched off. See [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md).
 * **Analytics** (`TelemetryService`): onboarding funnel (each whitelisted step logged once per player, the
   steps already sent stored as a bitmask in the profile — schema v4), the recurring `Expedition` funnel keyed by run id, and custom events (room deployed, combo, run
   result, room pair, feedback, ping, key, Caretaker hit) with device and build fields. Every call is
