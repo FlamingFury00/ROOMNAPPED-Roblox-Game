@@ -122,7 +122,8 @@ local function buildShell(model: Model, roomCF: CFrame, palette: Palette, accent
 		transparency = 0.1,
 	})
 	lamp:AddTag("RN_Lamp")
-	Kit.pointLight(lamp, palette.light, palette.lightBrightness, 20, true)
+	-- No shadows: up to four rooms can be out at once on top of the corridor lamps.
+	Kit.pointLight(lamp, palette.light, palette.lightBrightness, 20, false)
 	local outlet = Kit.part(model, {
 		name = "Outlet",
 		cf = rp(roomCF, 0, R.OutletHeight, 0.5),
@@ -779,7 +780,8 @@ function RoomPrefabs.suitcase(skinId: string?, scale: number?, roomColor: Color3
 			material = material,
 		})
 		part.Massless = true
-		part.CastShadow = true
+		-- Only the case's body casts a shadow; the small trims would add shadow work for nothing.
+		part.CastShadow = name == "Body"
 		return part
 	end
 	local handle = piece("Handle", CFrame.new(0, 0, 0), Vector3.new(1.1, 0.25, 0.3), palette.prop, M.Leather)

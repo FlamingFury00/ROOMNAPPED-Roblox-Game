@@ -4,19 +4,24 @@
 
 	The lobby is warm and golden; each hotel wing gets its own grade from its Palette theme (fog, ambient)
 	plus a tint; the escape adds an alarm-red pulse; being downed drains the colour out of the world.
-	All changes are client-side and tweened. Low Effects mode turns off depth of field and softens bloom.
+	All changes are client-side and tweened.
+
+	Low Effects (the setting, or switched on for the session when frames keep running long during a run)
+	turns off depth of field and light shadows, softens bloom and thins particles.
 ]]
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local Palette = require(Shared.World.Palette)
 local RunInfo = require(script.Parent.Parent.Core.RunInfo)
 local SettingsController = require(script.Parent.SettingsController)
 local Vfx = require(script.Parent.Parent.Visual.Vfx)
+local Toasts = require(script.Parent.Parent.UI.Toasts)
 
 local LightingController = {}
 LightingController.priority = 25
@@ -76,6 +81,40 @@ local currentMood: Mood? = nil
 local alarm = false
 local muted = false
 
+-- Automatic Low Effects: frames averaging longer than this for this long during a run.
+local AUTO_LOW_FRAME_SECONDS = 1 / 28
+local AUTO_LOW_AFTER_SECONDS = 8
+local autoLow = false
+local slowFor = 0
+local averageFrame = 1 / 60
+local lowApplied: boolean? = nil
+-- Lights whose shadows Low Effects switched off (weak), to switch back on.
+local unshadowed: { [Light]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+
+local function lowEffects(): boolean
+	return autoLow or SettingsController.get().lowEffects
+end
+
+local function applyShadows(root: Instance?, low: boolean)
+	if low then
+		if root then
+			for _, d in root:GetDescendants() do
+				if d:IsA("Light") and d.Shadows then
+					d.Shadows = false
+					unshadowed[d] = true
+				end
+			end
+		end
+	else
+		for light in unshadowed do
+			if light.Parent then
+				light.Shadows = true
+			end
+		end
+		table.clear(unshadowed)
+	end
+end
+
 local function ensure<T>(className: string, name: string): T
 	local existing = Lighting:FindFirstChild(name)
 	if existing and existing.ClassName == className then
@@ -108,7 +147,7 @@ local function applyMood(mood: Mood, seconds: number)
 		Contrast = mood.contrast,
 		Brightness = mood.brightness,
 	})
-	tween(bloom, seconds, { Intensity = if SettingsController.get().lowEffects then 0.25 else mood.bloom })
+	tween(bloom, seconds, { Intensity = if lowEffects() then 0.25 else mood.bloom })
 end
 
 local lastMoodKey = ""
@@ -127,12 +166,17 @@ local function refresh(seconds: number?)
 end
 
 local function applySettings()
-	local low = SettingsController.get().lowEffects
+	local low = lowEffects()
+	if low == lowApplied then
+		return
+	end
+	lowApplied = low
 	depth.Enabled = not low
 	Vfx.setLowEffects(low)
 	if currentMood then
 		bloom.Intensity = if low then 0.25 else (currentMood :: Mood).bloom
 	end
+	applyShadows(Workspace, low)
 end
 
 function LightingController.setMuted(value: boolean)
@@ -164,7 +208,7 @@ function LightingController.start()
 	grade = ensure("ColorCorrectionEffect", "RN_Grade")
 	alarmGrade = ensure("ColorCorrectionEffect", "RN_Alarm")
 	alarmGrade.TintColor = Color3.new(1, 1, 1)
-	alarmGrade.Enabled = true
+	alarmGrade.Enabled = false -- only during the escape alarm
 	depth = ensure("DepthOfFieldEffect", "RN_Depth")
 	depth.FarIntensity = 0.12
 	depth.FocusDistance = 40
@@ -174,13 +218,20 @@ function LightingController.start()
 	refresh(0)
 	applySettings()
 	SettingsController.Changed:Connect(applySettings)
-	RunInfo.LevelChanged:Connect(function()
+	RunInfo.LevelChanged:Connect(function(level: any)
 		refresh(1.5)
+		-- A new wing arrives with its own shadowed lamps.
+		if level and lowEffects() then
+			task.spawn(function()
+				applyShadows(RunInfo.waitForLevelModel(10), true)
+			end)
+		end
 	end)
 	-- The escape alarm is for the squad in the hotel, not for players waiting in the lobby.
 	local function refreshAlarm()
 		local phase = RunInfo.phase()
 		alarm = (phase == "Escape" or phase == "Capture") and RunInfo.isParticipant()
+		alarmGrade.Enabled = alarm
 	end
 	RunInfo.PhaseChanged:Connect(function()
 		refreshAlarm()
@@ -194,13 +245,21 @@ function LightingController.start()
 		LightingController.setMuted(status == "Downed" or status == "Recovering" or status == "Eliminated")
 	end)
 	-- Alarm pulse: a gentle red breathing tint during the escape (static red with Reduced Motion).
-	RunService.Heartbeat:Connect(function()
+	RunService.Heartbeat:Connect(function(dt: number)
+		-- A device that keeps dropping frames in a run gets Low Effects for the session (not saved).
+		if not autoLow and not SettingsController.get().lowEffects and RunInfo.isActivePhase() then
+			averageFrame += (math.min(dt, 0.5) - averageFrame) * 0.1
+			slowFor = if averageFrame > AUTO_LOW_FRAME_SECONDS then slowFor + dt else 0
+			if slowFor >= AUTO_LOW_AFTER_SECONDS and RunInfo.isParticipant() then
+				autoLow = true
+				applySettings()
+				Toasts.key("info", "toast.autoLowEffects", nil)
+			end
+		end
 		if alarm then
 			local settings = SettingsController.get()
 			local pulse = if settings.reducedMotion then 0.5 else 0.5 + 0.5 * math.sin(os.clock() * 4.4)
 			alarmGrade.TintColor = Color3.new(1, 1 - 0.16 * pulse, 1 - 0.2 * pulse)
-		elseif alarmGrade.TintColor ~= Color3.new(1, 1, 1) then
-			alarmGrade.TintColor = Color3.new(1, 1, 1)
 		end
 	end)
 end

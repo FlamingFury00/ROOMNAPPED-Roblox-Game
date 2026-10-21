@@ -21,6 +21,7 @@ local RunInfo = require(script.Parent.Parent.Core.RunInfo)
 local ClientState = require(script.Parent.Parent.Core.ClientState)
 local AudioController = require(script.Parent.AudioController)
 local Motion = require(script.Parent.Parent.UI.Motion)
+local Toasts = require(script.Parent.Parent.UI.Toasts)
 
 local WorldController = {}
 WorldController.priority = 30
@@ -58,7 +59,11 @@ local function doorSound(record: DoorRecord, opening: boolean)
 		then "metal_clank"
 		elseif kind == "elevator" then "elevator_doors"
 		else if opening then "door_open" else "door_close"
-	AudioController.play(name, { parent = part, volume = 0.8, rolloffMax = 90 })
+	-- Gates can open far from the lever or plate that opened them: louder, and the squad is told.
+	AudioController.play(name, { parent = part, volume = 0.8, rolloffMax = if kind == "gate" then 160 else 90 })
+	if kind == "gate" and opening and RunInfo.isParticipant() then
+		Toasts.key("key", "toast.gateOpened", nil)
+	end
 end
 
 local function applyDoor(record: DoorRecord, open: boolean, instant: boolean)

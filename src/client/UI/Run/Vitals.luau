@@ -107,6 +107,10 @@ function Vitals.create(parent: Instance): Handle
 	local myHearts = -1
 	local myMax = -1
 	local lowPulse = false
+	local pulsing = false
+	-- Solo runs: the one extra life, shown until the run ends (greyed once spent).
+	local extraLife: Frame? = nil
+	local extraLifeLeft = -1
 
 	-- Team cards ---------------------------------------------------------------------------------------------
 	local cards: { [string]: Card } = {}
@@ -238,6 +242,27 @@ function Vitals.create(parent: Instance): Handle
 				end
 				lowPulse = hearts == 1
 			end
+			local firstKey = next(roster)
+			local solo = firstKey == nil or next(roster, firstKey) == nil
+			local left = if solo and type(mine.selfRecoveries) == "number" then mine.selfRecoveries else -1
+			if left ~= extraLifeLeft then
+				extraLifeLeft = left
+				if extraLife then
+					(extraLife :: Frame):Destroy()
+					extraLife = nil
+				end
+				if left >= 0 then
+					local chip = Components.chip(
+						"refresh",
+						Strings.t(if left > 0 then "hud.extraLife" else "hud.extraLifeUsed"),
+						if left > 0 then C.blue else C.panelLight,
+						2
+					)
+					chip.Name = "ExtraLife"
+					chip.Parent = column
+					extraLife = chip
+				end
+			end
 		end
 		-- Teammates.
 		local seen: { [string]: boolean } = {}
@@ -307,18 +332,16 @@ function Vitals.create(parent: Instance): Handle
 				card.ring.frame.Visible = false
 			end
 		end
-		if lowPulse then
-			local stroke = heartsPanel:FindFirstChildOfClass("UIStroke")
-			if stroke then
-				stroke.Color = C.red:Lerp(C.gold, 0.5 + 0.5 * math.sin(os.clock() * 6))
-				stroke.Transparency = 0
-			end
-		else
-			local stroke = heartsPanel:FindFirstChildOfClass("UIStroke")
-			if stroke then
-				stroke.Color = C.gold
-				stroke.Transparency = 0.3
-			end
+		local stroke = heartsPanel:FindFirstChildOfClass("UIStroke")
+		if lowPulse and stroke then
+			stroke.Color = C.red:Lerp(C.gold, 0.5 + 0.5 * math.sin(os.clock() * 6))
+			stroke.Transparency = 0
+			pulsing = true
+		elseif pulsing and stroke then
+			-- Back to the resting look once, not every frame.
+			pulsing = false
+			stroke.Color = C.gold
+			stroke.Transparency = 0.3
 		end
 	end)
 

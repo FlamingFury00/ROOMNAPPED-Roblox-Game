@@ -51,6 +51,7 @@ local current: Run? = nil
 local global = StateServer.global("global")
 local healthConfig = HealthModel.configFrom(GameConfig)
 local resultsAcks: { [number]: string } = {}
+local tutorialCleared = false -- the run that just finished was a successful Check-In
 local resultsStartedAt = 0
 local stepErrors: { [string]: number } = {}
 
@@ -112,11 +113,14 @@ function ExpeditionService.participants(run: Run): { RosterEntry }
 	return out
 end
 
-local function publishPhase(outcome: string?)
+local function publishPhase(outcome: string?, cause: string?)
 	global:Set({ "run", "phase" }, machine.phase)
 	global:Set({ "run", "phaseStartedAt" }, serverNow())
 	if outcome then
 		global:Set({ "run", "outcome" }, outcome)
+	end
+	if cause then
+		global:Set({ "run", "cause" }, cause)
 	end
 	StateServer.flushAll()
 end
@@ -440,6 +444,7 @@ function ExpeditionService.finish(run: Run, outcome: string)
 	end
 	run.ended = true
 	run.outcome = outcome
+	tutorialCleared = run.tutorial and outcome == "Success"
 	if not machine:transition("Results", os.clock(), outcome :: any) then
 		-- Launching aborted before Explore: Launching -> Results is allowed; anything else is a bug.
 		log:Warn("could not enter Results from", machine.phase)
@@ -447,7 +452,7 @@ function ExpeditionService.finish(run: Run, outcome: string)
 	if outcome == "Success" then
 		setLevelElevatorDoors(run, false)
 	end
-	publishPhase(outcome)
+	publishPhase(outcome, if outcome == "Wiped" then run.stats.lastKnockout or "unknown" else nil)
 	resultsStartedAt = os.clock()
 	table.clear(resultsAcks)
 	local summary = buildSummary(run, outcome)
@@ -470,7 +475,8 @@ local function toPrep()
 	global:Set({ "run" }, { phase = "Prep", phaseStartedAt = serverNow() })
 	global:Set({ "roster" }, {})
 	Registry.get("Lobby").setElevatorDoors(true)
-	Registry.get("Session").onPrep(resultsAcks)
+	Registry.get("Session").onPrep(resultsAcks, tutorialCleared)
+	tutorialCleared = false
 	table.clear(resultsAcks)
 	StateServer.flushAll()
 end
@@ -590,7 +596,10 @@ function ExpeditionService.unstuck(player: Player)
 		if entry.health.status ~= "Active" then
 			return
 		end
-		Registry.get("Health").damage(run, entry, 1, "unstuck", nil)
+		-- The heart it costs keeps it from being a free escape, but it never knocks anyone out.
+		if entry.health.hearts > 1 then
+			Registry.get("Health").damage(run, entry, 1, "unstuck", nil)
+		end
 		Registry.get("Characters").teleport(player, entry.lastSafe or run.runtime.spawns[1])
 	else
 		Registry.get("Characters").teleport(player, Registry.get("Lobby").spawnFor(1))

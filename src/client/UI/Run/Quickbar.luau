@@ -40,8 +40,14 @@ local localPlayer = Players.LocalPlayer
 local ACTION_SIZE = 136
 local TOUCH_GAP = 12
 local PING_HOLD_SECONDS = 0.35
+local DROP_HOLD_SECONDS = 0.4 -- Drop sits beside Jump: a stray tap must never throw the suitcase down
 
-export type Handle = { frame: Frame, touch: Frame, setVisible: (boolean) -> () }
+export type Handle = {
+	frame: Frame,
+	touch: Frame,
+	setVisible: (boolean) -> (),
+	setSpectating: (boolean) -> (),
+}
 
 type Slot = {
 	button: TextButton,
@@ -423,9 +429,28 @@ function Quickbar.create(parent: Instance): Handle
 			PlacementController.select(slot)
 		end
 	end)
-	drop.Activated:Connect(function()
-		InputController.trigger("Drop", "Begin")
-		InputController.trigger("Drop", "End")
+	-- Drop is a short hold with a filling ring (the hold completes while the finger is still down).
+	local dropRing = Components.holdCircle(drop, C.orange)
+	dropRing.frame.Visible = false
+	local dropDown: number? = nil
+	drop.InputBegan:Connect(function(input: InputObject)
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
+			dropDown = os.clock()
+			dropRing.set(0)
+			dropRing.frame.Visible = true
+		end
+	end)
+	drop.InputEnded:Connect(function(input: InputObject)
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
+			dropDown = nil
+			dropRing.frame.Visible = false
+		end
 	end)
 	-- Tap = contextual ping, long press = the four-way wheel (its options are tapped); tapping Ping again
 	-- while the wheel is open puts it away.
@@ -502,6 +527,16 @@ function Quickbar.create(parent: Instance): Handle
 			pingDown = nil
 			PingController.openWheel()
 		end
+		if dropDown then
+			local progress = (os.clock() - (dropDown :: number)) / DROP_HOLD_SECONDS
+			dropRing.set(progress)
+			if progress >= 1 then
+				dropDown = nil
+				dropRing.frame.Visible = false
+				InputController.trigger("Drop", "Begin")
+				InputController.trigger("Drop", "End")
+			end
+		end
 		local candidate = PlacementController.candidate()
 		rotate.Visible = candidate ~= nil and candidate.dir ~= nil
 		cancel.Visible = PlacementController.selectedSlot() ~= 0
@@ -512,9 +547,11 @@ function Quickbar.create(parent: Instance): Handle
 	end)
 
 	local visible = false
+	local spectating = false -- out of the run: only Ping stays, so spectators can still point things out
 	local function applyVisibility()
 		bar.Visible = visible
-		touch.Visible = visible
+		small.Visible = not spectating
+		touch.Visible = (visible or spectating)
 			and (Device.isTouch() or Device.hasTouch() and not Device.isGamepad() and not Device.isKeyboard())
 	end
 	Device.Changed:Connect(applyVisibility)
@@ -524,6 +561,10 @@ function Quickbar.create(parent: Instance): Handle
 		touch = touch,
 		setVisible = function(value: boolean)
 			visible = value
+			applyVisibility()
+		end,
+		setSpectating = function(value: boolean)
+			spectating = value
 			applyVisibility()
 		end,
 	}

@@ -153,6 +153,8 @@ return function(ctx)
 			expect(sim:state(bot, "global", "level")).toBe(nil)
 			-- No instance growth once the level is gone (S27).
 			expect(sim:instanceCount() <= baseline + 5).toBe(true)
+			-- Check-In is done, so the lobby has moved on to the first real mission (PLAY AGAIN goes there).
+			expect(sim:state(bot, "global", "lobby.mission")).toBe("M1")
 		end)
 
 		it("fails safely when the caretaker catches a solo player who stands still (S16)", function()
@@ -175,6 +177,10 @@ return function(ctx)
 			assertClean(sim)
 			local outcome = sim:state(bot, "global", "run.outcome")
 			expect(outcome == "Wiped" or outcome == "TimeUp").toBe(true)
+			if outcome == "Wiped" then
+				-- The results name what knocked the squad out.
+				expect(sim:state(bot, "global", "run.cause")).toBe("caretaker")
+			end
 			sim:run(3)
 			expect(sim:state(bot, "me", "results.plan")).toBe(nil)
 			expect(sim:state(bot, "me", "profile.rooms.Laundry")).toBe(nil)

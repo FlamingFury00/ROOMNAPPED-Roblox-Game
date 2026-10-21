@@ -83,6 +83,8 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 		plan = nil,
 		saving = "Idle",
 		tutorial = run.tutorial,
+		-- What knocked the squad out, so a wipe names its cause.
+		cause = if summary.success then nil else run.stats.lastKnockout,
 	}
 	if not profile then
 		payload.saving = "Error"

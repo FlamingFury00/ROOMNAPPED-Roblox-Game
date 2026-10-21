@@ -41,6 +41,7 @@ export type RunStats = {
 	anyDowns: boolean,
 	firstDeployAt: number?,
 	roomsUsed: { [string]: boolean },
+	lastKnockout: string?, -- damage source of the latest knock-out (explains a wipe on the results)
 }
 
 export type Run = {

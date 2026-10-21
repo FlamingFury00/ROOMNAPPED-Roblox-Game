@@ -69,6 +69,7 @@ type BasinVis = {
 	phase: string,
 	electrified: boolean,
 	snap: any,
+	settledKey: number, -- fill/ice/visibility last written, while nothing on it animates (-1: animating)
 }
 
 type FireVis = {
@@ -116,6 +117,7 @@ type Session = {
 	sparksByZone: { [string]: { ParticleEmitter } },
 	windEmitters: { [string]: Part },
 	ramps: { BasePart },
+	rampsPrimed: boolean?,
 	highlights: { SelectionBox },
 	zoneParts: { [string]: BasePart },
 	first: boolean,
@@ -251,6 +253,7 @@ local function buildBasin(s: Session, zonePart: BasePart)
 		phase = "",
 		electrified = false,
 		snap = nil,
+		settledKey = -1,
 	}
 end
 
@@ -285,6 +288,14 @@ local function renderBasin(vis: BasinVis, now: number)
 	local surfaceY = vis.surfaceCF.Position.Y
 	local alpha = iceAlpha(vis)
 	local visible = fill > 0.01
+	-- Bobbing deep water and live sparks move every frame; a settled basin (dry, frozen, still) is written
+	-- once and then left alone.
+	local animating = vis.electrified or (vis.deep and visible and alpha < 0.5)
+	local key = math.round(fill * 500) + math.round(alpha * 500) * 1000
+	if not animating and key == vis.settledKey then
+		return
+	end
+	vis.settledKey = if animating then -1 else key
 	if vis.deep then
 		local height = math.max(0.2, fill * (surfaceY - vis.floorY))
 		local centreY = vis.floorY + height / 2
@@ -431,7 +442,7 @@ local function fireTransition(vis: FireVis, snap: any, silent: boolean)
 	local warning = phase == "Warning"
 	for _, e in vis.flames do
 		e.Enabled = burning or warning
-		e.Rate = if burning then 36 * (if Vfx.isLowEffects() then 0.25 else 1) else 6
+		Vfx.setRate(e, if burning then 36 else 6)
 	end
 	for _, e in vis.embers do
 		e.Enabled = burning
@@ -762,7 +773,8 @@ local function buildCart(s: Session, id: string, info: any, theme: Palette.Theme
 			d.CanCollide = false
 			d.CanQuery = false
 			d.CanTouch = false
-			d.CastShadow = true
+			-- The deck carries the shadow; the cart's small parts move every frame and would not add to it.
+			d.CastShadow = d.Name == "Deck"
 		end
 	end
 	local deck = model:FindFirstChild("Deck")
@@ -928,12 +940,20 @@ local function renderRamps(s: Session, now: number)
 			end
 		end
 	end
+	-- Primed ramps pulse every frame; resting ones are written once.
+	if not primed and s.rampsPrimed == false then
+		return
+	end
+	local changed = primed ~= s.rampsPrimed
+	s.rampsPrimed = primed
 	local pulse = 0.5 + 0.5 * math.sin(now * 6)
 	for _, ramp in s.ramps do
 		ramp.Color = if primed
 			then Color3.fromRGB(255, 220, 60):Lerp(Color3.fromRGB(255, 255, 255), pulse)
 			else Color3.fromRGB(240, 200, 60)
-		ramp.Material = if primed then Enum.Material.Neon else Enum.Material.DiamondPlate
+		if changed then
+			ramp.Material = if primed then Enum.Material.Neon else Enum.Material.DiamondPlate
+		end
 	end
 end
 
@@ -1124,6 +1144,10 @@ local function build(level: any)
 		end
 	end))
 	s.trove:Connect(RunService.Heartbeat, function(dt: number)
+		-- Players waiting in the lobby do not see the wing: no per-frame work for them.
+		if not RunInfo.isParticipant() then
+			return
+		end
 		local now = serverNow()
 		local clock = os.clock()
 		for _, vis in s.basins do

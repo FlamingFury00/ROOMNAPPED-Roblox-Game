@@ -29,6 +29,7 @@ function RunHud.start()
 		vitals.setVisible(participant)
 		-- Out of the run (spectating): the spectator bar takes the bottom of the screen instead.
 		quickbar.setVisible(active and RunInfo.myStatus() ~= "Eliminated")
+		quickbar.setSpectating(active and RunInfo.myStatus() == "Eliminated")
 		overlays.setVisible(participant or RunInfo.phase() == "Results")
 	end
 	RunInfo.PhaseChanged:Connect(refresh)

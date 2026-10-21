@@ -71,7 +71,7 @@
     "Lighting": {
       "$properties": {
         "LightingStyle": "Realistic",
-        "PrioritizeLightingQuality": true,
+        "PrioritizeLightingQuality": false,
         "Technology": "Future",
         "Ambient": [0.09, 0.075, 0.1],
         "OutdoorAmbient": [0.12, 0.1, 0.14],

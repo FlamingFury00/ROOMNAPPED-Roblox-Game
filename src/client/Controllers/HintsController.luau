@@ -4,11 +4,12 @@
 
 	The tutorial (Check-In) walks a new player through the core loop one step at a time, each hint in the
 	wording of the device they are using: move -> grab the Freezer -> unfold it at the glowing door -> walk
-	across the ice -> recall rooms -> find the target -> hold to steal it -> run. A step only advances when
-	the player has actually done it, and every completed step is reported for the onboarding funnel.
+	across the ice -> keep the room out for the way back -> find the target -> hold to steal it -> run. A step
+	only advances when the player has actually done it (the Freezer, not just any room), a wrong room at the
+	door is explained, and every completed step is reported for the onboarding funnel.
 
-	Outside the tutorial, first-time hints explain new situations once per session (ice, fans, ledges,
-	reviving). Players can turn hints off in Settings.
+	Outside the tutorial, first-time hints explain new situations once per session (ice, fans, ledges, fire,
+	live water, carrying the suitcase, reviving). Players can turn hints off in Settings.
 ]]
 
 local Players = game:GetService("Players")
@@ -112,7 +113,7 @@ end
 
 -- State -----------------------------------------------------------------------------------------------------
 
-type TutorialStep = "move" | "select" | "deploy" | "cross" | "recall" | "find" | "capture" | "escape" | "done"
+type TutorialStep = "move" | "select" | "deploy" | "cross" | "keep" | "find" | "capture" | "escape" | "done"
 
 local step: TutorialStep = "move"
 local spawnPosition: Vector3? = nil
@@ -164,15 +165,28 @@ local function anyDeepBasinSolid(): boolean
 	return false
 end
 
-local function myDeployedCount(): number
+local function myLoadout(): { string }
 	local entry = RunInfo.myEntry()
-	local n = 0
+	return if entry and type(entry.loadout) == "table" then entry.loadout else {}
+end
+
+local function selectedRoom(): string?
+	local slot = PlacementController.selectedSlot()
+	return if slot ~= 0 then myLoadout()[slot] else nil
+end
+
+-- Whether one of my unfolded rooms is `room` (or, with `other`, any room except it).
+local function roomOut(room: string, other: boolean?): boolean
+	local entry = RunInfo.myEntry()
 	if entry and type(entry.deployed) == "table" then
-		for _ in entry.deployed do
-			n += 1
+		for key in entry.deployed do
+			local out = myLoadout()[tonumber(key) or 0]
+			if out and (out == room) ~= (other == true) then
+				return true
+			end
 		end
 	end
-	return n
+	return false
 end
 
 local function tutorialHint(position: Vector3): string?
@@ -194,24 +208,28 @@ local function tutorialHint(position: Vector3): string?
 		end
 		return deviceKey("hint.move")
 	elseif step == "select" then
-		if anyDeepBasinSolid() then
+		if anyDeepBasinSolid() or roomOut("Freezer") then
 			advance("cross", "deployed")
 			return nil
 		end
-		if PlacementController.selectedSlot() ~= 0 then
+		if selectedRoom() == "Freezer" then
 			advance("deploy", "selected")
 			return nil
+		end
+		-- Another room took the door: it has to fold back before the Freezer fits.
+		if roomOut("Freezer", true) then
+			return deviceKey("hint.stray")
 		end
 		if nearestSocketDistance(position) < 26 then
 			return deviceKey("hint.select")
 		end
-		return "hint.find"
+		return "placement.selectHint"
 	elseif step == "deploy" then
-		if myDeployedCount() > 0 or anyDeepBasinSolid() then
+		if anyDeepBasinSolid() or roomOut("Freezer") then
 			advance("cross", "deployed")
 			return nil
 		end
-		if PlacementController.selectedSlot() == 0 then
+		if selectedRoom() ~= "Freezer" then
 			advance("select", nil)
 			return nil
 		end
@@ -222,16 +240,16 @@ local function tutorialHint(position: Vector3): string?
 			and (target.capturePoint - position).Magnitude
 				< (target.capturePoint - (spawnPosition or position)).Magnitude * 0.55
 		if crossed or os.clock() - stepStarted > 25 then
-			advance("recall", "crossed")
+			advance("keep", "crossed")
 			return nil
 		end
 		return if MovementController.isOnIce() then "hint.slippery" else "hint.cross"
-	elseif step == "recall" then
+	elseif step == "keep" then
 		if os.clock() - stepStarted > 6 then
 			advance("find", nil)
 			return nil
 		end
-		return "hint.recall"
+		return "hint.keepRoom"
 	elseif step == "find" then
 		local target = level.target
 		if target and (target.capturePoint - position).Magnitude < GameConfig.Capture.Range + 6 then
@@ -281,6 +299,36 @@ local function situationalHint(position: Vector3): string?
 		if MathUtil.pointInBox(ledge.cf, ledge.size, position, 4) and not seen["hint.ledge"] then
 			return once("hint.ledge", 6)
 		end
+	end
+	local zones = ClientState.get("global", "zones") or {}
+	if not seen["hint.fire"] then
+		for id, fire in level.fires or {} do
+			local zone = zones[id]
+			if
+				type(zone) == "table"
+				and zone.phase == "Burning"
+				and MathUtil.pointInBox(fire.volume.cf, fire.volume.size, position, 14)
+			then
+				return once("hint.fire", 6)
+			end
+		end
+	end
+	if not seen["hint.shock"] then
+		for id, basin in level.basins or {} do
+			local zone = zones[id]
+			if
+				type(zone) == "table"
+				and zone.electrified == true
+				and basin.surface
+				and MathUtil.pointInBox(basin.surface.cf, basin.surface.size, position, 14)
+			then
+				return once("hint.shock", 6)
+			end
+		end
+	end
+	local carryKey = deviceKey("hint.carry")
+	if localPlayer:GetAttribute("Carrying") == true and not seen[carryKey] then
+		return once(carryKey, 6)
 	end
 	for key, entry in RunInfo.roster() do
 		if key ~= RunInfo.myKey() and entry.status == "Downed" and not seen["hint.revive"] then

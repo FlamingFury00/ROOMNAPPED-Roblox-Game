@@ -123,6 +123,11 @@ function ClientState.waitUntilReady()
 	end
 end
 
+-- Parsed paths, kept: get() runs many times a frame with the same few paths. Bounded in case a caller
+-- builds paths from unbounded ids.
+local parsedPaths: { [string]: StatePath.Path } = {}
+local parsedCount = 0
+
 function ClientState.get(channelName: string, pathText: string?): any
 	local channel = channels[channelName]
 	if not channel then
@@ -131,7 +136,17 @@ function ClientState.get(channelName: string, pathText: string?): any
 	if pathText == nil or pathText == "" then
 		return channel.data
 	end
-	return StatePath.get(channel.data, StatePath.parse(pathText))
+	local path = parsedPaths[pathText]
+	if not path then
+		if parsedCount >= 512 then
+			table.clear(parsedPaths)
+			parsedCount = 0
+		end
+		path = StatePath.parse(pathText)
+		parsedPaths[pathText] = path
+		parsedCount += 1
+	end
+	return StatePath.get(channel.data, path :: StatePath.Path)
 end
 
 export type ObserverConnection = { Disconnect: (self: ObserverConnection) -> (), Connected: boolean }

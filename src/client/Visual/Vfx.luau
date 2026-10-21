@@ -10,7 +10,8 @@
 	* Vfx.flash(position, color, brightness, range, seconds) - short light flash.
 
 	Low Effects mode scales emission down (S29, A12) instead of removing feedback entirely, so information
-	conveyed by an effect is never lost - only its density.
+	conveyed by an effect is never lost - only its density. Continuous emitters remember their full rate, so
+	switching the mode rescales the ones already in the world.
 ]]
 
 local Debris = game:GetService("Debris")
@@ -40,17 +41,34 @@ Vfx.Textures = {
 }
 
 local lowEffects = false
+-- Continuous emitters and their full-density rate (weak: destroyed emitters drop out).
+local tracked: { [ParticleEmitter]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+local function densityScale(): number
+	return if lowEffects then GameConfig.Performance.LowEffectsParticleScale else 1
+end
 
 function Vfx.setLowEffects(value: boolean)
+	if value == lowEffects then
+		return
+	end
 	lowEffects = value
+	local scale = densityScale()
+	for emitter, rate in tracked do
+		if emitter.Parent then
+			emitter.Rate = rate * scale
+		end
+	end
 end
 
 function Vfx.isLowEffects(): boolean
 	return lowEffects
 end
 
-local function densityScale(): number
-	return if lowEffects then GameConfig.Performance.LowEffectsParticleScale else 1
+-- Change a continuous emitter's full-density rate (scaled for Low Effects now and on later changes).
+function Vfx.setRate(emitter: ParticleEmitter, rate: number)
+	tracked[emitter] = rate
+	emitter.Rate = rate * densityScale()
 end
 
 local function seq(...: number): NumberSequence
@@ -324,7 +342,9 @@ function Vfx.emitter(parent: Instance, preset: string, overrides: { [string]: an
 	if not config.Rate and not (overrides and overrides.Rate) then
 		emitter.Rate = 0
 	end
-	emitter.Rate *= densityScale()
+	if emitter.Rate > 0 then
+		Vfx.setRate(emitter, emitter.Rate)
+	end
 	emitter.Parent = parent
 	return emitter
 end

@@ -308,8 +308,9 @@ local function renderLines(data: any)
 	if not data.success or type(plan) ~= "table" then
 		countToken += 1
 		totalLabel.Text = ""
+		local _, _, tip = Common.failureText(data.outcome, data.cause)
 		Components.label({
-			text = Strings.t("results.failBody"),
+			text = if data.success or tip == "" then Strings.t("results.failBody") else tip,
 			font = Theme.Fonts.bodyBold,
 			textSize = Theme.Text.body,
 			color = C.cream,
@@ -415,10 +416,13 @@ local function render(data: any)
 			then Strings.t("results.tutorial")
 			else Strings.t("results.successBody", { room = Common.roomName(targetRoom or "?") })
 	else
-		headline.Text = Strings.t("results." .. outcome)
+		local title, reason = Common.failureText(outcome, data.cause)
+		headline.Text = title
 		headlineGradient.Color = ColorSequence.new(Color3.fromRGB(255, 160, 160), C.red)
-		subtitle.Text = Strings.t("results.failBody")
+		subtitle.Text = reason
 	end
+	-- After Check-In the lobby moves on to the first real mission, so the button says where it goes.
+	replayButton.setText(Strings.t(if data.success and data.tutorial then "results.next" else "results.replay"))
 	renderRewardCard(data)
 	renderStats(data)
 	renderLines(data)

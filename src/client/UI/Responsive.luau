@@ -81,7 +81,11 @@ function Responsive.toCanvas(gui: ScreenGui, viewportPoint: Vector2): Vector2
 end
 
 function Responsive.setUserScale(value: number)
-	userScale = math.clamp(value, 0.85, 1.3)
+	local clamped = math.clamp(value, 0.85, 1.3)
+	if clamped == userScale then
+		return
+	end
+	userScale = clamped
 	for _, entry in roots do
 		apply(entry)
 	end

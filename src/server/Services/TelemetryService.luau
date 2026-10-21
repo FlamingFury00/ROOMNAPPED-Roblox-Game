@@ -73,7 +73,7 @@ local function onboarding(player: Player, stepName: string)
 	if not profile or bit32.btest(profile.flags.onboardingSteps, bit) then
 		return
 	end
-	Profiles.update(player, function(p: any)
+	Profiles.updateQuiet(player, function(p: any)
 		p.flags.onboardingSteps = bit32.bor(p.flags.onboardingSteps, bit)
 	end)
 	safe("onboarding " .. stepName, function()

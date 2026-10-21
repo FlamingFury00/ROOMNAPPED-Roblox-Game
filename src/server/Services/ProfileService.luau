@@ -272,6 +272,18 @@ function ProfileService.update(player: Player, mutate: (Profile) -> ()): boolean
 	return true
 end
 
+-- Like update, for counters the client never shows live (deploys, onboarding steps): saved with the
+-- profile, but without republishing the whole profile and every mission preview in the middle of a run.
+function ProfileService.updateQuiet(player: Player, mutate: (Profile) -> ()): boolean
+	local session = sessions[player]
+	if not session or session.status ~= "Ready" or not session.data then
+		return false
+	end
+	mutate(session.data :: Profile)
+	session.dirty = true
+	return true
+end
+
 -- Save immediately (yields). Shows Saving/Saved/Error on the client.
 function ProfileService.saveNow(player: Player): boolean
 	local session = sessions[player]

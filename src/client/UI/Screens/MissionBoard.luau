@@ -96,7 +96,11 @@ local function lockReason(mission: MissionDef): string
 	end
 	local need = mission.unlock.extractions or 0
 	local have = if profile then profile.stats.extractions or 0 else 0
-	return Strings.t("mission.lockedExtractions", { count = math.max(1, need - have) })
+	local count = math.max(1, need - have)
+	return Strings.t(
+		if count == 1 then "mission.lockedExtractionsOne" else "mission.lockedExtractions",
+		{ count = count }
+	)
 end
 
 local function clearedCount(missionId: string): number
@@ -478,6 +482,8 @@ local function refreshDetails()
 	end
 
 	clear(challengeList)
+	local preview = previews()[m.id]
+	local practice = type(preview) == "table" and preview.kind == "practice"
 	for index, challenge in m.challenges do
 		local row = Create.new("Frame", {
 			Name = "Challenge",
@@ -504,19 +510,22 @@ local function refreshDetails()
 			parent = row,
 		})
 		text.TextTruncate = Enum.TextTruncate.AtEnd
-		-- Challenges pay every time; a done one keeps its tick.
-		local credits =
-			Components.chip("coin", "+" .. tostring(challenge.credits), if done then C.greenDark else C.goldDark, 1)
-		credits.AnchorPoint = Vector2.new(1, 0.5)
-		credits.Position = UDim2.new(1, -6, 0.5, 0)
-		credits.Parent = row
+		-- Challenges pay every time (a done one keeps its tick); in Check-In practice they only earn stars.
+		if not practice then
+			local credits =
+				Components.chip("coin", "+" .. tostring(challenge.credits), if done then C.greenDark else C.goldDark, 1)
+			credits.AnchorPoint = Vector2.new(1, 0.5)
+			credits.Position = UDim2.new(1, -6, 0.5, 0)
+			credits.Parent = row
+		end
 	end
 
 	-- Personal reward preview.
-	local preview = previews()[m.id]
 	if type(preview) == "table" then
 		local extra = Strings.t("reward.credits", { amount = preview.credits or 0 })
-		if preview.kind == "blueprint" then
+		if preview.kind == "practice" then
+			rewardRow("refresh", C.blue, Strings.t("reward.preview.practice", { amount = preview.credits or 0 }), nil)
+		elseif preview.kind == "blueprint" then
 			local def = RoomDefs.byId[preview.item]
 			rewardRow(
 				Icons.roomIcon[preview.item] or "star",

@@ -316,7 +316,8 @@ local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: bool
 		Registry.get("Expedition")
 			.fireRun(if water then "splash" else "fall", { userId = entry.key, position = position })
 		Registry.get("Caretaker").noise(run, position, GameConfig.Noise.Splash)
-		if status == "Active" then
+		-- Check-In forgives falls: a new player learns the flood with a splash, not by losing the run.
+		if status == "Active" and not run.tutorial then
 			Health.damage(run, entry, H.FallDamage, if water then "water" else "fall", nil)
 		end
 		local back = entry.lastSafe or run.runtime.spawns[1]

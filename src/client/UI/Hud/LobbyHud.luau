@@ -248,7 +248,15 @@ local function fitSquad()
 	squadRows.Selectable = height < content
 end
 
+-- The lobby HUD is hidden during an expedition; its lists rebuild once it shows again instead of on every
+-- update meanwhile (a deploy republishes the profile and the mission previews).
+local staleWhileHidden = false
+
 local function rebuildSquad()
+	if container and not container.Visible then
+		staleWhileHidden = true
+		return
+	end
 	for _, child in squadRows:GetChildren() do
 		if child:IsA("TextButton") then
 			child:Destroy()
@@ -421,6 +429,10 @@ end
 -- Mission card --------------------------------------------------------------------------------------------------
 
 local function refreshMission()
+	if container and not container.Visible then
+		staleWhileHidden = true
+		return
+	end
 	local missionId = lobbyState().mission
 	local mission = if type(missionId) == "string" then MissionDefs.byId[missionId] else nil
 	if missionCard.Visible ~= (mission ~= nil) then
@@ -459,7 +471,10 @@ local function refreshMission()
 	local previews = ClientState.get("me", "missions")
 	local preview = if type(previews) == "table" then previews[mission.id] else nil
 	if type(preview) == "table" then
-		if preview.kind == "blueprint" then
+		if preview.kind == "practice" then
+			rewardLabel.Text = Strings.t("reward.preview.practice", { amount = preview.credits or 0 })
+			Icons.make("refresh", C.blue, C.panelDark).Parent = rewardIconHolder
+		elseif preview.kind == "blueprint" then
 			rewardLabel.Text = Strings.t("reward.preview.blueprint", { item = Common.roomName(preview.item) })
 			local def = RoomDefs.byId[preview.item]
 			Icons.make(Icons.roomIcon[preview.item] or "star", if def then def.color else C.gold, C.panelDark).Parent =
@@ -538,6 +553,11 @@ local function refreshVisibility()
 	if container.Visible ~= visible then
 		container.Visible = visible
 		if visible then
+			if staleWhileHidden then
+				staleWhileHidden = false
+				rebuildSquad()
+				refreshMission()
+			end
 			Motion.pop(container, 0.96)
 		end
 	end

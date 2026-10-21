@@ -109,6 +109,12 @@ local smoothedSpeed = 0
 local lastJingle = 0
 local lastCreak = 0
 local visibleAlpha = 1
+local appliedTransparency = -1
+local appliedChilled: boolean? = nil
+local humVolume = -1
+local humPitch = -1
+local snoreVolume = -1
+local spottedShown = false
 local reactSpin = 0
 local spottedUntil = 0
 
@@ -321,7 +327,8 @@ local function buildRig(): Rig
 	lanternLight.Color = Color3.fromRGB(255, 190, 110)
 	lanternLight.Range = 16
 	lanternLight.Brightness = 1.6
-	lanternLight.Shadows = true
+	-- No shadows: a shadow-casting light that moves every frame redraws its shadow map every frame.
+	lanternLight.Shadows = false
 	lanternLight.Parent = lantern
 	local eyeLight = Instance.new("PointLight")
 	eyeLight.Color = Color3.fromRGB(255, 230, 170)
@@ -333,7 +340,8 @@ local function buildRig(): Rig
 	local highlight = Instance.new("Highlight")
 	highlight.FillTransparency = 1
 	highlight.OutlineColor = Theme.Colors.red
-	highlight.OutlineTransparency = 1
+	highlight.OutlineTransparency = 0.2
+	highlight.Enabled = false -- on only while it hunts
 	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	highlight.Parent = model
 
@@ -458,6 +466,11 @@ local function destroyRig()
 		r.snore.stop(0.4)
 	end
 	r.model:Destroy()
+	-- The next rig starts from scratch.
+	humVolume, humPitch, snoreVolume = -1, -1, -1
+	appliedTransparency = -1
+	appliedChilled = nil
+	spottedShown = false
 end
 
 -- Snapshot interpolation ---------------------------------------------------------------------------------------
@@ -574,6 +587,14 @@ local MODE_STYLE: { [string]: { eye: Color3, lantern: Color3, badge: string?, ba
 	Off = { eye = Color3.fromRGB(80, 80, 90), lantern = Color3.fromRGB(120, 100, 80) },
 }
 
+-- The badge above the hat: the mode's symbol, or a red "!" for a moment after it spots someone.
+local function applyBadge(r: Rig, style: any)
+	local spotted = os.clock() < spottedUntil
+	r.badge.Enabled = style.badge ~= nil or spotted
+	r.badgeLabel.Text = if spotted then "!" else style.badge or ""
+	r.badgeLabel.TextColor3 = if spotted then Theme.Colors.red else style.badgeColor or Theme.Colors.gold
+end
+
 local function applyModeStyle(r: Rig)
 	local style = MODE_STYLE[mode] or MODE_STYLE.Patrol
 	r.eyeL.Color = style.eye
@@ -581,23 +602,24 @@ local function applyModeStyle(r: Rig)
 	r.eyeLight.Color = style.eye
 	r.lantern.Color = style.lantern
 	r.lanternLight.Color = style.lantern
-	local showBadge = style.badge ~= nil or os.clock() < spottedUntil
-	r.badge.Enabled = showBadge
-	r.badgeLabel.Text = if os.clock() < spottedUntil then "!" else style.badge or ""
-	r.badgeLabel.TextColor3 = if os.clock() < spottedUntil
-		then Theme.Colors.red
-		else style.badgeColor or Theme.Colors.gold
+	applyBadge(r, style)
 	local hunting = mode == "Chase" or mode == "Hunt" or mode == "Lunge" or mode == "Alert"
-	r.highlight.OutlineTransparency = if hunting then 0.2 else 1
+	-- The outline only exists while it hunts (a Highlight costs a render pass even when invisible).
+	r.highlight.Enabled = hunting
 	local asleep = mode == "Dormant"
 	r.sleepy.Enabled = asleep
-	if r.hum then
-		-- Asleep, the snore replaces the presence hum.
-		(r.hum :: AudioController.LoopHandle).setVolume(if hunting then 1.2 elseif asleep then 0 else 0.7, 0.5);
-		(r.hum :: AudioController.LoopHandle).setPitch(if hunting then 1.12 else 1)
+	-- Loop volumes change only with the mode: re-tweening them every frame would churn tweens.
+	local hum = if hunting then 1.2 elseif asleep then 0 else 0.7 -- asleep, the snore replaces the hum
+	local pitch = if hunting then 1.12 else 1
+	if r.hum and (hum ~= humVolume or pitch ~= humPitch) then
+		humVolume, humPitch = hum, pitch;
+		(r.hum :: AudioController.LoopHandle).setVolume(hum, 0.5);
+		(r.hum :: AudioController.LoopHandle).setPitch(pitch)
 	end
-	if r.snore then
-		(r.snore :: AudioController.LoopHandle).setVolume(if asleep then 1 else 0, if asleep then 0.8 else 0.15)
+	local snore = if asleep then 1 else 0
+	if r.snore and snore ~= snoreVolume then
+		snoreVolume = snore;
+		(r.snore :: AudioController.LoopHandle).setVolume(snore, if asleep then 0.8 else 0.15)
 	end
 end
 
@@ -652,7 +674,10 @@ local function animate(r: Rig, position: Vector3, yaw: number, velocity: Vector3
 	stride += strideRate * dt
 	local swing = math.sin(stride * math.pi) * math.clamp(s / 9, 0, 1) * 0.75
 	local sign = if math.sin(stride * math.pi) >= 0 then 1 else -1
-	if sign ~= lastStepSign and s > 1 then
+	-- Its sounds only play within earshot of the camera (each one is a new Sound).
+	local camera = Workspace.CurrentCamera
+	local audible = camera ~= nil and (camera.CFrame.Position - position).Magnitude < 150
+	if sign ~= lastStepSign and s > 1 and audible then
 		lastStepSign = sign
 		local volume = math.clamp(s / 14, 0.25, 1.1)
 		AudioController.at("caretaker_step", position - Vector3.new(0, HOVER - 0.3, 0), {
@@ -663,11 +688,11 @@ local function animate(r: Rig, position: Vector3, yaw: number, velocity: Vector3
 		})
 	end
 	-- Occasional key jingle and creaks.
-	if s > 1 and now - lastJingle > 3.5 then
+	if s > 1 and now - lastJingle > 3.5 and audible then
 		lastJingle = now
 		AudioController.at("caretaker_keys", position, { volume = 0.6, rolloffMax = 60 })
 	end
-	if mode == "Search" and now - lastCreak > 2.2 then
+	if mode == "Search" and now - lastCreak > 2.2 and audible then
 		lastCreak = now
 		AudioController.at("caretaker_search", position, { volume = 0.5, rolloffMax = 60 })
 	end
@@ -781,18 +806,25 @@ local function animate(r: Rig, position: Vector3, yaw: number, velocity: Vector3
 
 	-- Lantern flicker, eye glow, frost, phase fade.
 	r.lanternLight.Brightness = 1.5 + math.sin(now * 11) * 0.12 + math.sin(now * 23) * 0.08
-	r.frost.Enabled = chilled
-	local tint = if chilled then Color3.fromRGB(150, 200, 255) else COAT
-	r.torso.Color = tint
-	r.coatTail.Color = tint
-	r.armL.Color = tint
-	r.armR.Color = tint
-	r.hat.Color = tint
+	if chilled ~= appliedChilled then
+		appliedChilled = chilled
+		r.frost.Enabled = chilled
+		local tint = if chilled then Color3.fromRGB(150, 200, 255) else COAT
+		r.torso.Color = tint
+		r.coatTail.Color = tint
+		r.armL.Color = tint
+		r.armR.Color = tint
+		r.hat.Color = tint
+	end
 	local targetAlpha = if mode == "Phase" then 0.15 elseif mode == "Off" then 0 else 1
 	visibleAlpha += (targetAlpha - visibleAlpha) * MathUtil.dampAlpha(6, dt)
-	local transparency = 1 - visibleAlpha
-	for _, part in r.parts do
-		part.LocalTransparencyModifier = transparency
+	-- Fades write the parts only while they move (in hundredths), not every frame.
+	local transparency = math.round((1 - visibleAlpha) * 100) / 100
+	if transparency ~= appliedTransparency then
+		appliedTransparency = transparency
+		for _, part in r.parts do
+			part.LocalTransparencyModifier = transparency
+		end
 	end
 	r.badge.StudsOffsetWorldSpace = Vector3.new(0, 2.4 + math.sin(now * 3) * 0.15, 0)
 	if mode == "React" then
@@ -805,7 +837,8 @@ end
 local function wanted(): boolean
 	local state = ClientState.get("global", "caretaker")
 	local m = if type(state) == "table" then state.mode else nil
-	return RunInfo.inRunPhase() and RunInfo.level() ~= nil and m ~= nil and m ~= "Gone"
+	-- Only the squad sees it: players waiting in the lobby never build or animate it.
+	return RunInfo.inRunPhase() and RunInfo.isParticipant() and RunInfo.level() ~= nil and m ~= nil and m ~= "Gone"
 end
 
 local function step(dt: number)
@@ -835,8 +868,10 @@ local function step(dt: number)
 	end
 	lastPosition = position
 	animate(r, position :: Vector3, yaw, velocity, dt)
-	if os.clock() < spottedUntil + 0.05 then
-		applyModeStyle(r)
+	-- The "!" after a spot: shown by the spot itself, cleared once when it runs out.
+	if spottedShown and os.clock() >= spottedUntil then
+		spottedShown = false
+		applyBadge(r, MODE_STYLE[mode] or MODE_STYLE.Patrol)
 	end
 end
 
@@ -870,6 +905,7 @@ function CaretakerView.start()
 		end
 		if name == "caretakerSpotted" then
 			spottedUntil = os.clock() + 1.4
+			spottedShown = true
 			applyModeStyle(r)
 			AudioController.at("caretaker_alert", r.torso.CFrame.Position, { volume = 0.55, pitch = 1.25 })
 		elseif name == "caretakerPhase" then

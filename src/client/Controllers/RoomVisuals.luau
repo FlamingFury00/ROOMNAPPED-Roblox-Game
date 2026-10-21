@@ -26,6 +26,7 @@ local Trove = require(Shared.Util.Trove)
 local ClientState = require(script.Parent.Parent.Core.ClientState)
 local RunInfo = require(script.Parent.Parent.Core.RunInfo)
 local AudioController = require(script.Parent.AudioController)
+local Haptics = require(script.Parent.Haptics)
 local CameraController = require(script.Parent.CameraController)
 local Vfx = require(script.Parent.Parent.Visual.Vfx)
 local Motion = require(script.Parent.Parent.UI.Motion)
@@ -58,6 +59,11 @@ local runTrove: Trove.Trove? = nil
 
 -- Scaling ----------------------------------------------------------------------------------------------
 
+-- Rescaling a whole room every frame is the costliest part of an unfold: it is skipped (the room simply
+-- appears at its final size) for players who are not in the run, in Low Effects or Reduced Motion, and
+-- when the room is too far from the camera for the motion to read.
+local SCALE_VIEW_DISTANCE = 140
+
 -- Animate a model's scale around a world pivot. Yields until finished (or superseded).
 local function scaleAround(
 	record: RoomRecord,
@@ -84,7 +90,9 @@ local function scaleAround(
 			end)
 		end
 	end
-	if Motion.isReduced() then
+	local camera = Workspace.CurrentCamera
+	local far = camera == nil or (camera.CFrame.Position - pivot.Position).Magnitude > SCALE_VIEW_DISTANCE
+	if Motion.isReduced() or Vfx.isLowEffects() or far or not RunInfo.isParticipant() then
 		setScale(to)
 		primary.PivotOffset = originalOffset
 		record.scaling = false
@@ -410,6 +418,9 @@ local function onCapture(position: Vector3?)
 	}
 	local centre = position or target:GetPivot().Position
 	AudioController.at("capture_success", centre, { volume = 1 })
+	if RunInfo.isParticipant() then
+		Haptics.pulse(0.7, 0.3)
+	end
 	AudioController.at("room_fold", centre, { volume = 1, pitch = 0.8 })
 	local swirl = Instance.new("Part")
 	swirl.Anchored = true

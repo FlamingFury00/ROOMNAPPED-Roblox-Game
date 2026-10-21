@@ -306,7 +306,7 @@ function RoomService.deploy(player: Player, socketId: string, slot: number, dir:
 	end
 	Registry.get("Expedition").fireRun("roomUnfold", { socket = socketId, room = roomId, owner = entry.key })
 	Registry.get("Telemetry").deployed(run, entry, roomId, socketId)
-	Registry.get("Profiles").update(player, function(profile: any)
+	Registry.get("Profiles").updateQuiet(player, function(profile: any)
 		profile.stats.deploys += 1
 	end)
 	task.delay(GameConfig.Deploy.UnfoldSeconds, function()

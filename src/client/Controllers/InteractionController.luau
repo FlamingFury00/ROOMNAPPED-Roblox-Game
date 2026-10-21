@@ -36,6 +36,8 @@ local Toasts = require(script.Parent.Parent.UI.Toasts)
 local DeployRules = require(Shared.Logic.DeployRules)
 
 local InteractionController = {}
+
+local RESOLVE_SECONDS = 0.05
 InteractionController.priority = 60
 
 export type Action = {
@@ -434,17 +436,24 @@ local function resolve(): Action?
 			end
 		end
 		if bestLever then
+			-- Power levers switch a circuit; the others only open a Lost & Found gate.
+			local power = false
+			for _, circuit in level.powers or {} do
+				if type(circuit.levers) == "table" and table.find(circuit.levers, bestLever) then
+					power = true
+				end
+			end
 			return {
 				kind = "lever",
 				target = bestLever,
-				text = Strings.t("action.lever"),
+				text = Strings.t(if power then "action.lever" else "action.leverGate"),
 				hold = false,
 				duration = 0,
 				position = bestPosition,
 				valid = true,
 				reasonText = nil,
 				color = C.orange,
-				icon = "bolt",
+				icon = if power then "bolt" else "key",
 			}
 		end
 	end
@@ -575,8 +584,16 @@ function InteractionController.start()
 	Device.Changed:Connect(function()
 		currentKey = ""
 	end)
-	RunService.Heartbeat:Connect(function()
-		local a = resolve()
+	-- Resolving the context action builds tables and text: 20 times a second is plenty for a prompt, while an
+	-- active hold still ticks every frame.
+	local resolveClock = math.huge
+	RunService.Heartbeat:Connect(function(dt: number)
+		resolveClock += dt
+		local fresh = resolveClock >= RESOLVE_SECONDS
+		if fresh then
+			resolveClock = 0
+		end
+		local a = if fresh then resolve() else current
 		-- An active hold keeps its action until it ends; moving away cancels it.
 		if hold then
 			local h = hold :: Hold
@@ -597,12 +614,12 @@ function InteractionController.start()
 			end
 		end
 		current = a
-		local key = actionKey(a)
+		local key = if fresh then actionKey(a) else currentKey
 		if key ~= currentKey then
 			currentKey = key
 			refreshPrompt(a)
 			InteractionController.ActionChanged:Fire(a)
-		elseif a and promptAnchor then
+		elseif a and promptAnchor and fresh then
 			(promptAnchor :: Attachment).WorldPosition = a.position
 		end
 		-- Teammate hold rings fill over their duration.

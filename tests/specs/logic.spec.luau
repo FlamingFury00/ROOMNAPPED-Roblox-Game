@@ -374,11 +374,61 @@ return function(ctx)
 			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, faster, cfg) :: any, faster, 3, 64)
 			expect(p.stats.bestTimes.M1).toBe(59)
 		end)
+		it("pays more for a spare blueprint on a harder mission", function()
+			local easy = RewardRules.duplicateCredits(Missions.byId.M1, cfg)
+			local hard = RewardRules.duplicateCredits(Missions.byId.M6, cfg)
+			expect(easy).toBe(cfg.DuplicateBlueprintCredits)
+			expect(hard > easy).toBe(true)
+			local p = profile()
+			p.rooms.Laundry = true
+			p.skins.owned.laundry_royal = true
+			p.skins.owned.laundry_laundromat = true
+			for _, skinId in Missions.byId.M1.rewardSkins do
+				p.skins.owned[skinId] = true
+			end
+			expect(RewardRules.preview(p, Missions.byId.M1, cfg).credits).toBe(cfg.ExtractionCredits + easy)
+		end)
+		it("treats a replayed Check-In as practice: extraction credits only, no unlock progress", function()
+			local p = profile()
+			local tutorial = Missions.byId.M0
+			local first = summary("t1", true)
+			first.missionId = "M0"
+			first.keysCollected, first.keysTotal = 1, 1
+			first.timeLeft = 10 -- misses the fast challenge the first time
+			RewardRules.apply(p, RewardRules.compute(p, tutorial, first, cfg) :: any, first, 1, 64)
+			expect(p.stats.extractions).toBe(1)
+			expect(p.stats.challengesDone.M0_fast).toBe(nil)
+			expect(RewardRules.preview(p, tutorial, cfg).kind).toBe("practice")
+			local again = summary("t2", true)
+			again.missionId = "M0"
+			again.keysCollected, again.keysTotal = 1, 1
+			local plan = RewardRules.compute(p, tutorial, again, cfg) :: any
+			expect(plan.practice).toBe(true)
+			expect(plan.credits).toBe(cfg.ExtractionCredits)
+			expect(#plan.lines).toBe(1)
+			expect(plan.lines[1].key).toBe("reward.practice")
+			local credits = p.credits
+			RewardRules.apply(p, plan, again, 2, 64)
+			expect(p.credits).toBe(credits + cfg.ExtractionCredits)
+			expect(p.stats.extractions).toBe(1) -- practice never unlocks missions
+			expect(p.stats.cleared.M0).toBe(2)
+			expect(p.stats.challengesDone.M0_fast).toBe(true) -- still earns the mission's stars
+		end)
 		it("previews the reward before starting", function()
 			local p = profile()
 			expect(RewardRules.preview(p, Missions.byId.M1, cfg).kind).toBe("blueprint")
 			p.rooms.Laundry = true
 			expect(RewardRules.preview(p, Missions.byId.M1, cfg).item).toBe("laundry_royal")
+		end)
+	end)
+
+	describe("Movement tuning (R02, S13)", function()
+		it("lets a carrier on a ledge make headway into the strongest Fan lane", function()
+			local walk = GameConfig.Movement.WalkSpeed
+				* GameConfig.Cargo.CarrierSpeedMultiplier
+				* GameConfig.Movement.LedgeSpeedMultiplier
+			local headwind = GameConfig.Wind.PlayerPushSpeed * GameConfig.Wind.HeadwindScale
+			expect(walk - headwind > 2).toBe(true)
 		end)
 	end)
 

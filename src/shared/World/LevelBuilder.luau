@@ -302,8 +302,9 @@ local function ceilingTile(ctx: Ctx, cf: CFrame, a0: number, a1: number)
 end
 
 local function lampAt(ctx: Ctx, cf: CFrame, a: number)
+	-- A few lamps per wing cast shadows for depth; every shadowed light costs every frame on the GPU.
 	local shadows = false
-	if ctx.shadowLights < 10 and ctx.rng() < 0.6 then
+	if ctx.shadowLights < 4 and ctx.rng() < 0.6 then
 		shadows = true
 		ctx.shadowLights += 1
 	end
@@ -583,6 +584,42 @@ local function buildSocket(ctx: Ctx, tile: TileInfo, side: string, socketId: str
 	(ctx.features[tile.index] :: any)[side] = "socket"
 end
 
+-- Whether a lever switches a power circuit (signed POWER) rather than only opening a gate (signed GATE).
+local function isPowerLever(layout: any, leverId: string): boolean
+	for _, power in layout.powers or {} do
+		if table.find(power.levers, leverId) then
+			return true
+		end
+	end
+	return false
+end
+
+-- What opens a Lost & Found gate, in words for its sign ("CRATE ON THE PLATE + POWER ON").
+local SIGNAL_WORDS: { [string]: string } = {
+	lever = "PULL THE LEVER",
+	plate = "CRATE ON THE PLATE",
+	float = "FILL THE POOL",
+	power = "POWER ON",
+}
+local function gateRule(layout: any, gateId: string): string?
+	local gate = layout.gates and layout.gates[gateId]
+	if type(gate) ~= "table" or type(gate.signals) ~= "table" then
+		return nil
+	end
+	local words = {}
+	for _, signal in gate.signals do
+		local kind = string.match(signal, "^(%a+):")
+		local text = kind and SIGNAL_WORDS[kind]
+		if text and not table.find(words, text) then
+			table.insert(words, text)
+		end
+	end
+	if #words == 0 then
+		return nil
+	end
+	return "OPENS: " .. table.concat(words, if gate.mode == "all" then " + " else " OR ")
+end
+
 local function buildLever(ctx: Ctx, tile: TileInfo, side: string, leverId: string)
 	local s = sideSign(side)
 	local inward = (tile.cf.Position - tpt(tile.cf, s * INNER, 0, 0)).Unit
@@ -607,7 +644,7 @@ local function buildLever(ctx: Ctx, tile: TileInfo, side: string, leverId: strin
 	)
 	Kit.surfaceText(warning, {
 		face = Enum.NormalId.Front,
-		text = "⚡ POWER",
+		text = if isPowerLever(ctx.layout, leverId) then "⚡ POWER" else "GATE",
 		color = Color3.fromRGB(30, 30, 30),
 		font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold),
 	})
@@ -658,6 +695,24 @@ local function buildAlcove(ctx: Ctx, tile: TileInfo, side: string, alcoveId: str
 		color = Color3.fromRGB(40, 28, 20),
 		font = Font.new("rbxasset://fonts/families/Fondamento.json", Enum.FontWeight.Bold),
 	})
+	-- A plaque under it says what opens the gate.
+	local rule = gateRule(ctx.layout, gateId)
+	if rule then
+		local plaque = Kit.decor(
+			ctx.decor,
+			"AlcoveRule",
+			ap(0, 8.35, -1.06),
+			Vector3.new(5.6, 0.6, 0.1),
+			Color3.fromRGB(40, 28, 20),
+			M.SmoothPlastic
+		)
+		Kit.surfaceText(plaque, {
+			face = Enum.NormalId.Back,
+			text = rule,
+			color = Color3.fromRGB(255, 226, 150),
+			font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold),
+		})
+	end
 	-- Gate bars (server collider; clients slide them up when the gate opens).
 	local gatePart = Kit.part(ctx.movers, {
 		name = "Gate_" .. gateId,

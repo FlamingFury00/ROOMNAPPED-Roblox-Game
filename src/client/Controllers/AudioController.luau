@@ -5,12 +5,15 @@
 	* Four sound groups (Music, Effects, Ambience, Interface) follow the player's volume settings.
 	* Every id comes from Config.AudioIds (licensed Creator Store audio - no synthesized sounds). Each name is
 	  verified in the background; if an asset fails to load, the next alternate takes over, and running loops
-	  are switched in place, so a removed asset never leaves the game silent.
+	  are switched in place, so a removed asset never leaves the game silent. Effects (and the lobby music)
+	  are verified - and so cached - right after joining; the other music tracks, which are large, only
+	  when they are first played, so a phone on mobile data is not downloading every track at once.
 	* A small music director picks the track for the current phase, crossfades between tracks, layers the
 	  escape clock and the chase heartbeat, and plays the results sting.
 ]]
 
 local ContentProvider = game:GetService("ContentProvider")
+local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -182,11 +185,14 @@ local function switchLoops(name: string, id: number)
 	end
 end
 
+local verified: { [string]: boolean } = {}
+
 local function verify(name: string)
 	local entry = AudioIds[name]
-	if not entry then
+	if not entry or verified[name] then
 		return
 	end
+	verified[name] = true
 	local candidates = { entry.id }
 	for _, alt in entry.alternates do
 		table.insert(candidates, alt)
@@ -215,8 +221,6 @@ local PRIORITY = {
 	"ui_error",
 	"ui_notify",
 	"music_lobby",
-	"music_tutorial",
-	"music_explore",
 	"room_select",
 	"room_unfold",
 	"room_fold",
@@ -231,7 +235,8 @@ local function verifyAll()
 	end
 	local rest = {}
 	for name in AudioIds do
-		if not done[name] then
+		-- Music beyond the lobby track waits for its first play.
+		if not done[name] and string.sub(name, 1, 6) ~= "music_" then
 			table.insert(rest, name)
 		end
 	end
@@ -259,6 +264,9 @@ function AudioController.play(name: string, opts: PlayOptions?): Sound?
 	local id = idFor(name)
 	if not id then
 		return nil
+	end
+	if not verified[name] then
+		task.spawn(verify, name) -- first play of a lazily verified track
 	end
 	local sound = Instance.new("Sound")
 	sound.Name = name
@@ -307,12 +315,8 @@ function AudioController.play(name: string, opts: PlayOptions?): Sound?
 			end
 		end
 		sound.Ended:Once(cleanup)
-		-- Safety net for sounds that never load or never fire Ended.
-		task.delay(30, function()
-			if sound.Parent then
-				cleanup()
-			end
-		end)
+		-- Safety net for sounds that never load or never fire Ended (no thread per sound).
+		Debris:AddItem(holder or sound, 30)
 	end
 	return sound
 end

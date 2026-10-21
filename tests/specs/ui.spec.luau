@@ -380,11 +380,16 @@ return function(ctx)
 		it("shows a failed expedition without implying any reward", function()
 			local client = boot()
 			local UIRoot = client:module("UI.UIRoot")
-			client:patch("global", { "run" }, { phase = "Results", id = "run-2", outcome = "Wiped", mission = "M1" })
+			client:patch(
+				"global",
+				{ "run" },
+				{ phase = "Results", id = "run-2", outcome = "Wiped", cause = "caretaker", mission = "M1" }
+			)
 			client:patch("me", { "results" }, {
 				runId = "run-2",
 				mission = "M1",
 				outcome = "Wiped",
+				cause = "caretaker",
 				success = false,
 				duration = 300,
 				timeLeft = 0,
@@ -398,6 +403,8 @@ return function(ctx)
 			task.wait(0.05)
 			expect(UIRoot.isOpen("Results")).toBe(true)
 			expect(textOf(client, "Headline")).toBe("CAUGHT!")
+			-- The reason and a tip instead of a generic line.
+			expect(textOf(client, "Subtitle")).toBe("The Caretaker caught the whole squad.")
 			expect(client:find("Saving").Visible).toBe(false)
 			-- First finished run: the survey is due, but PLAY AGAIN goes straight back in without it.
 			local p = profile()

@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage.Shared
 local Net = require(Shared.Net.Net)
 local ProfileSchema = require(Shared.Logic.ProfileSchema)
 local Signal = require(Shared.Util.Signal)
+local Tables = require(Shared.Util.Tables)
 local ClientState = require(script.Parent.Parent.Core.ClientState)
 local Motion = require(script.Parent.Parent.UI.Motion)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
@@ -74,11 +75,16 @@ function SettingsController.start()
 		if type(value) ~= "table" then
 			return
 		end
-		-- Adopt the saved copy when it first arrives or whenever nothing local is pending.
+		-- Adopt the saved copy when it first arrives or whenever nothing local is pending (and only re-apply
+		-- when it actually differs: the profile republishes for many other reasons).
 		if not receivedFromProfile or not dirty then
+			local incoming = ProfileSchema.cleanSettings(value, ProfileSchema.defaultSettings())
+			local first = not receivedFromProfile
 			receivedFromProfile = true
-			current = ProfileSchema.cleanSettings(value, ProfileSchema.defaultSettings())
-			apply(nil)
+			if first or not Tables.deepEqual(incoming, current) then
+				current = incoming
+				apply(nil)
+			end
 		end
 	end)
 end

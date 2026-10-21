@@ -29,6 +29,7 @@ local Motion = require(script.Parent.Parent.Motion)
 local Components = require(script.Parent.Parent.Components)
 local UIRoot = require(script.Parent.Parent.UIRoot)
 local Responsive = require(script.Parent.Parent.Responsive)
+local Common = require(script.Parent.Parent.Screens.Common)
 
 local Overlays = {}
 
@@ -447,10 +448,9 @@ function Overlays.create(parent: Instance): Handle
 			local outcome = RunInfo.run().outcome
 			if outcome == "Success" then
 				showBanner(Strings.t("banner.extracted"), "", C.green, 2.2)
-			elseif outcome == "Wiped" then
-				showBanner(Strings.t("results.Wiped"), "", C.red, 2)
-			elseif outcome == "TimeUp" then
-				showBanner(Strings.t("results.TimeUp"), "", C.red, 2)
+			elseif outcome == "Wiped" or outcome == "TimeUp" then
+				local title = Common.failureText(outcome, RunInfo.run().cause)
+				showBanner(title, "", C.red, 2)
 			end
 		end
 	end)

@@ -333,11 +333,14 @@ local function addMarker(info: any)
 		return
 	end
 	local style = KIND_STYLE[info.kind] or KIND_STYLE.here
-	-- One marker per player: a new ping replaces the old one.
+	-- One marker per player: a new ping replaces the old one; a clear just removes it.
 	for _, marker in table.clone(markers) do
 		if marker.gui:GetAttribute("From") == info.from then
 			removeMarker(marker)
 		end
+	end
+	if info.clear == true then
+		return
 	end
 	local anchor = Instance.new("Attachment")
 	anchor.WorldPosition = info.position

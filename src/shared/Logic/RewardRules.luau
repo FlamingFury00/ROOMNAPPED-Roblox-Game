@@ -5,8 +5,11 @@
 	Priority for the main reward of a successful extraction (shown to the player before starting):
 	  1. the captured room's blueprint, if the player does not own it yet
 	  2. otherwise the reward skin the player targeted for this mission, if not owned
-	  3. otherwise a fixed cosmetic credit amount (duplicate blueprint)
+	  3. otherwise a cosmetic credit amount (duplicate blueprint) that grows with the mission's difficulty
 	Every success also pays extraction credits, key credits, a first-clear bonus and challenge bonuses.
+
+	Replaying Check-In is practice: it pays the extraction credits only (so it never out-earns a real
+	mission) and does not count toward mission unlocks. Its challenges and keys still count for mastery.
 
 	Idempotency: apply() records the run id in the profile's bounded grant ledger in the same write as the
 	reward itself, so retried saves, duplicate calls and reconnects can never award twice.
@@ -31,12 +34,13 @@ export type RewardPlan = {
 	skin: string?,
 	credits: number,
 	duplicate: boolean,
+	practice: boolean,
 	firstClear: boolean,
 	challenges: { [string]: boolean },
 	lines: { RewardLine },
 }
 
-export type Preview = { kind: "blueprint" | "skin" | "credits", item: string?, credits: number }
+export type Preview = { kind: "blueprint" | "skin" | "credits" | "practice", item: string?, credits: number }
 
 type ProfileLike = {
 	rooms: { [string]: boolean },
@@ -61,18 +65,31 @@ type MissionLike = {
 	targetRoom: string,
 	rewardSkins: { string },
 	tutorial: boolean,
+	difficulty: number?,
 	challenges: { { id: string, kind: string, value: number?, combo: string?, credits: number } },
 }
 
 type RewardConfig = {
 	ExtractionCredits: number,
 	DuplicateBlueprintCredits: number,
+	DuplicateDifficultyCredits: number?,
 	DuplicateSkinCredits: number,
 	KeyCredits: number,
 	FirstClearBonusCredits: number,
 }
 
 local RewardRules = {}
+
+-- What a duplicate blueprint pays on this mission: harder missions pay more.
+function RewardRules.duplicateCredits(mission: MissionLike, config: RewardConfig): number
+	local steps = math.max(0, (mission.difficulty or 1) - 1)
+	return config.DuplicateBlueprintCredits + steps * (config.DuplicateDifficultyCredits or 0)
+end
+
+-- A cleared Check-In replayed: practice.
+function RewardRules.isPractice(profile: ProfileLike, mission: MissionLike): boolean
+	return mission.tutorial and (profile.stats.cleared[mission.id] or 0) > 0
+end
 
 -- The reward skin a player is targeting for a mission (validated against the mission's list).
 function RewardRules.choiceFor(profile: ProfileLike, mission: MissionLike): string?
@@ -90,6 +107,9 @@ function RewardRules.choiceFor(profile: ProfileLike, mission: MissionLike): stri
 end
 
 function RewardRules.preview(profile: ProfileLike, mission: MissionLike, config: RewardConfig): Preview
+	if RewardRules.isPractice(profile, mission) then
+		return { kind = "practice", item = nil, credits = config.ExtractionCredits }
+	end
 	if not profile.rooms[mission.targetRoom] then
 		return { kind = "blueprint", item = mission.targetRoom, credits = config.ExtractionCredits }
 	end
@@ -100,7 +120,7 @@ function RewardRules.preview(profile: ProfileLike, mission: MissionLike, config:
 	return {
 		kind = "credits",
 		item = nil,
-		credits = config.ExtractionCredits + config.DuplicateBlueprintCredits,
+		credits = config.ExtractionCredits + RewardRules.duplicateCredits(mission, config),
 	}
 end
 
@@ -138,11 +158,24 @@ function RewardRules.compute(
 		skin = nil,
 		credits = 0,
 		duplicate = false,
+		practice = false,
 		firstClear = false,
 		challenges = {},
 		lines = {},
 	}
 	local preview = RewardRules.preview(profile, mission, config)
+	if preview.kind == "practice" then
+		plan.practice = true
+		plan.credits = config.ExtractionCredits
+		table.insert(plan.lines, { key = "reward.practice", amount = config.ExtractionCredits })
+		-- Challenges still count toward the mission's stars; they just do not pay again.
+		for _, challenge in mission.challenges do
+			if RewardRules.challengeMet(challenge, summary) then
+				plan.challenges[challenge.id] = true
+			end
+		end
+		return plan
+	end
 	if preview.kind == "blueprint" then
 		plan.blueprint = preview.item
 		table.insert(plan.lines, { key = "reward.blueprint", item = preview.item })
@@ -150,12 +183,10 @@ function RewardRules.compute(
 		plan.skin = preview.item
 		table.insert(plan.lines, { key = "reward.skin", item = preview.item })
 	else
+		local duplicate = RewardRules.duplicateCredits(mission, config)
 		plan.duplicate = true
-		plan.credits += config.DuplicateBlueprintCredits
-		table.insert(
-			plan.lines,
-			{ key = "reward.duplicate", amount = config.DuplicateBlueprintCredits, item = mission.targetRoom }
-		)
+		plan.credits += duplicate
+		table.insert(plan.lines, { key = "reward.duplicate", amount = duplicate, item = mission.targetRoom })
 	end
 
 	plan.credits += config.ExtractionCredits
@@ -210,7 +241,9 @@ function RewardRules.apply(
 		profile.skins.owned[plan.skin :: string] = true
 	end
 	profile.credits += plan.credits
-	profile.stats.extractions += 1
+	if not plan.practice then
+		profile.stats.extractions += 1 -- unlocks count real missions, not Check-In practice
+	end
 	profile.stats.captures += 1
 	profile.stats.keys += summary.keysCollected
 	profile.stats.cleared[summary.missionId] = (profile.stats.cleared[summary.missionId] or 0) + 1

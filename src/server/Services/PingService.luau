@@ -2,6 +2,9 @@
 --[[
 	PingService: chat-free coordination (U11). Help / Here / Use room markers are broadcast to the squad,
 	validated for range and throttled (cooldown + burst window) so rapid ping spam is impossible.
+
+	A downed squad member pings Help automatically for as long as they can be revived, so teammates can
+	find them in time; the marker clears the moment they are back up or out.
 ]]
 
 local Players = game:GetService("Players")
@@ -35,9 +38,24 @@ local function onPing(player: Player, kind: string, position: Vector3, targetId:
 		return
 	end
 	lastPing[player] = now
-	local origin = Registry.get("Characters").position(player)
-	if not origin or (position - origin).Magnitude > P.MaxDistance then
-		return
+	if entry.health.status == "Eliminated" then
+		-- Spectators watch through a teammate's camera: anywhere inside the level counts.
+		local b = run.runtime.bounds
+		if
+			position.X < b.min.X
+			or position.Y < b.min.Y
+			or position.Z < b.min.Z
+			or position.X > b.max.X
+			or position.Y > b.max.Y
+			or position.Z > b.max.Z
+		then
+			return
+		end
+	else
+		local origin = Registry.get("Characters").position(player)
+		if not origin or (position - origin).Magnitude > P.MaxDistance then
+			return
+		end
 	end
 	if kind == "room" and (targetId == nil or run.runtime.sockets[targetId :: string] == nil) then
 		targetId = nil
@@ -56,6 +74,37 @@ local function onPing(player: Player, kind: string, position: Vector3, targetId:
 	end
 	Net.fireList(recipients, "PingMarker", marker)
 	Registry.get("Telemetry").ping(player, kind)
+end
+
+-- Send a marker (or a clear) from `entry` to everyone else in the run.
+local function toSquad(run: any, entry: any, marker: { [string]: any })
+	local recipients = {}
+	for _, other in Registry.get("Expedition").participants(run) do
+		if other ~= entry then
+			table.insert(recipients, other.player)
+		end
+	end
+	if #recipients > 0 then
+		Net.fireList(recipients, "PingMarker", marker)
+	end
+end
+
+function PingService.helpFor(run: any, entry: any, seconds: number)
+	local position = Registry.get("Characters").position(entry.player)
+	if not position then
+		return
+	end
+	toSquad(run, entry, {
+		from = entry.key,
+		name = entry.display,
+		kind = "help",
+		position = position,
+		expires = workspace:GetServerTimeNow() + seconds,
+	})
+end
+
+function PingService.clearFor(run: any, entry: any)
+	toSquad(run, entry, { from = entry.key, kind = "help", position = Vector3.zero, clear = true })
 end
 
 function PingService.Init()

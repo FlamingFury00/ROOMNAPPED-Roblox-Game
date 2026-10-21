@@ -100,7 +100,9 @@ to the squad (`ExpeditionService.fireRun`), so the lobby never hears another squ
   the resulting collision on the server and replicates each changed zone.
 * **Movement modifiers** (`MovementController`, client): momentum on ice, a capped and falloff-weighted fan
   push, ice + wind launches on a fixed arc over gaps, knockback, ledge and carry slowdowns, the downed lock —
-  all through one plane-mode `LinearVelocity` enabled only while a modifier applies. The server judges the
+  all through one plane-mode `LinearVelocity` enabled only while a modifier applies. Walking into a lane keeps
+  only a fifth of its push (`Wind.HeadwindScale`), so a Fan left blowing toward the target slows the way home
+  but can never hold a carrier on a beam in place (a logic spec checks the numbers). The server judges the
   outcomes (falls, hazards, launch combos detected over the whole flight arc).
 * **Hazards** (`HazardService`): crates on rails (wind along parallel lanes, magnet pull), pressure plates,
   carts on deterministic timelines (`CartTimeline`, reproduced exactly by clients), fire and electrified
@@ -125,6 +127,13 @@ danger, a 20 s downed window with a 3 s team revive, one automatic solo self-rec
 elimination and spectating. The Humanoid never dies from gameplay. Downed and spectating states reach the
 client through roster data and player attributes; `SpectateController` follows living teammates.
 
+A downed squad member pings Help automatically for their whole revive window (the marker clears when they
+are revived or out), the squad hears and reads when a teammate is out, a solo player sees their extra life
+beside the hearts, spectators keep the Ping button (anywhere inside the level), and "I'm stuck!" never costs
+the last heart. Check-In forgives falls. The server records what landed the last knock-out, so a wipe reads
+"CAUGHT!" only when the Caretaker did it ("KNOCKED OUT!" otherwise, "TIME'S UP!" when the clock ran out),
+with the reason and a tip on the results.
+
 ## 8. Persistence and rewards (S21–S23)
 
 * `ProfileStore` stores `{ profile, lock }` per user in the `RoomnappedProfiles_v1` DataStore. Loading takes
@@ -144,9 +153,12 @@ client through roster data and player attributes; `SpectateController` follows l
   results can show "Saving…" until a confirmed write. Without DataStore access an in-memory store with the
   same contract is used and the player is told progress will not persist.
 * `RewardRules` + `RewardService`: on success each member of the starting roster gets their own plan —
-  blueprint of the captured room if new, else the reward skin they targeted, else duplicate credits — plus
-  extraction, key, first-clear and challenge credits. The grant and the run id are written in one save
-  (bounded grant ledger), so retries and reconnects can never pay twice.
+  blueprint of the captured room if new, else the reward skin they targeted, else duplicate credits that grow
+  with the mission's difficulty — plus extraction, key, first-clear and challenge credits. A replayed Check-In
+  is practice: extraction credits only, no unlock progress (its challenges and keys still count for the
+  stars), so the tutorial is never the best place to farm. After a successful Check-In the lobby moves on to
+  the first real mission (the results button reads NEXT MISSION). The grant and the run id are written in
+  one save (bounded grant ledger), so retries and reconnects can never pay twice.
 * Credits only buy cosmetic skins (`SessionService`), each purchase deducts exactly once. No Robux sales.
 
 ## 9. Client presentation
@@ -205,7 +217,20 @@ client through roster data and player attributes; `SpectateController` follows l
   so the physics load is the players and a few crates.
 * Replication is batched per frame per channel; the Caretaker uses an unreliable 15 Hz stream.
 * Clients render zone and room visuals from replicated state with tweens and engine-bundled particle
-  textures; the low effects mode scales particles to 25 % and drops depth of field. At most ten shadow-casting lights per level.
+  textures. Low Effects (the setting, or switched on for the session when frames average over ~36 ms for
+  8 s during a run) scales live particle emitters to 25 %, turns off depth of field and light shadows, softens
+  bloom and skips room rescale animations. At most four corridor lamps per level cast shadows (plus the
+  elevator car); room lights, the Caretaker's moving lantern and small moving parts cast none, and
+  `PrioritizeLightingQuality` is off so the engine can trade lighting quality before view distance.
+* Per-frame client work only writes what changed: settled water and resting ramps are written once, the
+  Caretaker's tint, fade and loop volumes change with its state, context actions and placement candidates
+  resolve at 20 Hz while holds and previews still animate every frame, and parsed state paths are cached.
+  Players waiting in the lobby do not build or animate the Caretaker, run the wing's zone visuals or play
+  its distant footsteps; one-shot sounds are cleaned up by `Debris`.
+* Stat counters the client never shows live (deploys, onboarding steps) are saved without republishing the
+  profile and every mission preview mid-run, and the hidden lobby HUD rebuilds when it shows again.
+* Audio: effects and the lobby music are verified (and cached) right after joining; the other music tracks
+  only on first play.
 * A regression test runs ten consecutive expeditions and asserts the instance count does not grow.
 
 ## 12. Testing

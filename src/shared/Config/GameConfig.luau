@@ -101,6 +101,7 @@ local GameConfig = {
 
 	Wind = {
 		PlayerPushSpeed = 13,
+		HeadwindScale = 0.2, -- share of the push that still holds back a player walking into a lane
 		PlayerMaxSpeed = 24,
 		PlayerAcceleration = 45,
 		SlideBoostSpeed = 46,
@@ -206,7 +207,8 @@ local GameConfig = {
 
 	Rewards = {
 		ExtractionCredits = 20,
-		DuplicateBlueprintCredits = 60, -- fixed cosmetic credit for duplicate blueprints
+		DuplicateBlueprintCredits = 60, -- fixed cosmetic credit for duplicate blueprints (Easy missions)
+		DuplicateDifficultyCredits = 25, -- extra duplicate credit per difficulty step, so harder missions pay more
 		DuplicateSkinCredits = 40,
 		KeyCredits = 10,
 		FirstClearBonusCredits = 30,

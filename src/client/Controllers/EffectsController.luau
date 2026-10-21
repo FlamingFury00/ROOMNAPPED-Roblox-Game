@@ -18,6 +18,7 @@ local Signal = require(Shared.Util.Signal)
 local RunInfo = require(script.Parent.Parent.Core.RunInfo)
 local AudioController = require(script.Parent.AudioController)
 local CameraController = require(script.Parent.CameraController)
+local Haptics = require(script.Parent.Haptics)
 local Vfx = require(script.Parent.Parent.Visual.Vfx)
 local Toasts = require(script.Parent.Parent.UI.Toasts)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -72,6 +73,7 @@ HANDLERS.hit = function(p: any)
 	if isMe(p.userId) then
 		AudioController.play("player_hurt", { volume = 1 })
 		CameraController.shake(1.1, 0.35)
+		Haptics.pulse(0.6, 0.15)
 		EffectsController.LocalHit:Fire(p.source)
 	elseif position then
 		AudioController.at("player_hurt", position, { volume = 0.7 })
@@ -92,6 +94,7 @@ HANDLERS.downed = function(p: any)
 	if isMe(p.userId) then
 		AudioController.play("player_downed", { volume = 1 })
 		CameraController.shake(0.8, 0.5)
+		Haptics.pulse(0.9, 0.35)
 	else
 		if position then
 			AudioController.at("player_downed", position, { volume = 0.8 })
@@ -120,6 +123,10 @@ HANDLERS.revived = function(p: any)
 end
 
 HANDLERS.selfRecovered = function(p: any)
+	if isMe(p.userId) then
+		-- Solo players get one extra life; say so the moment it is spent.
+		Toasts.key("warn", "toast.extraLifeUsed", nil)
+	end
 	task.delay(0.15, function()
 		local position = characterPosition(p.userId)
 		if position then
@@ -127,6 +134,13 @@ HANDLERS.selfRecovered = function(p: any)
 			Vfx.burst(position, "poof", 16)
 		end
 	end)
+end
+
+HANDLERS.eliminated = function(p: any)
+	if not isMe(p.userId) then
+		AudioController.ui("ui_error", 0.6)
+		Toasts.key("warn", "toast.teammateOut", { name = nameOf(p.userId) })
+	end
 end
 
 HANDLERS.splash = function(p: any)

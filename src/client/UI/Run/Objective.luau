@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local RoomDefs = require(Shared.Config.RoomDefs)
+local MissionDefs = require(Shared.Config.MissionDefs)
 local Strings = require(Shared.Config.Strings)
 local ClientState = require(script.Parent.Parent.Parent.Core.ClientState)
 local RunInfo = require(script.Parent.Parent.Parent.Core.RunInfo)
@@ -274,13 +275,20 @@ function Objective.create(parent: Instance): Handle
 		if not RunInfo.isParticipant() then
 			local me = ClientState.get("global", "players." .. RunInfo.myKey())
 			if RunInfo.inRunPhase() and type(me) == "table" and me.waiting then
+				-- Say which expedition is out, so a friend who joined mid-run knows what they are waiting for.
+				local mission = MissionDefs.byId[tostring(RunInfo.run().mission)]
+				if mission then
+					return "objective.lobbyWaitingOn", "clock", { name = Strings.t(mission.nameKey) }
+				end
 				return "objective.lobbyWaiting", "clock", nil
 			end
 			return "objective.lobby", "door", nil
 		end
 		if status == "Eliminated" then
 			return "objective.spectating", "eye", nil
-		elseif status == "Downed" or status == "Recovering" then
+		elseif status == "Recovering" then
+			return "hud.downed.solo", "refresh", nil
+		elseif status == "Downed" then
 			return "objective.downed", "heart", nil
 		end
 		local level = RunInfo.level()
@@ -301,6 +309,9 @@ function Objective.create(parent: Instance): Handle
 				return "objective.escapeDropped", "alert", nil
 			elseif cargo.state == "Carried" and cargo.carrier == RunInfo.myKey() then
 				return "objective.escapeCarry", "suitcase", nil
+			elseif cargo.state == "Carried" and type(cargo.carrier) == "string" then
+				-- Only the carrier is hunted; everyone else clears the way.
+				return "objective.escapeCover", "arrowUp", { name = RunInfo.displayName(cargo.carrier) }
 			end
 			return "objective.escape", "arrowUp", nil
 		end
@@ -309,7 +320,7 @@ function Objective.create(parent: Instance): Handle
 
 	local function refreshObjective()
 		local key, icon, params = objectiveFor()
-		local full = key .. icon .. (if params then tostring(params.room) else "")
+		local full = key .. icon .. (if params then tostring(params.room) .. tostring(params.name) else "")
 		if full == lastObjectiveKey then
 			return
 		end
@@ -377,6 +388,7 @@ function Objective.create(parent: Instance): Handle
 		end
 	end
 
+	local timerColor: Color3? = nil
 	local function refreshTimer()
 		local run = RunInfo.run()
 		local endsAt = run.escapeEndsAt
@@ -394,8 +406,12 @@ function Objective.create(parent: Instance): Handle
 		timerBar.set(remaining / GameConfig.Escape.WindowSeconds)
 		local warning = remaining <= GameConfig.Escape.WarningSeconds
 		local color = if warning then C.red elseif remaining <= 45 then C.orange else C.gold
-		timerStroke.Color = color
-		timerBar.setColor(color)
+		-- The bar's gradient is rebuilt only when its colour band changes, not every frame.
+		if color ~= timerColor then
+			timerColor = color
+			timerStroke.Color = color
+			timerBar.setColor(color)
+		end
 		timerText.TextColor3 = if warning then C.red:Lerp(C.white, 0.35 + 0.35 * math.sin(os.clock() * 8)) else C.text
 		if seconds ~= lastSecond then
 			lastSecond = seconds

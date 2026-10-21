@@ -7,8 +7,9 @@
 
 	* Ice (frozen basins / pools): momentum-based sliding - the horizontal velocity eases toward the input
 	  with low traction, so you glide, overshoot and drift.
-	* Wind (active Fan lanes): a capped push along the lane, weaker further from the fan. Walking against
-	  it is slow but always possible.
+	* Wind (active Fan lanes): a capped push along the lane, weaker further from the fan. Walking into it
+	  keeps only a fifth of the push, so it is slower but always possible - even carrying the suitcase along
+	  a ledge, where a full push would hold the carrier in place.
 	* Ice + wind: on a frozen basin that feeds a launch ramp, a Fan blowing toward the ramp boosts the slide;
 	  hitting the ramp fast enough throws you across the gap on a fixed arc to the landing point.
 	* Knockback from hazards, slow walking on ledges and while carrying the suitcase, and a full movement
@@ -209,6 +210,21 @@ local function windAt(level: any, position: Vector3, onIce: boolean): WindSample
 	return sample
 end
 
+-- A lane's push on a player who is steering `moveFlat`. Only HeadwindScale of the part that opposes the
+-- stick survives, so a Fan left blowing the wrong way slows the escape instead of trapping the carrier;
+-- standing still or walking with the wind takes the full push.
+local function playerPush(push: Vector3, moveFlat: Vector3): Vector3
+	local scaled = push * W.PlayerPushSpeed
+	if moveFlat.Magnitude > 0.1 then
+		local forward = moveFlat.Unit
+		local against = -scaled:Dot(forward)
+		if against > 0 then
+			scaled += forward * against * (1 - W.HeadwindScale)
+		end
+	end
+	return scaled
+end
+
 -- Launch -----------------------------------------------------------------------------------------------
 
 local function tryLaunch(r: CharacterRig, level: any, position: Vector3, horizontal: Vector3, now: number): boolean
@@ -333,11 +349,11 @@ local function step(dt: number)
 	elseif knocked then
 		target, traction, maxSpeed = Vector3.zero, KNOCK_TRACTION, math.huge
 	elseif slippery then
-		target = moveFlat * walk + wind.push * W.PlayerPushSpeed
+		target = moveFlat * walk + playerPush(wind.push, moveFlat)
 		traction = if moveFlat.Magnitude > 0.1 then ICE.Traction else ICE.StopTraction
 		maxSpeed = ICE.MaxSpeed
 	else
-		target = moveFlat * walk + wind.push * W.PlayerPushSpeed
+		target = moveFlat * walk + playerPush(wind.push, moveFlat)
 		traction = NORMAL_WIND_TRACTION
 		maxSpeed = W.PlayerMaxSpeed
 	end

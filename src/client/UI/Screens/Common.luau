@@ -103,6 +103,19 @@ function Common.findChallenge(challengeId: string): MissionDefs.Challenge?
 	return nil
 end
 
+-- Failed runs: the headline, the reason and a tip for this outcome. A wipe is only "CAUGHT!" when the
+-- Caretaker landed the final knock-out.
+function Common.failureText(outcome: string?, cause: string?): (string, string, string)
+	if outcome == "TimeUp" then
+		return Strings.t("results.TimeUp"), Strings.t("results.reason.TimeUp"), Strings.t("results.tip.TimeUp")
+	elseif outcome == "Abandoned" then
+		return Strings.t("results.Abandoned"), Strings.t("results.failBody"), ""
+	end
+	local key = if type(cause) == "string" and Strings.has("results.reason." .. cause) then cause else "unknown"
+	local headline = if key == "caretaker" then Strings.t("results.Wiped") else Strings.t("results.KnockedOut")
+	return headline, Strings.t("results.reason." .. key), Strings.t("results.tip." .. key)
+end
+
 function Common.difficultyText(level: number): string
 	return Strings.t("mission.difficulty" .. tostring(math.clamp(level, 1, 3)))
 end

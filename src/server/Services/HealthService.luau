@@ -93,6 +93,10 @@ local function onDowned(run: Run, entry: RosterEntry, result: string)
 	Registry.get("Rooms").clearHeld(entry.player)
 	Registry.get("Expedition").fireRun("downed", { userId = entry.key, solo = result == "Recovering" })
 	Registry.get("Telemetry").downed(run, entry)
+	if result == "Downed" then
+		-- Call for help automatically while a revive is still possible.
+		Registry.get("Pings").helpFor(run, entry, config.DownedWindowSeconds)
+	end
 end
 
 -- Apply damage. Returns true if the hit landed (not absorbed by grace or state).
@@ -116,6 +120,7 @@ function HealthService.damage(
 	end
 	Registry.get("Expedition").fireRun("hit", { userId = entry.key, source = source })
 	if result == "Downed" or result == "Recovering" then
+		run.stats.lastKnockout = source
 		onDowned(run, entry, result)
 	end
 	setAttributes(entry)
@@ -136,6 +141,7 @@ function HealthService.revive(run: Run, target: RosterEntry, by: RosterEntry): b
 	end
 	setAttributes(target)
 	Registry.get("Expedition").publishRosterEntry(run, target)
+	Registry.get("Pings").clearFor(run, target)
 	Registry.get("Expedition").fireRun("revived", { userId = target.key, by = by.key })
 	Registry.get("Telemetry").revived(run, target, by)
 	return true
@@ -194,6 +200,7 @@ function HealthService.step(run: Run, _dt: number)
 			elseif event == "Eliminated" then
 				ensureSpectatorBox(run)
 				Registry.get("Characters").teleport(entry.player, spectatorSpot(run))
+				Registry.get("Pings").clearFor(run, entry)
 				Registry.get("Expedition").fireRun("eliminated", { userId = entry.key })
 			end
 		end

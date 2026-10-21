@@ -56,6 +56,8 @@ local DIR_ORDER = { "Forward", "Backward", "Across" }
 local localPlayer = Players.LocalPlayer
 
 local selectedSlot = 0
+local RESOLVE_SECONDS = 0.05
+local resolveClock = math.huge -- seconds since the candidate was last resolved
 local chosenDir: { [string]: string } = {} -- socketId -> direction picked with Rotate
 local lastActionAt = -math.huge
 local candidate: Candidate? = nil
@@ -468,6 +470,7 @@ function PlacementController.select(slot: number)
 		slot = 0
 	end
 	selectedSlot = slot
+	resolveClock = math.huge
 	Net.send("SelectSlot", slot)
 	WorldController.setHoldingSuitcase(slot ~= 0)
 	AudioController.ui(if slot ~= 0 then "room_select" else "ui_close", 0.8)
@@ -491,6 +494,7 @@ function PlacementController.rotate()
 	end
 	local index = table.find(dirs, c.dir :: string) or 0
 	chosenDir[c.socketId :: string] = dirs[index % #dirs + 1]
+	resolveClock = math.huge
 	AudioController.ui("ui_toggle", 0.8)
 end
 
@@ -512,6 +516,7 @@ function PlacementController.execute(): boolean
 	end
 	-- Put the suitcase away after using it; the room itself is the feedback.
 	selectedSlot = 0
+	resolveClock = math.huge
 	Net.send("SelectSlot", 0)
 	WorldController.setHoldingSuitcase(false)
 	PlacementController.SelectionChanged:Fire(0)
@@ -558,7 +563,15 @@ function PlacementController.start()
 			reset()
 		end
 	end)
-	RunService.Heartbeat:Connect(function()
+	-- The candidate is resolved 20 times a second (it builds tables); a pick, a turn or a use resolves at
+	-- once, and the preview itself animates every frame.
+	RunService.Heartbeat:Connect(function(dt: number)
+		resolveClock += dt
+		if resolveClock < RESOLVE_SECONDS then
+			updatePreview(candidate)
+			return
+		end
+		resolveClock = 0
 		local c = resolve()
 		local key = if c
 			then table.concat({
