@@ -26,6 +26,13 @@ type RosterEntry = RunTypes.RosterEntry
 
 local RewardService = {}
 
+-- Background retries after a failed reward save: one every RETRY_SECONDS, for about ten minutes.
+local RETRY_SECONDS = 30
+local RETRY_ATTEMPTS = 20
+
+-- The run whose results each player is looking at (a newer run's results replace the panel).
+local shownRun: { [Player]: string } = {}
+
 local function bestCombo(run: Run): string?
 	-- Prefer the most "inventive" combo used this run for the results panel (U18).
 	local priority = {
@@ -51,6 +58,7 @@ end
 
 local function publishResults(player: Player, payload: any)
 	if player.Parent == Players then
+		shownRun[player] = payload.runId
 		StateServer.private(player):Set({ "results" }, payload)
 	end
 end
@@ -131,8 +139,23 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 	end
 	payload.saving = if saved then "Saved" else "Error"
 	publishResults(player, payload)
-	if not saved and player.Parent == Players then
-		Net.fire(player, "Toast", "error", "toast.saveFailed", {})
+	if saved or player.Parent ~= Players then
+		return
+	end
+	Net.fire(player, "Toast", "error", "toast.saveFailed", {})
+	-- Keep the panel's promise ("retrying automatically"): retry in the background and confirm once a write
+	-- lands. A newer run's own save carries this reward too (saves write the whole profile).
+	for _ = 1, RETRY_ATTEMPTS do
+		task.wait(RETRY_SECONDS)
+		if player.Parent ~= Players or shownRun[player] ~= payload.runId then
+			return
+		end
+		if Profiles.saveNow(player) then
+			payload.saving = "Saved"
+			publishResults(player, payload)
+			Net.fire(player, "Toast", "success", "toast.saveRecovered", {})
+			return
+		end
 	end
 end
 
@@ -149,6 +172,10 @@ function RewardService.Init()
 	Registry.add("Rewards", RewardService)
 end
 
-function RewardService.Start() end
+function RewardService.Start()
+	Players.PlayerRemoving:Connect(function(player: Player)
+		shownRun[player] = nil
+	end)
+end
 
 return RewardService

@@ -56,6 +56,8 @@ local shownRunId: string? = nil
 local actedRunId: string? = nil
 local renderedKey = ""
 local spinnerConnection: RBXScriptConnection? = nil
+local raysConnection: RBXScriptConnection? = nil
+local countToken = 0
 
 -- Called after the player leaves the results panel with "lobby" or "replay" (Feedback uses this to decide
 -- whether to ask).
@@ -108,6 +110,83 @@ end
 
 -- Rendering ---------------------------------------------------------------------------------------------------------
 
+local function stopRays()
+	if raysConnection then
+		raysConnection:Disconnect()
+		raysConnection = nil
+	end
+end
+
+-- Slowly turning beams of light behind a reward (still with reduced motion).
+local function rays(parent: Instance, color: Color3, size: number, center: UDim2)
+	stopRays()
+	local holder = Create.new("Frame", {
+		Name = "Rays",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = center,
+		Size = UDim2.fromOffset(size, size),
+		Parent = parent,
+	})
+	for i = 0, 5 do
+		local beam = Create.new("Frame", {
+			BackgroundColor3 = color,
+			BackgroundTransparency = 0.5,
+			BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(0, math.floor(size * 0.13), 1, 0),
+			Rotation = i * 30,
+			Parent = holder,
+		})
+		Create.new("UIGradient", {
+			Rotation = 90,
+			Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.5, 0),
+				NumberSequenceKeypoint.new(1, 1),
+			}),
+			Parent = beam,
+		})
+	end
+	if not Motion.isReduced() then
+		raysConnection = RunService.RenderStepped:Connect(function(dt: number)
+			holder.Rotation = (holder.Rotation + dt * 18) % 360
+		end)
+	end
+end
+
+-- Counts the credit total up from zero once the reward lines have landed (instant with reduced motion).
+local function countUp(amount: number, delaySeconds: number)
+	countToken += 1
+	local token = countToken
+	local function show(value: number)
+		totalLabel.Text = Strings.t("results.totalCredits", { amount = value })
+	end
+	if Motion.isReduced() or amount <= 0 then
+		show(amount)
+		return
+	end
+	show(0)
+	task.delay(delaySeconds, function()
+		if token ~= countToken then
+			return
+		end
+		Components.sound("ui_coin")
+		local duration = math.clamp(0.35 + amount / 220, 0.5, 1.3)
+		local elapsed = 0
+		while token == countToken and elapsed < duration do
+			elapsed += task.wait()
+			local t = math.min(1, elapsed / duration)
+			show(math.floor(amount * (1 - (1 - t) ^ 3) + 0.5))
+		end
+		if token == countToken then
+			show(amount)
+			Motion.pop(totalLabel, 0.85)
+		end
+	end)
+end
+
 local function bigIcon(parent: Instance, icon: string, color: Color3, size: number, position: UDim2)
 	local back = Create.new("Frame", {
 		Name = "BigIcon",
@@ -129,6 +208,7 @@ local function bigIcon(parent: Instance, icon: string, color: Color3, size: numb
 end
 
 local function renderRewardCard(data: any)
+	stopRays()
 	clear(rewardCard)
 	local plan = data.plan
 	local title: string
@@ -173,7 +253,12 @@ local function renderRewardCard(data: any)
 		stroke = true,
 		parent = rewardCard,
 	})
-	bigIcon(rewardCard, icon, color, if compact then 78 else 116, UDim2.new(0.5, 0, 0, if compact then 48 else 52))
+	local iconSize = if compact then 78 else 116
+	local iconTop = if compact then 48 else 52
+	if data.success and type(plan) == "table" then
+		rays(rewardCard, color:Lerp(C.white, 0.35), iconSize * 2, UDim2.new(0.5, 0, 0, iconTop + iconSize // 2))
+	end
+	bigIcon(rewardCard, icon, color, iconSize, UDim2.new(0.5, 0, 0, iconTop))
 	local nameLabel = Components.label({
 		text = name,
 		font = Theme.Fonts.heading,
@@ -211,6 +296,7 @@ local function renderLines(data: any)
 	clear(linesList)
 	local plan = data.plan
 	if not data.success or type(plan) ~= "table" then
+		countToken += 1
 		totalLabel.Text = ""
 		Components.label({
 			text = Strings.t("results.failBody"),
@@ -267,7 +353,7 @@ local function renderLines(data: any)
 			end)
 		end
 	end
-	totalLabel.Text = Strings.t("results.totalCredits", { amount = plan.credits or 0 })
+	countUp(plan.credits or 0, 0.12 * #(plan.lines or {}) + 0.25)
 end
 
 local function stopSpinner()
@@ -439,6 +525,7 @@ local function build()
 		BackgroundTransparency = 0.35,
 		Position = UDim2.fromOffset(0, 162),
 		Size = UDim2.fromOffset(330, 254),
+		ClipsDescendants = true,
 		Parent = content,
 	}, { Create.corner(Theme.Radius.large), Create.stroke(C.gold, 3, 0.1) })
 
@@ -568,7 +655,11 @@ function Results.start()
 		name = "Results",
 		frame = window.frame,
 		closable = false,
-		onClose = stopSpinner,
+		onClose = function()
+			stopSpinner()
+			stopRays()
+			countToken += 1
+		end,
 		defaultSelection = function(): GuiObject?
 			return replayButton.instance
 		end,

@@ -69,6 +69,7 @@ local GROUPS: { { title: string, commands: { Command } } } = {
 			{ label = "Tutorial done", command = "tutorial", a = "done" },
 			{ label = "Tutorial reset", command = "tutorial", a = "reset" },
 			{ label = "Reset profile", command = "resetprofile", variant = "danger" },
+			{ label = "Fail 6 saves", command = "failsaves", a = "6", variant = "danger" },
 		},
 	},
 }

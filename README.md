@@ -57,9 +57,15 @@ is not saved" while that is the case.
   server: a bot presses real input bindings and touch buttons, and every controller, visual and HUD module
   runs its real code. Any error fails the test.
 * **Interface specs** (`tests/harness/ClientEnv.luau`) that build every screen and HUD widget.
+* **A chaos soak** (`chaos.spec`): on every mission a squad of bots sends random valid, invalid and malformed
+  requests, leaves, drops out and rejoins while a late joiner hammers the lobby; the squad leader runs the
+  real client. Invariants (room caps, cargo ownership, roster membership, hearts, clean return to Prep, no
+  instance growth, no server or client error) are checked every second. Seeds are fixed, so failures
+  reproduce.
 
 Set `RN_LAYOUT_SIMS_NO_CLIENT=1` to run the layout playthroughs without the client attached (faster), or
-`RN_SKIP_LAYOUT_SIMS=1` to skip them.
+`RN_SKIP_LAYOUT_SIMS=1` to skip them. The chaos soak takes `RN_SKIP_CHAOS=1` (skip), `RN_CHAOS_NO_CLIENT=1`
+(server only) and `RN_CHAOS_SEEDS=n` (soak n seeds per mission).
 
 ### Visual previews
 

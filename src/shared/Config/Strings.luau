@@ -387,6 +387,7 @@ local catalog: { [string]: string } = {
 	["toast.memoryStore"] = "Test server: progress won't be saved here",
 	["toast.leftRun"] = "You left the expedition",
 	["toast.saveFailed"] = "Couldn't save yet - we'll keep trying",
+	["toast.saveRecovered"] = "Progress saved",
 	["toast.keyFound"] = "Golden key found!",
 	["toast.combo"] = "Combo: {combo}!",
 	["toast.teammateDown"] = "{name} is down!",

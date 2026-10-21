@@ -61,6 +61,7 @@ ProfileService.Changed = Signal.new() -- (player, profile)
 local sessions: { [Player]: Session } = {}
 local store: ProfileStore.Store
 local usingMemory = false
+local memoryStore: any = nil -- the in-memory store, when DataStores are unavailable (fault injection for QA)
 local sessionId = if Engine.jobId() ~= "" then Engine.jobId() else HttpService:GenerateGUID(false)
 local sessionCounter = 0
 local shuttingDown = false
@@ -240,6 +241,16 @@ function ProfileService.usingMemoryStore(): boolean
 	return usingMemory
 end
 
+-- QA on test servers: the next `count` store requests fail, as a DataStore outage would. Only possible with the
+-- in-memory store, so a live server can never be told to drop saves.
+function ProfileService.injectStoreFailures(count: number): boolean
+	if not usingMemory or memoryStore == nil then
+		return false
+	end
+	memoryStore:injectFailures(math.clamp(math.floor(count), 0, 100))
+	return true
+end
+
 -- Mutate a loaded profile. Returns false if the profile is not ready (no write happens).
 function ProfileService.update(player: Player, mutate: (Profile) -> ()): boolean
 	local session = sessions[player]
@@ -317,6 +328,7 @@ end
 function ProfileService.Start()
 	local dataStore, memory = resolveStore()
 	usingMemory = memory
+	memoryStore = if memory then dataStore else nil
 	if memory then
 		log:Warn("DataStores unavailable - using an in-memory profile store (progress will not persist)")
 	end

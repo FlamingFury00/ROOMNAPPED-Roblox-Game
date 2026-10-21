@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   # Formatting, lint, type analysis, the place build and every headless test except the authored
-  # mission playthroughs (those run in parallel below).
+  # mission playthroughs and the chaos soak (those run in parallel below).
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -31,6 +31,7 @@ jobs:
       - name: Type analysis, build and headless tests
         env:
           RN_SKIP_LAYOUT_SIMS: "1"
+          RN_SKIP_CHAOS: "1"
         run: tools/check.sh
 
       - name: Build release place
@@ -57,3 +58,19 @@ jobs:
 
       - name: Authored mission playthroughs
         run: lune run tests/run.luau build/test.rbxl "Authored playthroughs"
+
+  # Random squads (valid, invalid and malformed requests, drop-outs, rejoins) on every mission.
+  chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: tools/install-toolchain.sh "$HOME/rbxtools" >> "$GITHUB_PATH"
+
+      - name: Build test place
+        run: tools/build.sh build/test.rbxl
+
+      - name: Chaos soak
+        run: lune run tests/run.luau build/test.rbxl "Chaos soak"

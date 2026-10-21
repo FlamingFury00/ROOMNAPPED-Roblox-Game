@@ -323,6 +323,152 @@ return function(ctx)
 			assertClean(sim)
 		end)
 
+		it("gives a socket to exactly one of two players who claim it in the same frame (S06)", function()
+			local sim = boot()
+			local bots = joinAndLaunch(sim, { "Hal", "Ida" })
+			local a, b = bots[1], bots[2]
+			local level = sim:state(a, "global", "level")
+			local s1 = level.sockets.S1.interactPoint
+			for i, bot in bots do
+				local path = route(sim, bot, level, tileIndexAt(level, s1))
+				table.insert(path, s1 + V3.new(i - 1.5, 0, 0))
+				sim:walk(bot, path)
+			end
+			expect(sim:runUntil(function()
+				return near(sim, a, s1, 2.5)() and near(sim, b, s1, 2.5)()
+			end, 20)).toBe(true)
+			sim:send(a, "RequestDeploy", "S1", 1)
+			sim:send(b, "RequestDeploy", "S1", 1)
+			sim:run(1.5)
+			assertClean(sim)
+			local socket = sim:state(a, "global", "sockets.S1")
+			expect(socket ~= nil).toBe(true)
+			expect(socket.owner).toBe("1001")
+			expect(sim:inboxHas(b, "Toast", "deploy.reason.SocketOccupied")).toBe(true)
+			-- One room, one owner: the loser's slot is still free.
+			local count = 0
+			for _ in sim:state(a, "global", "sockets") do
+				count += 1
+			end
+			expect(count).toBe(1)
+		end)
+
+		it(
+			"charges once when a skin is bought with exactly enough credits, however often it is pressed (A12)",
+			function()
+				local sim = boot()
+				local bot = sim:addBot("Jay", 2201)
+				sim:snapshot(bot)
+				sim:run(0.6)
+				local price = ctx.module("ReplicatedStorage.Shared.Config.SkinDefs").byId.freezer_icecream.price
+				local credits = sim:state(bot, "me", "profile.credits")
+				sim:send(bot, "Debug", "give", "credits", tostring(price - credits))
+				sim:run(0.3)
+				expect(sim:state(bot, "me", "profile.credits")).toBe(price)
+				for _ = 1, 6 do
+					sim:send(bot, "BuySkin", "freezer_icecream")
+				end
+				sim:run(1)
+				assertClean(sim)
+				expect(sim:state(bot, "me", "profile.credits")).toBe(0)
+				expect(sim:state(bot, "me", "profile.skins.owned.freezer_icecream")).toBe(true)
+				local bought = 0
+				for _, message in bot.inbox do
+					if message.name == "Toast" and message.args[2] == "toast.bought" then
+						bought += 1
+					end
+				end
+				expect(bought).toBe(1)
+				-- Too poor for the next one: refused, balance untouched.
+				sim:run(6)
+				sim:send(bot, "BuySkin", "fan_tropical")
+				sim:run(0.5)
+				expect(sim:state(bot, "me", "profile.credits")).toBe(0)
+			end
+		)
+
+		-- Plays the tutorial to a win with `failures` store requests failing from the moment the run ends, and
+		-- records every save state the results panel would show.
+		local function winWithFailingStore(name: string, userId: number, failures: number)
+			local sim = boot()
+			local bot = sim:addBot(name, userId)
+			sim:snapshot(bot)
+			sim:run(0.6)
+			sim:send(bot, "SetReady", true)
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Explore"
+			end, 30)).toBe(true)
+			sim:send(bot, "Debug", "failsaves", tostring(failures))
+			sim:run(0.1)
+			sim:send(bot, "Debug", "phase", "win")
+			local states = {}
+			local savedAt: number? = nil
+			local elapsed = 0
+			while elapsed < 120 do
+				local state = sim:state(bot, "me", "results.saving")
+				if state ~= states[#states] then
+					table.insert(states, state)
+				end
+				if state == "Saved" or state == "Error" then
+					savedAt = elapsed
+					break
+				end
+				sim:run(0.2)
+				elapsed += 0.2
+			end
+			return sim, bot, states, savedAt
+		end
+
+		local function rejoin(sim, bot, name: string, userId: number)
+			sim:removeBot(bot)
+			sim:run(1)
+			local again = sim:addBot(name, userId)
+			sim:snapshot(again)
+			expect(sim:runUntil(function()
+				return sim:state(again, "me", "profile.status") == "Ready"
+			end, 30)).toBe(true)
+			return again
+		end
+
+		it("shows Saving through a store outage and Saved only after the write lands (S22, A12)", function()
+			-- Six failures: the first save gives up after five attempts, the retry succeeds on its second.
+			local sim, bot, states, savedAt = winWithFailingStore("Kim", 2301, 6)
+			assertClean(sim)
+			expect(states[#states]).toBe("Saved")
+			expect(table.find(states, "Error")).toBe(nil)
+			expect(table.find(states, "Saving") ~= nil).toBe(true)
+			-- Five attempts with backoff (1 + 2 + 4 + 8 s) had to fail before anything could be confirmed.
+			expect((savedAt :: number) >= 15).toBe(true)
+			local credits = sim:state(bot, "me", "results.plan.credits")
+			expect(credits > 0).toBe(true)
+			expect(sim:state(bot, "me", "profile.credits")).toBe(credits)
+			-- The write really landed: a fresh session loads the reward, granted exactly once.
+			local again = rejoin(sim, bot, "Kim", 2301)
+			expect(sim:state(again, "me", "profile.rooms.Laundry")).toBe(true)
+			expect(sim:state(again, "me", "profile.credits")).toBe(credits)
+			assertClean(sim)
+		end)
+
+		it("reports a save that keeps failing, keeps retrying and confirms when it lands (S22, A12)", function()
+			local sim, bot, states, _ = winWithFailingStore("Lou", 2302, 100)
+			assertClean(sim)
+			expect(states[#states]).toBe("Error")
+			expect(table.find(states, "Saved")).toBe(nil)
+			expect(sim:inboxHas(bot, "Toast", "toast.saveFailed")).toBe(true)
+			local credits = sim:state(bot, "me", "results.plan.credits")
+			-- The outage ends: the background retry lands, the panel flips to Saved and the player is told.
+			sim:send(bot, "Debug", "failsaves", "0")
+			expect(sim:runUntil(function()
+				return sim:state(bot, "me", "results.saving") == "Saved"
+			end, 40)).toBe(true)
+			expect(sim:inboxHas(bot, "Toast", "toast.saveRecovered")).toBe(true)
+			-- And the next session loads the reward.
+			local again = rejoin(sim, bot, "Lou", 2302)
+			expect(sim:state(again, "me", "profile.rooms.Laundry")).toBe(true)
+			expect(sim:state(again, "me", "profile.credits")).toBe(credits)
+			assertClean(sim)
+		end)
+
 		it("cycles ten runs without growing the instance count (S27)", function()
 			local sim = boot()
 			local bot = sim:addBot("Finn", 2001)

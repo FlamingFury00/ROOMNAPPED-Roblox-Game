@@ -15,6 +15,7 @@
 	  runid | stats                   print the run id / instance and connection stats
 	  tutorial <reset|done>           toggle the tutorial flag
 	  resetprofile                    wipe your own profile (Studio memory store only)
+	  failsaves <n>                   the next n profile store requests fail (Studio memory store only)
 ]]
 
 local GroupService = game:GetService("GroupService")
@@ -204,6 +205,13 @@ local function onDebug(player: Player, command: string, a: string?, b: string?)
 			reply(player, "profile reset (memory store)")
 		else
 			reply(player, "resetprofile is only available with the Studio memory store")
+		end
+	elseif command == "failsaves" then
+		local count = tonumber(a) or 0
+		if Profiles.injectStoreFailures(count) then
+			reply(player, string.format("the next %d store requests will fail", count))
+		else
+			reply(player, "failsaves is only available with the Studio memory store")
 		end
 	else
 		reply(player, "unknown command " .. command)

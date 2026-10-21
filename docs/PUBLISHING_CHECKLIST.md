@@ -19,7 +19,7 @@ so a room, a mission or a feature can be turned off without republishing (see §
 
 ## 1. Code gates
 
-- [ ] Both CI jobs are green on the release commit (`verify` and `playthroughs`).
+- [ ] All CI jobs are green on the release commit (`verify`, `playthroughs` and `chaos`).
 - [ ] `tools/check.sh` passes locally (StyLua, luau-lsp strict analysis, build, headless tests).
 - [ ] `GameConfig.Version` is bumped. If the profile shape changed, `GameConfig.SaveSchemaVersion` is bumped
       and `ProfileSchema` has a migration with a unit test from the previous version.

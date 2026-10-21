@@ -196,8 +196,10 @@ client through roster data and player attributes; `SpectateController` follows l
 ## 12. Testing
 
 See [QA_PLAN.md](QA_PLAN.md). In short: pure-rule unit specs, layout solvability specs, server simulations
-with bot squads, full-stack playthroughs of every mission with the real client attached, touch-phone and
-squad play tests, interface specs, and offline renders of every screen on desktop and phone sizes.
+with bot squads, full-stack playthroughs of every mission with the real client attached, a seeded chaos
+soak of every mission (random, invalid and malformed requests, drop-outs and rejoins under continuous
+invariant checks), touch-phone and squad play tests, interface specs, and offline renders of every screen on
+desktop and phone sizes.
 
 ## Traceability
 
@@ -221,15 +223,15 @@ squad play tests, interface specs, and offline renders of every screen on deskto
 | S16 | Damage & recovery | `HealthModel`, `HealthService`, `Overlays` | logic, play |
 | S17 | Session & friends | `SessionService` (squad of ≤ 4, waiting players) | sim |
 | S18 | Solo & group scaling | Caretaker speed by squad size, solo self-recovery | logic, sim |
-| S19 | Anti-grief & disconnect | orphaned rooms, safe cargo drop, no body blocking | sim |
-| S20 | Network authority | `Net`, `Remotes`, `RateLimiter`, server checks | sim (spoofed requests) |
+| S19 | Anti-grief & disconnect | orphaned rooms, safe cargo drop, no body blocking | sim, chaos |
+| S20 | Network authority | `Net`, `Remotes`, `RateLimiter`, server checks | sim (spoofed requests), chaos |
 | S21 | Save profile | `ProfileStore`, `ProfileSchema`, `ProfileService` | logic, sim |
 | S22 | Reward persistence | `RewardService` grant ledger, honest saving state | logic, ui |
 | S23 | Progression & missions | `MissionDefs`, unlocks, challenges, `MissionBoard` | logic, ui |
 | S24 | Onboarding | Check-In mission, `HintsController`, onboarding funnel | play |
 | S25 | Lobby & collection | `LobbyBuilder`, `LobbyService`, `LobbyHud`, `Collection` | ui |
 | S26 | Analytics & feedback | `TelemetryService`, `Feedback` screen | ui |
-| S27 | Performance budget | §11 | sim (ten runs) |
+| S27 | Performance budget | §11 | sim (ten runs), chaos |
 | S28 | Debug & regression tools | `DebugService`, `Debug` screen, `tests/` | sim, ui |
 | S29 | Accessibility & settings | `SettingsController`, `Settings` screen | ui |
 | S30 | Localization readiness | `Strings.luau` catalog, no text in images, layouts tolerate longer strings | ui renders |
@@ -261,11 +263,11 @@ squad play tests, interface specs, and offline renders of every screen on deskto
 | U21 | Cosmetic shop | P2. The credit shop lives in `Collection` (preview, owned state, price, confirmation) | ui |
 | U22 | Showroom editor | Deferred with S33 | — |
 | R01–R05 | Freezer, Fan, Laundry, Greenhouse, Magnet | `RoomDefs`, `RoomPrefabs`, `EffectModel`, `HazardService`, `RoomVisuals` | effectmodel, layout_sims |
-| R06 | Deployment limits | `DeployRules` (2 per player, 4 per team) | logic |
+| R06 | Deployment limits | `DeployRules` (2 per player, 4 per team) | logic, chaos |
 | R07–R10 | Water + cold, ice + wind, water + fire, water + electricity | `EffectModel`, `MovementController`, `HazardService` | effectmodel, layout_sims |
 | R11 | Geometry contract | `Kit`, `RoomPrefabs` reserved bounds | world |
 | R12 | Unlocks & duplicates | `RewardRules`, `ProfileSchema` | logic |
-| R13 | Deterministic cleanup | `EffectModel` source removal, `RoomService` | effectmodel, sim |
+| R13 | Deterministic cleanup | `EffectModel` source removal, `RoomService` | effectmodel, sim, chaos |
 | A01 | Hotel modular kit | `Kit`, `Props`, `Palette`, `LevelBuilder` | world, renders |
 | A02 | Room prefabs | `RoomPrefabs` (five rooms, every skin) | world |
 | A03 | Caretaker rig | `CaretakerView` | play |
@@ -277,5 +279,5 @@ squad play tests, interface specs, and offline renders of every screen on deskto
 | A09 | Store-page media | [STORE_MEDIA.md](STORE_MEDIA.md) | manual |
 | A10 | Content ownership record | [CONTENT_OWNERSHIP.md](CONTENT_OWNERSHIP.md), `gen_audio.py` source check | generator |
 | A11 | Input & device QA | [QA_PLAN.md](QA_PLAN.md) §2, touch play test | play, manual |
-| A12 | State & save QA | [QA_PLAN.md](QA_PLAN.md) §3 | sim, manual |
+| A12 | State & save QA | [QA_PLAN.md](QA_PLAN.md) §3 | sim, chaos, manual |
 | A13 | Publishing checklist | [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md) | manual |
