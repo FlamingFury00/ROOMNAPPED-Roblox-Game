@@ -18,7 +18,7 @@ fonts are the ones bundled with the Roblox client, and nothing is synthesized or
 
 | Area | Contents |
 | --- | --- |
-| Missions | Check-In (tutorial) plus six expeditions: Soggy Suites, Frostbite Floor, The Boiler Wing, Luggage Line, Greenhouse Atrium, Magnet Vault. Each has bonus challenges, keys and a target-room reward, and rooms won later open new routes in earlier missions (a vine bridge in Soggy Suites, magnet-pulled crates in Soggy Suites and Luggage Line). |
+| Missions | Check-In (tutorial) plus six expeditions: Soggy Suites, Frostbite Floor, The Boiler Wing, Luggage Line, Greenhouse Atrium, Magnet Vault. Each has bonus challenges, keys and a target-room reward, and rooms won later open new routes in earlier missions (vine bridges in Soggy Suites and Frostbite Floor, magnet-pulled crates in Soggy Suites and Luggage Line). |
 | Rooms | Freezer, Fan, Laundry, Greenhouse, Magnet — two slots per player, up to two active rooms per player and four per team. |
 | Room combos | Ice bridge, ice launch, doused flames, frozen live water, power cut, crate bridge, weighted switch, vine bridge, pinned or frozen carts, Caretaker blown away. |
 | Threats | The Caretaker (sleeps, patrols, investigates, chases, searches; reacts to cold and wind), floods, fires, live wires, runaway luggage carts, pits and gates. |

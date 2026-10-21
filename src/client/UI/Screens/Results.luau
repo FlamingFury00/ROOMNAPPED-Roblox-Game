@@ -51,6 +51,7 @@ local lobbyButton: ButtonHandle
 local replayButton: ButtonHandle
 -- Short windows (phones) use a compact layout: smaller headline, reward art and buttons.
 local compact = false
+local breakdownHeight = 254
 
 local shownRunId: string? = nil
 local actedRunId: string? = nil
@@ -302,6 +303,34 @@ local function renderStats(data: any)
 	end
 end
 
+-- Reward lines shrink (down to 28) so every line fits without scrolling where it can, phones included.
+local function lineHeight(count: number): number
+	local reserve = if compact then 40 else 56 -- the total under the list
+	local available = breakdownHeight - reserve - 12 - 4 * math.max(0, count - 1)
+	return math.clamp(math.floor(available / math.max(count, 1)), 28, 40)
+end
+
+local function sizeLine(row: Frame, height: number)
+	row.Size = UDim2.new(1, 0, 0, height)
+	local chip = row:FindFirstChild("Chip")
+	if chip and chip:IsA("Frame") then
+		chip.Size = UDim2.fromOffset(0, math.min(34, height - 2))
+	end
+end
+
+local function fitLines()
+	local rows = {}
+	for _, child in linesList:GetChildren() do
+		if child.Name == "Line" and child:IsA("Frame") then
+			table.insert(rows, child)
+		end
+	end
+	local height = lineHeight(#rows)
+	for _, row in rows do
+		sizeLine(row, height)
+	end
+end
+
 local function renderLines(data: any)
 	clear(linesList)
 	local plan = data.plan
@@ -320,12 +349,12 @@ local function renderLines(data: any)
 		})
 		return
 	end
+	local height = lineHeight(#(plan.lines or {}))
 	for index, line in plan.lines or {} do
 		local row = Create.new("Frame", {
 			Name = "Line",
 			BackgroundColor3 = C.panel,
 			BackgroundTransparency = if index % 2 == 0 then 0.55 else 0.3,
-			Size = UDim2.new(1, 0, 0, 40),
 			LayoutOrder = index,
 			Parent = linesList,
 		}, { Create.corner(Theme.Radius.small) })
@@ -349,6 +378,7 @@ local function renderLines(data: any)
 			chip.Position = UDim2.new(1, -6, 0.5, 0)
 			chip.Parent = row
 		end
+		sizeLine(row, height)
 		if not Motion.isReduced() then
 			row.BackgroundTransparency = 1
 			text.TextTransparency = 1
@@ -657,6 +687,11 @@ local function build()
 		rewardCard.Size = UDim2.fromOffset(330, middle)
 		breakdown.Position = UDim2.fromOffset(346, top)
 		breakdown.Size = UDim2.new(1, -346, 0, middle)
+		breakdownHeight = middle
+		linesList.Size = UDim2.new(1, -12, 1, if compact then -40 else -56)
+		totalLabel.Size = UDim2.new(1, -24, 0, if compact then 34 else 40)
+		totalLabel.Position = UDim2.new(1, -12, 1, if compact then -4 else -6)
+		fitLines()
 		savingRow.Position = UDim2.fromOffset(0, top + middle + 8)
 		buttonRow.Size = UDim2.new(1, 0, 0, buttonsHeight)
 		lobbyButton.instance.Size = UDim2.fromOffset(300, buttonsHeight - 8)

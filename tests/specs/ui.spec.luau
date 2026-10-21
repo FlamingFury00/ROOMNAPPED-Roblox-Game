@@ -562,6 +562,65 @@ return function(ctx)
 			assertClean(client)
 		end)
 
+		it("tells a first-time player to check in, the leader to pick, the squad to ready up, then confirms", function()
+			local client = boot(function(c)
+				c.snapshot.me.data.profile.tutorialDone = false
+				c.snapshot.global.data.lobby.mission = "M0"
+			end)
+			local Strings = client:shared("Config.Strings")
+			local function objective(): string
+				client.services.RunService.Heartbeat:Fire(0.2)
+				return client:find("ObjectiveColumn").TopRow.Objective.Text.Text
+			end
+			expect(objective()).toBe(Strings.t("objective.lobbyNew"))
+			client:patch("me", { "profile" }, profile())
+			task.wait(0.05)
+			expect(objective()).toBe(Strings.t("objective.lobby"))
+			-- A newcomer in a squad whose leader picked a later mission readies up like everyone else.
+			local fresh = profile()
+			fresh.tutorialDone = false
+			client:patch("me", { "profile" }, fresh)
+			client:patch("global", { "lobby" }, { mission = "M3", ready = 0, total = 2, leader = "2002" })
+			task.wait(0.05)
+			expect(objective()).toBe(Strings.t("objective.lobbyMember"))
+			local players = snapshot().global.data.players
+			players[ME].ready = true
+			client:patch("global", { "players" }, players)
+			task.wait(0.05)
+			expect(objective()).toBe(Strings.t("objective.lobbyReady"))
+			assertClean(client)
+		end)
+
+		it("tells someone who stayed behind which expedition is out, while it runs and while it wraps up", function()
+			local client = boot()
+			local Strings = client:shared("Config.Strings")
+			local function objective(): string
+				client.services.RunService.Heartbeat:Fire(0.2)
+				return client:find("ObjectiveColumn").TopRow.Objective.Text.Text
+			end
+			local name = Strings.t("mission.M1.name")
+			client:patch("global", { "roster" }, {
+				["2002"] = {
+					name = "Friend",
+					display = "Best Friend",
+					status = "Active",
+					hearts = 3,
+					max = 3,
+					order = 1,
+				},
+			})
+			client:patch("global", { "run" }, { phase = "Explore", id = "run-4", mission = "M1" })
+			task.wait(0.05)
+			expect(objective()).toBe(Strings.t("objective.lobbyWaitingOn", { name = name }))
+			client:patch("global", { "run" }, { phase = "Results", id = "run-4", mission = "M1" })
+			task.wait(0.05)
+			expect(objective()).toBe(Strings.t("objective.lobbyWrapUp", { name = name }))
+			client:patch("global", { "run" }, { phase = "Prep", phaseStartedAt = 1100 })
+			task.wait(0.05)
+			expect(objective()).toBe(Strings.t("objective.lobby"))
+			assertClean(client)
+		end)
+
 		it("keeps the chat window clear of the HUD: right edge with keys or a pad, Roblox's spot on touch", function()
 			local client = boot(function(c)
 				roblox.Instance.new("ChatWindowConfiguration").Parent = c.loaded.game:GetService("TextChatService")

@@ -29,8 +29,12 @@ local catalog: { [string]: string } = {
 
 	-- Phases & objectives (U02) ----------------------------------------------------------------------
 	["objective.lobby"] = "Pick a mission and press PLAY",
-	["objective.lobbyWaiting"] = "Run in progress - you'll join the next one",
-	["objective.lobbyWaitingOn"] = "{name} is underway - you'll join the next run",
+	["objective.lobbyNew"] = "Press PLAY to check in!",
+	["objective.lobbyMember"] = "Press PLAY when you're ready",
+	["objective.lobbyReady"] = "You're in - the elevator leaves soon!",
+	["objective.lobbyWaiting"] = "Run in progress - you can join the next one",
+	["objective.lobbyWaitingOn"] = "{name} is underway - you can join the next run",
+	["objective.lobbyWrapUp"] = "{name} is wrapping up - you can join the next run",
 	["objective.launching"] = "Going up...",
 	["objective.explore"] = "Find the {room} Room and steal it",
 	["objective.exploreTutorial"] = "Find the {room} Room down the hall",

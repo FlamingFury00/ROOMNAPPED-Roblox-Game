@@ -3,7 +3,7 @@
 	L2 "Frostbite Floor" (M2, frost wing, difficulty 2).
 
 	Route: elevator -> ice slide B1 into the launch gap G1 -> right through two luggage-cart tracks -> left
-	across the pond B2 -> right to the Freezer Room.
+	across the pond B2 and the planter gap G2 -> right to the Freezer Room.
 
 	Obstacles and their solutions:
 	  B1 pool (1 tile, deep)  Freezer at S1 freezes it | ledge on the left
@@ -12,6 +12,8 @@
 	  CT1 carts               Fan at S3 blowing Across pins the cart | Freezer at S3 slows it | timing
 	  CT2 carts (faster)      Freezer at S3 slows it too | timing
 	  B2 pond (2 tiles)       Freezer at S4 | ledge on the left
+	  G2 planter gap          Greenhouse at S5 grows vine V1, which drinks from the pond - so only while B2 is not
+	                          frozen (a later prize; never required) | beam on the right
 	Keys: K1 on the landing, K2 past the pond, K3 in the Lost & Found alcove (lever LV1 around the corner).
 ]]
 local LayoutTypes = require(script.Parent.Parent.Parent.World.LayoutTypes)
@@ -41,9 +43,12 @@ local layout: LayoutTypes.LayoutDef = {
 		{
 			kind = "Hall",
 			len = 1,
+			sockets = { [1] = { L = "S5" } },
 			alcoves = { { id = "A1", at = 1, side = "R", gate = "GT1", key = "K3" } },
 			keys = { { id = "K2", at = 1, lateral = -4.5, along = -3 } },
 		},
+		{ kind = "Gap", id = "G2", len = 1, vine = "V1", waterFrom = "B2", beam = "R" },
+		{ kind = "Hall", len = 1 },
 		{ kind = "Turn", dir = "R" },
 		{ kind = "Hall", len = 2, levers = { { id = "LV1", at = 1, side = "L" } } },
 		{ kind = "Target", room = "Freezer" },
@@ -53,11 +58,12 @@ local layout: LayoutTypes.LayoutDef = {
 		S2 = { wind = { "Forward", "Backward" } },
 		S3 = { wind = { "Across" }, cold = { "CT1", "CT2" } },
 		S4 = { cold = { "B2" } },
+		S5 = { vine = "V1" },
 	},
 	gates = {
 		GT1 = { signals = { "lever:LV1" } },
 	},
-	caretaker = { patrolFrom = 8, patrolTo = 20, spawn = 14 },
+	caretaker = { patrolFrom = 8, patrolTo = 22, spawn = 14 },
 	solutions = {
 		{
 			name = "starter: ice launch, pin the cart, freeze the pond",
@@ -74,8 +80,10 @@ local layout: LayoutTypes.LayoutDef = {
 				{ recall = "Freezer" },
 				{ deploy = "S4", room = "Freezer" },
 				{ cross = "B2", by = "ice" },
+				{ cross = "G2", by = "beam" },
 				{ pull = "LV1" },
 				{ capture = true },
+				{ cross = "G2", by = "beam" },
 				{ cross = "B2", by = "ice" },
 				{ cross = "CT2", by = "timing" },
 				{ cross = "CT1", by = "pin" },
@@ -96,8 +104,10 @@ local layout: LayoutTypes.LayoutDef = {
 				{ cross = "CT1", by = "slow" },
 				{ cross = "CT2", by = "slow" },
 				{ cross = "B2", by = "ledge" },
+				{ cross = "G2", by = "beam" },
 				{ pull = "LV1" },
 				{ capture = true },
+				{ cross = "G2", by = "beam" },
 				{ cross = "B2", by = "ledge" },
 				{ cross = "CT2", by = "slow" },
 				{ cross = "CT1", by = "slow" },
@@ -106,6 +116,33 @@ local layout: LayoutTypes.LayoutDef = {
 				{ escape = true },
 			},
 			combos = { "cart_freeze" },
+			keys = { "K1", "K2", "K3" },
+		},
+		{
+			name = "gardener: leave the pond liquid so it waters a vine bridge",
+			loadout = { "Freezer", "Greenhouse" },
+			steps = {
+				{ deploy = "S1", room = "Freezer" },
+				{ cross = "B1", by = "ice" },
+				{ cross = "G1", by = "beam" },
+				{ recall = "Freezer" },
+				{ deploy = "S3", room = "Freezer" },
+				{ cross = "CT1", by = "slow" },
+				{ cross = "CT2", by = "slow" },
+				{ cross = "B2", by = "ledge" },
+				{ deploy = "S5", room = "Greenhouse" },
+				{ cross = "G2", by = "vine" },
+				{ pull = "LV1" },
+				{ capture = true },
+				{ cross = "G2", by = "vine" },
+				{ cross = "B2", by = "ledge" },
+				{ cross = "CT2", by = "slow" },
+				{ cross = "CT1", by = "slow" },
+				{ cross = "G1", by = "beam" },
+				{ cross = "B1", by = "ledge" },
+				{ escape = true },
+			},
+			combos = { "ice_bridge", "cart_freeze", "vine_bridge" },
 			keys = { "K1", "K2", "K3" },
 		},
 	},

@@ -273,14 +273,34 @@ function Objective.create(parent: Instance): Handle
 			return "objective.results", "trophy", nil
 		end
 		if not RunInfo.isParticipant() then
-			local me = ClientState.get("global", "players." .. RunInfo.myKey())
-			if RunInfo.inRunPhase() and type(me) == "table" and me.waiting then
-				-- Say which expedition is out, so a friend who joined mid-run knows what they are waiting for.
+			-- Anyone outside the run that is playing out (a friend who joined mid-run, someone who stayed behind
+			-- or left it) joins the next one: say which expedition is out, so they know what they are waiting for.
+			if RunInfo.inRunPhase() or phase == "Results" then
 				local mission = MissionDefs.byId[tostring(RunInfo.run().mission)]
 				if mission then
-					return "objective.lobbyWaitingOn", "clock", { name = Strings.t(mission.nameKey) }
+					return if phase == "Results" then "objective.lobbyWrapUp" else "objective.lobbyWaitingOn",
+						"clock",
+						{ name = Strings.t(mission.nameKey) }
 				end
 				return "objective.lobbyWaiting", "clock", nil
+			end
+			local me = ClientState.get("global", "players." .. RunInfo.myKey())
+			-- A first visit has one mission to pick: say just that. Only the leader picks; the squad readies up.
+			local lobby = ClientState.get("global", "lobby")
+			local profile = ClientState.get("me", "profile")
+			if type(lobby) ~= "table" then
+				return "objective.lobby", "door", nil
+			end
+			if type(me) == "table" and me.ready == true then
+				return "objective.lobbyReady", "check", nil
+			elseif
+				lobby.mission == MissionDefs.tutorialId
+				and type(profile) == "table"
+				and profile.tutorialDone == false
+			then
+				return "objective.lobbyNew", "door", nil
+			elseif type(lobby.leader) == "string" and lobby.leader ~= RunInfo.myKey() then
+				return "objective.lobbyMember", "door", nil
 			end
 			return "objective.lobby", "door", nil
 		end
