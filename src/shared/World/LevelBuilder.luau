@@ -1367,6 +1367,20 @@ local function buildPitModule(ctx: Ctx, moduleIndex: number, mod: ModuleDef)
 		theme,
 		ctx.rng
 	)
+	-- Traffic cones mark both edges, tucked against the pit's sides so they never block a jump (only where
+	-- the neighbouring module has ordinary floor to stand them on).
+	for _, spec in { { a = la - 0.9, neighbour = moduleIndex - 1 }, { a = lb + 0.9, neighbour = moduleIndex + 1 } } do
+		local next = ctx.layout.modules[spec.neighbour]
+		if next and next.kind ~= "Gap" and next.kind ~= "Basin" then
+			for _, side in { -1, 1 } do
+				local x = pitMid + side * (pitWidth / 2 - 0.7)
+				Props.trafficCone(
+					ctx.decor,
+					CFrame.new(tpt(cf, x, 0, spec.a)) * CFrame.Angles(0, side * 0.7 + spec.a, 0)
+				)
+			end
+		end
+	end
 
 	-- Bypass ledge with a rope railing (safe but slow - S10).
 	if mod.ledge then
