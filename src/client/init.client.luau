@@ -33,6 +33,7 @@ local AudioController = require(Controllers.AudioController)
 local InputController = require(Controllers.InputController)
 local UIRoot = require(UI.UIRoot)
 local Toasts = require(UI.Toasts)
+local Vfx = require(script.Visual.Vfx)
 
 local function safeStart(name: string, fn: () -> ())
 	local ok: boolean, err: any = xpcall(fn :: any, function(message: any): string
@@ -51,6 +52,8 @@ safeStart("Audio", AudioController.start)
 safeStart("Input", InputController.start)
 UIRoot.setBlockHook(InputController.setBlocked)
 safeStart("Toasts", Toasts.start)
+-- Particle images load in the background; any that fail fall back to the engine's own.
+task.spawn(Vfx.preload)
 
 -- Core GUI: hearts replace the health bar; there are no tools; the squad panel and team cards replace the
 -- player list (which would open over the menu bar in the top-right corner); reset means "unstuck me".

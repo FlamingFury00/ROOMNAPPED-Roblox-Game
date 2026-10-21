@@ -342,6 +342,7 @@ local function basinTransition(vis: BasinVis, snap: any, silent: boolean)
 			Vfx.flash(centre + Vector3.new(0, 2, 0), ICE, 3, 22, 0.5)
 		elseif phase == "Thawing" then
 			AudioController.at("ice_crack", centre, { volume = 0.8 })
+			Vfx.burst(centre + Vector3.new(0, 0.8, 0), "shards", 16)
 		elseif phase == "Melting" then
 			AudioController.at("ice_melt", centre, { volume = 0.7 })
 		end

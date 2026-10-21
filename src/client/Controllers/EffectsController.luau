@@ -113,6 +113,7 @@ HANDLERS.revived = function(p: any)
 	if position then
 		AudioController.at("player_revive", position, { volume = 1 })
 		Vfx.burst(position, "magic", 26)
+		Vfx.burst(position + Vector3.new(0, 1.5, 0), "hearts", 12)
 		Vfx.ring(position - Vector3.new(0, 2.6, 0), Theme.Colors.green, 7, 0.6)
 	end
 	if not isMe(p.userId) then
@@ -213,6 +214,7 @@ HANDLERS.cargoBanked = function(p: any)
 	AudioController.play("cargo_bank", { volume = 1 })
 	if position then
 		Vfx.burst(position + Vector3.new(0, 2, 0), "confetti", 70)
+		Vfx.burst(position + Vector3.new(0, 1, 0), "coins", 24)
 		Vfx.flash(position, Theme.Colors.gold, 5, 30, 0.6)
 	end
 end

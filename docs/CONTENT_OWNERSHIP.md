@@ -160,6 +160,31 @@ retries with the Roblox-made fallbacks, then with plain body colours.
 Animations are Roblox's own R15 packs (Elder, Werewolf, SitV2, R15 emotes; ids in
 `src/client/Visual/CaretakerHuman.luau`), which play in every experience.
 
+## Particle images
+
+Free Creator Store images (verified like the textures above) used by `src/client/Visual/Vfx.luau`. Each
+has an engine-bundled fallback (next section) that replaces it if it fails to load on a client.
+
+| Use | Image id | Name (creator) |
+| --- | --- | --- |
+| smoke, steam, mist | 716847870 | Particle - Fire/Smoke [white] (Mertna) |
+| cartoon smoke flipbook (poofs, dust) | 11632052078 | Cartoony smoke [Flipbook Particle] (kirbyzaz) |
+| flame flipbook (fires) | 12360893247 | Constant flame [Flipbook Particle] (kirbyzaz) |
+| embers | 133927008003451 | white dot w orange glow (MarkPater12) |
+| sparks | 11469784323 | Spark Particle/Velocity Parallel (BugabooV) |
+| water droplets | 113689065664958 | water droplet particle (daye_dreamer) |
+| snowflakes (frost) | 137831468 | snowflake (Planet3arth) |
+| stars (magic, dizzy stars) | 81834701835654 | star particle (fixed) (ShazTheAmazingest) |
+| soft glow | 12820082481 | Soft Glow (GunsForGuns34) |
+| leaves | 14873729766 | Leaf particles (Leahgamer555) |
+| wind streaks | 125456829699116 | wind particle (smartmartawastaken) |
+| lightning (zaps) | 7151778302 | lightning beam 3 (Ninja215215) |
+| soap bubbles | 131012657102345 | soap bubbles particles (muffinCat1625) |
+| hearts (revive) | 264486777 | Heart particles (Starkatti) |
+| coins (banking) | 87971732430791 | coins (WILLIAM_GIBSON2015) |
+| capture vortex | 17386861497 | spiral particle (Magichord) |
+| ice shards | 124108901053016 | ice crystals (UrlocalT800 friend group) |
+
 ## Bundled client textures
 
 Referenced by path (the files ship inside every Roblox client and are verified present in the

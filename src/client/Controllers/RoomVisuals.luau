@@ -189,6 +189,12 @@ local function setupLife(record: RoomRecord)
 				"splash",
 				{ Rate = 6, Speed = NumberRange.new(6, 10), EmissionDirection = Enum.NormalId.Front }
 			)
+			-- Soap bubbles drifting out into the hall.
+			Vfx.emitter(outletPart, "bubbles", {
+				Rate = 4,
+				EmissionDirection = Enum.NormalId.Front,
+				Speed = NumberRange.new(2, 4),
+			})
 		end
 		local loop = AudioController.loop("water_loop", { parent = outletPart or model.PrimaryPart, rolloffMax = 70 })
 		if loop then
@@ -432,14 +438,14 @@ local function onCapture(position: Vector3?)
 	swirl.CFrame = if pivot then (pivot :: CFrame) * CFrame.new(0, 5, -1) else CFrame.new(centre)
 	swirl.Parent = Workspace
 	Vfx.emitter(swirl, "magic", { Rate = 60, Speed = NumberRange.new(2, 6) })
-	local vortex = Vfx.emitter(swirl, "zap", {
-		Texture = Vfx.Textures.vortex,
-		Rate = 10,
-		Size = Vfx.seq(4, 9),
-		Lifetime = NumberRange.new(0.4, 0.7),
-		Color = ColorSequence.new(Color3.fromRGB(255, 220, 120)),
+	-- A spiral vortex sucking the room into the doorway, with lightning flickering through it.
+	Vfx.emitter(swirl, "swirl", { Rate = 16, Size = Vfx.seq(5, 10, 1) })
+	Vfx.emitter(swirl, "zap", {
+		Rate = 6,
+		Size = Vfx.seq(3, 5),
+		Lifetime = NumberRange.new(0.12, 0.22),
+		Color = ColorSequence.new(Color3.fromRGB(255, 236, 170)),
 	})
-	local _ = vortex
 	task.delay(GameConfig.Capture.FoldCinematicSeconds, function()
 		swirl:Destroy()
 	end)

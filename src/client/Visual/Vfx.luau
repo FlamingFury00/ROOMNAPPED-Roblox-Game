@@ -1,8 +1,11 @@
 --!strict
 --[[
-	Vfx: particle presets and one-shot effects built only from engine-bundled textures
-	(content/textures/particles/* and content/textures/*.png ship inside every Roblox client, so they always
-	load, cost no upload and need no moderation).
+	Vfx: particle presets and one-shot effects.
+
+	Presets draw on curated free Creator Store particle images (flipbook flames and cartoon smoke,
+	snowflakes, sparks, leaves, wind streaks ...; docs/CONTENT_OWNERSHIP.md). Each has an engine-bundled
+	fallback (content/textures/particles/*, shipped inside every client): Vfx.preload checks the curated
+	images at startup and any that fail to load are swapped for their fallbacks in every later emitter.
 
 	* Vfx.emitter(parent, preset, overrides?) - a configured, continuously emitting ParticleEmitter.
 	* Vfx.burst(position, preset, count, overrides?) - fire-and-forget burst at a world position.
@@ -14,6 +17,7 @@
 	switching the mode rescales the ones already in the world.
 ]]
 
+local ContentProvider = game:GetService("ContentProvider")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -39,6 +43,38 @@ Vfx.Textures = {
 	softGlow = "rbxasset://textures/glow.png",
 	circle = "rbxasset://textures/whiteCircle.png",
 }
+
+export type Curated = {
+	id: string,
+	fallback: string,
+	flipbook: Enum.ParticleFlipbookLayout?,
+	failed: boolean,
+}
+
+local function curated(id: number, fallback: string, flipbook: Enum.ParticleFlipbookLayout?): Curated
+	return { id = "rbxassetid://" .. tostring(id), fallback = fallback, flipbook = flipbook, failed = false }
+end
+
+-- Image asset ids (A10), each with the engine texture used if it cannot load.
+Vfx.Curated = {
+	smokePuff = curated(716847870, Vfx.Textures.smoke),
+	cartoonSmoke = curated(11632052078, Vfx.Textures.puff, Enum.ParticleFlipbookLayout.Grid8x8),
+	flame = curated(12360893247, Vfx.Textures.fire, Enum.ParticleFlipbookLayout.Grid4x4),
+	ember = curated(133927008003451, Vfx.Textures.fireSparks),
+	spark = curated(11469784323, Vfx.Textures.fireSparks),
+	droplet = curated(113689065664958, Vfx.Textures.sparkles),
+	snowflake = curated(137831468, Vfx.Textures.star),
+	star = curated(81834701835654, Vfx.Textures.star),
+	glow = curated(12820082481, Vfx.Textures.glow),
+	leaf = curated(14873729766, Vfx.Textures.square),
+	windStreak = curated(125456829699116, Vfx.Textures.square),
+	bolt = curated(7151778302, Vfx.Textures.vortex),
+	bubble = curated(131012657102345, Vfx.Textures.circle),
+	heart = curated(264486777, Vfx.Textures.star),
+	coin = curated(87971732430791, Vfx.Textures.star),
+	swirl = curated(17386861497, Vfx.Textures.vortex),
+	shard = curated(124108901053016, Vfx.Textures.star),
+} :: { [string]: Curated }
 
 local lowEffects = false
 -- Continuous emitters and their full-density rate (weak: destroyed emitters drop out).
@@ -102,7 +138,10 @@ type Preset = { [string]: any }
 
 local PRESETS: { [string]: Preset } = {
 	fire = {
-		Texture = Vfx.Textures.fire,
+		Curated = "flame",
+		FlipbookMode = Enum.ParticleFlipbookMode.Loop,
+		FlipbookFramerate = NumberRange.new(16, 24),
+		FlipbookStartRandom = true,
 		Color = colors(Color3.fromRGB(255, 236, 140), Color3.fromRGB(255, 140, 40), Color3.fromRGB(200, 50, 20)),
 		LightEmission = 1,
 		LightInfluence = 0,
@@ -113,12 +152,12 @@ local PRESETS: { [string]: Preset } = {
 		Speed = NumberRange.new(4, 8),
 		SpreadAngle = Vector2.new(12, 12),
 		Acceleration = Vector3.new(0, 6, 0),
-		Rotation = NumberRange.new(0, 360),
-		RotSpeed = NumberRange.new(-60, 60),
+		Rotation = NumberRange.new(-10, 10),
+		RotSpeed = NumberRange.new(-12, 12),
 		ZOffset = 0.5,
 	},
 	embers = {
-		Texture = Vfx.Textures.fireSparks,
+		Curated = "ember",
 		Color = colors(Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 110, 40)),
 		LightEmission = 1,
 		LightInfluence = 0,
@@ -131,7 +170,7 @@ local PRESETS: { [string]: Preset } = {
 		Acceleration = Vector3.new(0, 4, 0),
 	},
 	smoke = {
-		Texture = Vfx.Textures.smoke,
+		Curated = "smokePuff",
 		Color = colors(Color3.fromRGB(90, 80, 76), Color3.fromRGB(40, 36, 34)),
 		LightInfluence = 0.6,
 		Size = seq(2, 5, 7),
@@ -145,7 +184,7 @@ local PRESETS: { [string]: Preset } = {
 		RotSpeed = NumberRange.new(-25, 25),
 	},
 	steam = {
-		Texture = Vfx.Textures.smoke,
+		Curated = "smokePuff",
 		Color = colors(Color3.fromRGB(240, 246, 250)),
 		LightInfluence = 0.4,
 		Size = seq(1.5, 5, 8),
@@ -158,7 +197,7 @@ local PRESETS: { [string]: Preset } = {
 		RotSpeed = NumberRange.new(-40, 40),
 	},
 	splash = {
-		Texture = Vfx.Textures.sparkles,
+		Curated = "droplet",
 		Color = colors(Color3.fromRGB(220, 245, 255), Color3.fromRGB(120, 200, 255)),
 		LightEmission = 0.4,
 		Size = seq(0.6, 0.4, 0),
@@ -170,7 +209,7 @@ local PRESETS: { [string]: Preset } = {
 		EmissionDirection = Enum.NormalId.Top,
 	},
 	mist = {
-		Texture = Vfx.Textures.smoke,
+		Curated = "smokePuff",
 		Color = colors(Color3.fromRGB(210, 240, 255)),
 		LightInfluence = 0.3,
 		LightEmission = 0.2,
@@ -185,7 +224,7 @@ local PRESETS: { [string]: Preset } = {
 		RotSpeed = NumberRange.new(-20, 20),
 	},
 	frost = {
-		Texture = Vfx.Textures.star,
+		Curated = "snowflake",
 		Color = colors(Color3.fromRGB(230, 250, 255), Color3.fromRGB(150, 220, 255)),
 		LightEmission = 0.8,
 		LightInfluence = 0,
@@ -199,7 +238,8 @@ local PRESETS: { [string]: Preset } = {
 		RotSpeed = NumberRange.new(-90, 90),
 	},
 	sparks = {
-		Texture = Vfx.Textures.fireSparks,
+		Curated = "spark",
+		Orientation = Enum.ParticleOrientation.VelocityParallel,
 		Color = colors(Color3.fromRGB(255, 255, 255), Color3.fromRGB(140, 210, 255)),
 		LightEmission = 1,
 		LightInfluence = 0,
@@ -211,7 +251,7 @@ local PRESETS: { [string]: Preset } = {
 		Acceleration = Vector3.new(0, -30, 0),
 	},
 	zap = {
-		Texture = Vfx.Textures.vortex,
+		Curated = "bolt",
 		Color = colors(Color3.fromRGB(170, 230, 255), Color3.fromRGB(90, 160, 255)),
 		LightEmission = 1,
 		LightInfluence = 0,
@@ -223,8 +263,8 @@ local PRESETS: { [string]: Preset } = {
 		Rotation = NumberRange.new(0, 360),
 	},
 	leaves = {
-		Texture = Vfx.Textures.square,
-		Color = colors(Color3.fromRGB(120, 210, 90), Color3.fromRGB(60, 150, 60)),
+		Curated = "leaf",
+		Color = colors(Color3.fromRGB(235, 255, 225), Color3.fromRGB(190, 235, 170)),
 		LightInfluence = 0.8,
 		Size = seq(0.35, 0.3),
 		Transparency = seq(0, 0, 1),
@@ -257,7 +297,8 @@ local PRESETS: { [string]: Preset } = {
 		EmissionDirection = Enum.NormalId.Top,
 	},
 	dust = {
-		Texture = Vfx.Textures.smoke,
+		Curated = "cartoonSmoke",
+		FlipbookMode = Enum.ParticleFlipbookMode.OneShot,
 		Color = colors(Color3.fromRGB(200, 180, 150)),
 		LightInfluence = 0.8,
 		Size = seq(1, 3, 4),
@@ -270,7 +311,7 @@ local PRESETS: { [string]: Preset } = {
 		Rotation = NumberRange.new(0, 360),
 	},
 	magic = {
-		Texture = Vfx.Textures.star,
+		Curated = "star",
 		Color = colors(Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 200, 70)),
 		LightEmission = 1,
 		LightInfluence = 0,
@@ -284,7 +325,8 @@ local PRESETS: { [string]: Preset } = {
 		RotSpeed = NumberRange.new(-180, 180),
 	},
 	poof = {
-		Texture = Vfx.Textures.puff,
+		Curated = "cartoonSmoke",
+		FlipbookMode = Enum.ParticleFlipbookMode.OneShot,
 		Color = colors(Color3.fromRGB(255, 255, 255), Color3.fromRGB(230, 220, 240)),
 		LightInfluence = 0.5,
 		LightEmission = 0.2,
@@ -298,12 +340,13 @@ local PRESETS: { [string]: Preset } = {
 		RotSpeed = NumberRange.new(-60, 60),
 	},
 	wind = {
-		Texture = Vfx.Textures.square,
+		-- A soft horizontal streak, turned a quarter so it lies along the velocity.
+		Curated = "windStreak",
+		Rotation = NumberRange.new(90, 90),
 		Color = colors(Color3.fromRGB(235, 250, 255)),
 		LightEmission = 0.6,
 		LightInfluence = 0,
-		Size = seq(0.08, 0.12, 0.05),
-		Squash = seq(-2.6),
+		Size = seq(0.9, 1.6, 0.8),
 		Transparency = seq(1, 0.55, 0.55, 1),
 		Lifetime = NumberRange.new(0.5, 0.9),
 		Rate = 26,
@@ -313,7 +356,7 @@ local PRESETS: { [string]: Preset } = {
 		LockedToPart = false,
 	},
 	glowOrb = {
-		Texture = Vfx.Textures.glow,
+		Curated = "glow",
 		Color = colors(Color3.fromRGB(255, 220, 120)),
 		LightEmission = 1,
 		LightInfluence = 0,
@@ -324,6 +367,78 @@ local PRESETS: { [string]: Preset } = {
 		Speed = NumberRange.new(0, 0),
 		LockedToPart = true,
 	},
+	bubbles = {
+		Curated = "bubble",
+		Color = colors(Color3.fromRGB(255, 255, 255)),
+		LightEmission = 0.3,
+		LightInfluence = 0.4,
+		Size = seq(0.4, 0.8, 0.9),
+		Transparency = seq(0.1, 0.2, 1),
+		Lifetime = NumberRange.new(1.6, 3),
+		Rate = 5,
+		Speed = NumberRange.new(1, 3),
+		SpreadAngle = Vector2.new(50, 50),
+		Acceleration = Vector3.new(0, 1.2, 0),
+		Drag = 0.6,
+	},
+	hearts = {
+		Curated = "heart",
+		Color = colors(Color3.fromRGB(255, 255, 255)),
+		LightEmission = 0.6,
+		LightInfluence = 0,
+		Size = seq(0.6, 1.1, 0),
+		Transparency = seq(0, 0.1, 1),
+		Lifetime = NumberRange.new(0.8, 1.4),
+		Speed = NumberRange.new(4, 9),
+		SpreadAngle = Vector2.new(60, 60),
+		Acceleration = Vector3.new(0, 3, 0),
+		Drag = 2,
+		Rotation = NumberRange.new(-20, 20),
+		EmissionDirection = Enum.NormalId.Top,
+	},
+	coins = {
+		Curated = "coin",
+		Color = colors(Color3.fromRGB(255, 255, 255)),
+		LightEmission = 0.4,
+		LightInfluence = 0,
+		Size = seq(0.9, 0.9, 0),
+		Transparency = seq(0, 0, 1),
+		Lifetime = NumberRange.new(1, 1.6),
+		Speed = NumberRange.new(12, 22),
+		SpreadAngle = Vector2.new(45, 45),
+		Acceleration = Vector3.new(0, -40, 0),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-240, 240),
+		EmissionDirection = Enum.NormalId.Top,
+	},
+	swirl = {
+		Curated = "swirl",
+		Color = colors(Color3.fromRGB(255, 236, 160), Color3.fromRGB(190, 140, 255)),
+		LightEmission = 1,
+		LightInfluence = 0,
+		Size = seq(3, 6, 1),
+		Transparency = seq(0.4, 0.2, 1),
+		Lifetime = NumberRange.new(0.6, 1),
+		Rate = 14,
+		Speed = NumberRange.new(0, 1),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-420, -260),
+		LockedToPart = true,
+	},
+	shards = {
+		Curated = "shard",
+		Color = colors(Color3.fromRGB(235, 250, 255)),
+		LightEmission = 0.5,
+		LightInfluence = 0.3,
+		Size = seq(0.8, 0.6, 0),
+		Transparency = seq(0, 0.1, 1),
+		Lifetime = NumberRange.new(0.6, 1.1),
+		Speed = NumberRange.new(10, 18),
+		SpreadAngle = Vector2.new(180, 180),
+		Acceleration = Vector3.new(0, -40, 0),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-300, 300),
+	},
 }
 
 -- Create a configured emitter. `Rate` is scaled by the Low Effects setting at creation time.
@@ -332,7 +447,27 @@ function Vfx.emitter(parent: Instance, preset: string, overrides: { [string]: an
 	emitter.Name = "Vfx_" .. preset
 	local config = PRESETS[preset] or PRESETS.magic
 	for key, value in config do
-		(emitter :: any)[key] = value
+		if key == "Curated" then
+			local image = Vfx.Curated[value]
+			if image and not image.failed then
+				emitter.Texture = image.id
+				if image.flipbook then
+					emitter.FlipbookLayout = image.flipbook
+				end
+			elseif image then
+				emitter.Texture = image.fallback
+			end
+		elseif string.sub(key, 1, 8) ~= "Flipbook" then
+			(emitter :: any)[key] = value
+		end
+	end
+	-- Flipbook timing only means something on a flipbook texture.
+	if emitter.FlipbookLayout ~= Enum.ParticleFlipbookLayout.None then
+		for key, value in config do
+			if string.sub(key, 1, 8) == "Flipbook" then
+				(emitter :: any)[key] = value
+			end
+		end
 	end
 	if overrides then
 		for key, value in overrides do
@@ -347,6 +482,24 @@ function Vfx.emitter(parent: Instance, preset: string, overrides: { [string]: an
 	end
 	emitter.Parent = parent
 	return emitter
+end
+
+-- Check the curated images once (client start); any that cannot load fall back to engine textures from then on.
+function Vfx.preload()
+	local ids: { string } = {}
+	local byId: { [string]: Curated } = {}
+	for _, image in Vfx.Curated do
+		table.insert(ids, image.id)
+		byId[image.id] = image
+	end
+	pcall(function()
+		ContentProvider:PreloadAsync(ids, function(contentId: string, status: Enum.AssetFetchStatus)
+			local image = byId[contentId]
+			if image and status ~= Enum.AssetFetchStatus.Success then
+				image.failed = true
+			end
+		end)
+	end)
 end
 
 -- Fire-and-forget burst at a world position.
