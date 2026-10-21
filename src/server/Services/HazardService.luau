@@ -22,7 +22,6 @@ local GameConfig = require(Shared.Config.GameConfig)
 local CartTimeline = require(Shared.Logic.CartTimeline)
 local MathUtil = require(Shared.Util.MathUtil)
 local Engine = require(Shared.Util.Engine)
-local Net = require(Shared.Net.Net)
 local Registry = require(script.Parent.Parent.Core.Registry)
 local StateServer = require(script.Parent.Parent.Core.StateServer)
 local RunTypes = require(script.Parent.Parent.Core.RunTypes)
@@ -199,7 +198,7 @@ local function stepCrates(run: Run, dt: number)
 					state.velocity = 0
 					state.part.CFrame = state.runtime.slotCF
 					state.part:SetAttribute("Slotted", true)
-					Net.fireAll("Effect", "crateSlot", { crate = state.id })
+					Registry.get("Expedition").fireRun("crateSlot", { crate = state.id })
 					Registry.get("Effects").combo(run, "crate_bridge")
 					Registry.get("Caretaker").noise(run, state.part.CFrame.Position, GameConfig.Noise.CrateImpact)
 					global:Set({ "crates", state.id }, { slotted = true })
@@ -208,7 +207,7 @@ local function stepCrates(run: Run, dt: number)
 					state.offset = nextOffset
 					state.part.CFrame = crateCFrame(state)
 					if hitEnd and math.abs(state.velocity) > 4 then
-						Net.fireAll("Effect", "crateImpact", { crate = state.id })
+						Registry.get("Expedition").fireRun("crateImpact", { crate = state.id })
 						Registry.get("Caretaker").noise(run, state.part.CFrame.Position, GameConfig.Noise.CrateImpact)
 					end
 					if hitEnd then
@@ -314,7 +313,8 @@ local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: bool
 	if pit and position.Y < pitTop - H.FallDepth and not onLedge(run, position) then
 		s.falling[entry.userId] = now + GameConfig.Health.FallRespawnDelaySeconds + 0.4
 		local water = pit.zone ~= nil and run.effect:basinWet(pit.zone)
-		Net.fireAll("Effect", if water then "splash" else "fall", { userId = entry.key, position = position })
+		Registry.get("Expedition")
+			.fireRun(if water then "splash" else "fall", { userId = entry.key, position = position })
 		Registry.get("Caretaker").noise(run, position, GameConfig.Noise.Splash)
 		if status == "Active" then
 			Health.damage(run, entry, H.FallDamage, if water then "water" else "fall", nil)
@@ -432,7 +432,7 @@ local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: bool
 				s.keyTaken[keyId] = true
 				run.stats.keys[keyId] = entry.userId
 				global:Set({ "keys", keyId }, entry.key)
-				Net.fireAll("Effect", "key", { key = keyId, userId = entry.key })
+				Registry.get("Expedition").fireRun("key", { key = keyId, userId = entry.key })
 				Registry.get("Telemetry").keyCollected(run, entry, keyId)
 			end
 		end

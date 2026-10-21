@@ -267,6 +267,10 @@ function Objective.create(parent: Instance): Handle
 	local function objectiveFor(): (string, string, { [string]: any }?)
 		local phase = RunInfo.phase()
 		local status = RunInfo.myStatus()
+		-- Results is not a run phase (isParticipant is false there), but the squad still reads its wrap-up line.
+		if phase == "Results" and RunInfo.inThisRun() then
+			return "objective.results", "trophy", nil
+		end
 		if not RunInfo.isParticipant() then
 			local me = ClientState.get("global", "players." .. RunInfo.myKey())
 			if RunInfo.inRunPhase() and type(me) == "table" and me.waiting then
@@ -299,8 +303,6 @@ function Objective.create(parent: Instance): Handle
 				return "objective.escapeCarry", "suitcase", nil
 			end
 			return "objective.escape", "arrowUp", nil
-		elseif phase == "Results" then
-			return "objective.results", "trophy", nil
 		end
 		return "objective.lobby", "door", nil
 	end

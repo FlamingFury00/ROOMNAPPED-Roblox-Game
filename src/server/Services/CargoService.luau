@@ -233,10 +233,12 @@ function CargoService.drop(run: Run, entry: RosterEntry, reason: string)
 	s.carrier = nil
 	s.since = os.clock()
 	setCarryAttribute(entry, false)
+	-- The hand is free again: show the selected room's suitcase if one is still out.
+	Registry.get("Rooms").refreshHeld(entry.player)
 	placeDropped(run, dropAt)
 	publish(run)
 	Registry.get("Expedition").publishRosterEntry(run, entry)
-	Net.fireAll("Effect", "cargoDrop", { position = s.position, reason = reason })
+	Registry.get("Expedition").fireRun("cargoDrop", { position = s.position, reason = reason })
 end
 
 function CargoService.pickup(run: Run, entry: RosterEntry): boolean
@@ -257,7 +259,7 @@ function CargoService.pickup(run: Run, entry: RosterEntry): boolean
 	setCarryAttribute(entry, true)
 	publish(run)
 	Registry.get("Expedition").publishRosterEntry(run, entry)
-	Net.fireAll("Effect", "cargoPickup", { userId = entry.key })
+	Registry.get("Expedition").fireRun("cargoPickup", { userId = entry.key })
 	return true
 end
 
@@ -315,7 +317,7 @@ function CargoService.step(run: Run, _dt: number)
 					s.model = nil
 				end
 				publish(run)
-				Net.fireAll("Effect", "cargoBanked", { userId = entry.key })
+				Registry.get("Expedition").fireRun("cargoBanked", { userId = entry.key })
 				return
 			end
 		end
@@ -325,7 +327,7 @@ function CargoService.step(run: Run, _dt: number)
 			local fallback = run.runtime.target.capturePoint
 			placeDropped(run, fallback)
 			publish(run)
-			Net.fireAll("Effect", "cargoReturned", { position = s.position })
+			Registry.get("Expedition").fireRun("cargoReturned", { position = s.position })
 		end
 	end
 end

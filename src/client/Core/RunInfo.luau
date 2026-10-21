@@ -73,10 +73,18 @@ function RunInfo.myEntry(): any
 	return roster[myKey]
 end
 
--- True when the local player is part of the current expedition (and has not left it).
+-- True when the local player is part of the current expedition (and has not left it). A roster entry marked
+-- Disconnected belongs to an earlier session of this player (they dropped and rejoined): not a participant.
 function RunInfo.isParticipant(): boolean
 	local entry = roster[myKey]
-	return entry ~= nil and entry.status ~= "Left" and IN_RUN[phase] == true
+	return entry ~= nil and entry.status ~= "Left" and entry.status ~= "Disconnected" and IN_RUN[phase] == true
+end
+
+-- True while the local player belongs to the run that is playing out, including its Results phase (unlike
+-- isParticipant). False for lobby bystanders, players who left and earlier sessions of a rejoined player.
+function RunInfo.inThisRun(): boolean
+	local entry = roster[myKey]
+	return entry ~= nil and entry.status ~= "Left" and entry.status ~= "Disconnected" and phase ~= "Prep"
 end
 
 -- Local roster status: Active / Downed / Recovering / Eliminated / Left / Disconnected / None.
@@ -139,6 +147,9 @@ end
 local function refreshStatus()
 	local entry = roster[myKey]
 	local status = if entry and IN_RUN[phase] then entry.status or "Active" else "None"
+	if status == "Disconnected" then
+		status = "None"
+	end
 	if status ~= myStatus then
 		local previous = myStatus
 		myStatus = status
@@ -152,6 +163,15 @@ function RunInfo.start()
 		if p ~= phase then
 			local previous = phase
 			phase = p
+			-- A launch replicates phase, roster and level in one patch and this observer runs first: read the
+			-- others now so PhaseChanged listeners (cinematics, menus) see the run they belong to.
+			local currentRoster = ClientState.get("global", "roster")
+			roster = if type(currentRoster) == "table" then currentRoster else {}
+			local currentLevel = ClientState.get("global", "level")
+			if currentLevel ~= level then
+				level = currentLevel
+				RunInfo.LevelChanged:Fire(currentLevel)
+			end
 			RunInfo.PhaseChanged:Fire(p, previous)
 			refreshStatus()
 		end

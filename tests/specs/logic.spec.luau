@@ -221,7 +221,7 @@ return function(ctx)
 				loadout = { "Laundry", "Laundry", "Magnet" },
 			}
 			local migrated = ProfileSchema.migrate(old)
-			expect(migrated.schema).toBe(3)
+			expect(migrated.schema).toBe(ProfileSchema.CURRENT)
 			local template = ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
 			local clean = ProfileSchema.sanitize(migrated, template, content())
 			expect(clean.rooms.Laundry).toBe(true)
@@ -229,6 +229,16 @@ return function(ctx)
 			expect(clean.loadout[1]).toBe("Laundry")
 			expect(clean.loadout[2]).toBe("Freezer")
 			expect(#clean.loadout).toBe(2)
+		end)
+		it("migrates the v3 onboarding high-water mark to per-step bits", function()
+			local old = ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
+			old.schema = 3
+			old.flags.onboardingSteps = nil
+			(old.flags :: any).onboardingFunnel = 3
+			local migrated = ProfileSchema.migrate(old)
+			expect(migrated.schema).toBe(4)
+			expect(migrated.flags.onboardingSteps).toBe(7) -- steps 1, 2 and 3
+			expect(migrated.flags.onboardingFunnel).toBe(nil)
 		end)
 		it("refuses data written by a newer schema", function()
 			expect(ProfileSchema.migrate({ schema = 99 })).toBe(nil)

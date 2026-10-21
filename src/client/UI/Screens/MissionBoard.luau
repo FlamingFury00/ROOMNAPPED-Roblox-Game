@@ -71,6 +71,9 @@ local function isLeader(): boolean
 end
 
 local function isUnlocked(mission: MissionDef): boolean
+	if Common.missionDisabled(mission.id) then
+		return false
+	end
 	local preview = previews()[mission.id]
 	if type(preview) == "table" and preview.unlocked ~= nil then
 		return preview.unlocked == true
@@ -83,6 +86,9 @@ local function isUnlocked(mission: MissionDef): boolean
 end
 
 local function lockReason(mission: MissionDef): string
+	if Common.missionDisabled(mission.id) then
+		return Strings.t("mission.disabled")
+	end
 	local profile = Common.profile()
 	if mission.unlock.tutorial and not (profile and profile.tutorialDone) then
 		return Strings.t("mission.lockedTutorial")
@@ -324,7 +330,7 @@ local function buildTargetPicker(mission: MissionDef)
 	local row = Create.new("Frame", {
 		Name = "Skins",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 68),
+		Size = UDim2.new(1, 0, 0, 76),
 		LayoutOrder = 1,
 		Parent = targetPicker,
 	}, { Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center) })
@@ -333,10 +339,11 @@ local function buildTargetPicker(mission: MissionDef)
 		local isOwned = owned[skinId] == true
 		local text = Common.skinName(skinId) .. (if isOwned then "  ✓" else "")
 		local handle = Components.button({
+			name = "Target_" .. skinId,
 			text = text,
 			icon = if skin and skin.kind == "suitcase" then "suitcase" else "palette",
 			variant = if skinId == choice then "primary" else "secondary",
-			size = UDim2.fromOffset(300, 64),
+			size = UDim2.fromOffset(300, 72),
 			textSize = Theme.Text.body,
 			layoutOrder = index,
 			sound = "ui_toggle",
@@ -655,18 +662,23 @@ function MissionBoard.start()
 			return if card then card.button else nil
 		end,
 	})
+	-- Live updates rebuild cards and reward buttons; a gamepad selection follows the item it was on.
 	local function live()
 		if UIRoot.isOpen("MissionBoard") then
-			paintCards()
-			refreshDetails()
+			Common.keepSelection(window.frame, function()
+				paintCards()
+				refreshDetails()
+			end)
 		end
 	end
 	ClientState.observe("global", "lobby", live)
 	ClientState.observe("me", "missions", live)
 	ClientState.observe("me", "profile", function()
 		if UIRoot.isOpen("MissionBoard") then
-			rebuildList()
-			refreshDetails()
+			Common.keepSelection(window.frame, function()
+				rebuildList()
+				refreshDetails()
+			end)
 		end
 	end)
 	RunInfo.PhaseChanged:Connect(function()

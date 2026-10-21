@@ -141,7 +141,15 @@ function LightingController.setMuted(value: boolean)
 	end
 	muted = value
 	if currentMood then
-		tween(grade, 0.6, { Saturation = if muted then -0.75 else (currentMood :: Mood).saturation })
+		-- Tween the whole grade: a tween touching only Saturation would cancel a mood tween still in flight
+		-- (TweenService cancels the older tween), leaving the previous wing's tint behind.
+		local mood = currentMood :: Mood
+		tween(grade, 0.6, {
+			TintColor = mood.tint,
+			Saturation = if muted then -0.75 else mood.saturation,
+			Contrast = mood.contrast,
+			Brightness = mood.brightness,
+		})
 	end
 end
 
@@ -169,11 +177,17 @@ function LightingController.start()
 	RunInfo.LevelChanged:Connect(function()
 		refresh(1.5)
 	end)
-	RunInfo.PhaseChanged:Connect(function(phase: string)
-		alarm = phase == "Escape" or phase == "Capture"
+	-- The escape alarm is for the squad in the hotel, not for players waiting in the lobby.
+	local function refreshAlarm()
+		local phase = RunInfo.phase()
+		alarm = (phase == "Escape" or phase == "Capture") and RunInfo.isParticipant()
+	end
+	RunInfo.PhaseChanged:Connect(function()
+		refreshAlarm()
 		refresh(1.2)
 	end)
 	RunInfo.RosterChanged:Connect(function()
+		refreshAlarm()
 		refresh(1.2)
 	end)
 	RunInfo.StatusChanged:Connect(function(status: string)

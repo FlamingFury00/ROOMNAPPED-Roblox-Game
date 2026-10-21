@@ -199,6 +199,47 @@ return function(ctx)
 			expect(m:vineProgress("V1")).toBe(0)
 		end)
 
+		it("a vine fed by a frozen basin goes dormant instead of growing", function()
+			local m = EffectModel.new(defs(), T)
+			-- B2 floods (S2 Laundry), then S1 freezes it; the Greenhouse at S4 would grow V1 from B2's water.
+			m:setSources({ S2 = "water" })
+			run(m, T.FillSeconds + 0.5)
+			m:setSources({ S1 = "cold", S2 = "water", S4 = "vine" })
+			run(m, T.FreezeSeconds + 0.5)
+			expect(m:basinSolid("B2")).toBe(true)
+			-- It drank while the water was still freezing; once the basin is solid it neither grows nor drops.
+			local frozenAt = m:vineProgress("V1")
+			expect(frozenAt < 1).toBe(true)
+			run(m, T.VineGrowSeconds + 0.5)
+			expect(m:vineProgress("V1")).toBe(frozenAt)
+			expect(m:vineSolid("V1")).toBe(false)
+		end)
+
+		it("reports a gate change exactly when it becomes passable and when it blocks again", function()
+			local m = EffectModel.new(defs(), T)
+			local wasOpen = m:gateOpen("G1")
+			local flips, reported = 0, 0
+			local function watch(seconds)
+				for _ = 1, math.ceil(seconds / 0.05) do
+					local changed = m:step(0.05)
+					local open = m:gateOpen("G1")
+					if open ~= wasOpen then
+						flips += 1
+						if table.find(changed, "G1") then
+							reported += 1
+						end
+						wasOpen = open
+					end
+				end
+			end
+			m:setSources({ S2 = "water" })
+			watch(T.FillSeconds + 1.2)
+			m:setSources({})
+			watch(T.DrainSeconds + 2)
+			expect(flips).toBe(2)
+			expect(reported).toBe(2)
+		end)
+
 		it("float gates open with water and never close on a player", function()
 			local m = EffectModel.new(defs(), T)
 			m:setSources({ S2 = "water" })

@@ -12,7 +12,6 @@ local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local Kit = require(Shared.World.Kit)
 local Palette = require(Shared.World.Palette)
-local Net = require(Shared.Net.Net)
 local Registry = require(script.Parent.Parent.Core.Registry)
 local StateServer = require(script.Parent.Parent.Core.StateServer)
 local RunTypes = require(script.Parent.Parent.Core.RunTypes)
@@ -46,7 +45,8 @@ function CaptureService.complete(run: Run, entry: RosterEntry)
 	run.scratch.capture = { done = true, by = entry.userId }
 	local target = run.runtime.target
 	global:Set({ "rooms", "target" }, { state = "Folding", room = target.room, since = workspace:GetServerTimeNow() })
-	Net.fireAll("Effect", "capture", { room = target.room, by = entry.key, position = target.capturePoint })
+	Registry.get("Expedition")
+		.fireRun("capture", { room = target.room, by = entry.key, position = target.capturePoint })
 	Registry.get("Cargo").spawnCargo(run, entry, target.room)
 	Registry.get("Expedition").onCaptured(run, entry)
 	Registry.get("Caretaker").noise(run, target.capturePoint, 1000)

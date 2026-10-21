@@ -474,6 +474,7 @@ end)
 
 local profileStatus = "Loading"
 local dismissed = false
+local patchConnection: RBXScriptConnection? = nil
 
 local function setStatus(key: string, fallback: string, value: number)
 	status.Text = t(key, fallback)
@@ -508,6 +509,10 @@ local function finish()
 	renderConnection:Disconnect()
 	if fitConnection then
 		fitConnection:Disconnect()
+	end
+	if patchConnection then
+		patchConnection:Disconnect()
+		patchConnection = nil
 	end
 	gui:Destroy()
 	player:SetAttribute("RN_LoadingDone", true)
@@ -587,7 +592,7 @@ task.spawn(function()
 	setStatus("loading.profile", "Fetching your luggage", 0.6)
 	local patch = remotes:WaitForChild("StatePatch", 10)
 	if patch and patch:IsA("RemoteEvent") then
-		patch.OnClientEvent:Connect(function(channel: any, _seq: any, patches: any)
+		patchConnection = patch.OnClientEvent:Connect(function(channel: any, _seq: any, patches: any)
 			if channel ~= "me" or type(patches) ~= "table" then
 				return
 			end

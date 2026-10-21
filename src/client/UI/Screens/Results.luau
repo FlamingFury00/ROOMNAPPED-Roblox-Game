@@ -57,10 +57,11 @@ local actedRunId: string? = nil
 local renderedKey = ""
 local spinnerConnection: RBXScriptConnection? = nil
 
--- Called after the player leaves the results panel (Feedback uses this to decide whether to ask).
-local closedCallbacks: { (any) -> () } = {}
+-- Called after the player leaves the results panel with "lobby" or "replay" (Feedback uses this to decide
+-- whether to ask).
+local closedCallbacks: { (any, string) -> () } = {}
 
-function Results.onClosed(fn: (payload: any) -> ())
+function Results.onClosed(fn: (payload: any, action: string) -> ())
 	table.insert(closedCallbacks, fn)
 end
 
@@ -380,7 +381,7 @@ local function act(action: string)
 	end
 	UIRoot.close("Results")
 	for _, fn in closedCallbacks do
-		task.spawn(fn, data)
+		task.spawn(fn, data, action)
 	end
 end
 
@@ -539,7 +540,7 @@ local function build()
 		local wasCompact = compact
 		compact = height < 560
 		local top = if compact then 128 else 162
-		local buttonsHeight = if compact then 76 else 96
+		local buttonsHeight = if compact then 80 else 96
 		local middle = if compact then math.max(150, height - top - 44 - buttonsHeight) else 254
 		headline.TextSize = if compact then 50 else 66
 		headline.Size = UDim2.new(1, 0, 0, if compact then 56 else 74)

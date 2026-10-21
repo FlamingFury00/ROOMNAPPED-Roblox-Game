@@ -83,6 +83,7 @@ local dim = Create.new("TextButton", {
 	Text = "",
 	AutoButtonColor = false,
 	Visible = false,
+	Selectable = false, -- a gamepad must never land on the backdrop
 	Modal = true, -- frees the mouse from shift-lock / first person while a menu is open
 	Parent = UIRoot.Guis.Dim,
 })
@@ -156,9 +157,16 @@ end
 
 function UIRoot.register(screen: Screen)
 	screens[screen.name] = screen
-	screen.frame.Visible = false
-	if screen.frame.Parent == nil then
-		screen.frame.Parent = UIRoot.Menus
+	local frame = screen.frame
+	frame.Visible = false
+	-- Gamepad navigation stays inside the open menu (never wanders onto the HUD or a menu underneath).
+	frame.SelectionGroup = true
+	frame.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+	frame.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+	frame.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+	frame.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
+	if frame.Parent == nil then
+		frame.Parent = UIRoot.Menus
 	end
 end
 
@@ -219,19 +227,22 @@ function UIRoot.open(name: string, arg: any?)
 		return
 	end
 	if not screen.keepUnder then
-		-- A normal menu replaces whatever menus were open.
+		-- A normal menu replaces whatever menus were open; one that cannot close (Results) waits hidden
+		-- underneath and comes back when this one closes.
 		for i = #stack, 1, -1 do
 			local other = stack[i]
 			if other.closable ~= false then
 				table.remove(stack, i)
-				other.frame.Visible = false
 				if other.onClose then
 					(other.onClose :: () -> ())()
 				end
 			end
+			other.frame.Visible = false
 		end
 	end
 	table.insert(stack, screen)
+	-- Draw above anything still showing underneath (confirm dialogs over their menu).
+	screen.frame.ZIndex = 10 + #stack
 	screen.frame.Visible = true
 	if screen.onOpen then
 		(screen.onOpen :: (any?) -> ())(arg)
@@ -272,6 +283,23 @@ end
 
 dim.Activated:Connect(function()
 	UIRoot.back()
+end)
+
+-- Gamepad selection safety net: when a menu rebuilds its buttons (or the player picks up a controller while
+-- a menu is open) and nothing is selected any more, select the top menu's default again.
+local function reselectIfLost()
+	local top = stack[#stack]
+	if top and Device.isGamepad() and GuiService.SelectedObject == nil then
+		selectDefault(top)
+	end
+end
+GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(function()
+	if GuiService.SelectedObject == nil and #stack > 0 then
+		task.defer(reselectIfLost)
+	end
+end)
+Device.Changed:Connect(function()
+	task.defer(reselectIfLost)
 end)
 
 -- Cinematic fade to black and back. `hold` keeps it black until fadeIn is called.

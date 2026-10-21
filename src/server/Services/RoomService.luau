@@ -310,7 +310,7 @@ function RoomService.deploy(player: Player, socketId: string, slot: number, dir:
 	if not run.stats.firstDeployAt then
 		run.stats.firstDeployAt = os.clock()
 	end
-	Net.fireAll("Effect", "roomUnfold", { socket = socketId, room = roomId, owner = entry.key })
+	Registry.get("Expedition").fireRun("roomUnfold", { socket = socketId, room = roomId, owner = entry.key })
 	Registry.get("Telemetry").deployed(run, entry, roomId, socketId)
 	Registry.get("Profiles").update(player, function(profile: any)
 		profile.stats.deploys += 1
@@ -334,7 +334,7 @@ local function fold(run: Run, record: RoomRecord)
 	publishSocket(run, record)
 	refreshEffects(run)
 	local socket = run.runtime.sockets[record.socketId]
-	Net.fireAll("Effect", "roomFold", { socket = record.socketId, room = record.roomId })
+	Registry.get("Expedition").fireRun("roomFold", { socket = record.socketId, room = record.roomId })
 	Registry.get("Caretaker").noise(run, socket.interactPoint, GameConfig.Noise.Recall)
 	task.delay(GameConfig.Deploy.FoldSeconds, function()
 		local s = run.scratch.rooms
@@ -417,11 +417,29 @@ local function clearHeld(character: Model?)
 	end
 end
 
-local function onSelectSlot(player: Player, slot: number)
+-- The suitcase in a player's hand always shows their selected room, except while they are not Active or
+-- are carrying the stolen room (the cargo suitcase takes the hand).
+function RoomService.refreshHeld(player: Player)
 	local Expedition = Registry.get("Expedition")
 	local entry = Expedition.entry(player)
 	local character = player.Character
-	if not entry or not character then
+	clearHeld(character)
+	if not entry or not character or entry.selectedSlot == 0 or entry.health.status ~= "Active" then
+		return
+	end
+	if Registry.get("Cargo").carrierOf(Expedition.current()) == entry.userId then
+		return
+	end
+	local roomId = entry.loadout[entry.selectedSlot]
+	local def = RoomDefs.byId[roomId]
+	local case = RoomPrefabs.suitcase(entry.suitcase, 0.8, if def then def.color else nil)
+	case.Name = "HeldSuitcase"
+	Attach.toHand(character, case)
+end
+
+local function onSelectSlot(player: Player, slot: number)
+	local entry = Registry.get("Expedition").entry(player)
+	if not entry or not player.Character then
 		return
 	end
 	if slot < 0 or slot > #entry.loadout then
@@ -431,15 +449,7 @@ local function onSelectSlot(player: Player, slot: number)
 		return
 	end
 	entry.selectedSlot = slot
-	clearHeld(character)
-	if slot == 0 or Registry.get("Cargo").carrierOf(Expedition.current()) == entry.userId then
-		return
-	end
-	local roomId = entry.loadout[slot]
-	local def = RoomDefs.byId[roomId]
-	local case = RoomPrefabs.suitcase(entry.suitcase, 0.8, if def then def.color else nil)
-	case.Name = "HeldSuitcase"
-	Attach.toHand(character, case)
+	RoomService.refreshHeld(player)
 end
 
 function RoomService.clearHeld(player: Player)

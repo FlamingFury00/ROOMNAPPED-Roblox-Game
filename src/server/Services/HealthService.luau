@@ -88,8 +88,10 @@ local function onDowned(run: Run, entry: RosterEntry, result: string)
 	run.stats.anyDowns = true
 	Registry.get("Cargo").onCarrierDowned(run, entry)
 	Registry.get("Interaction").cancelFor(entry.player)
+	-- The client drops its selection when downed; keep the server in step so the next pick re-equips.
+	entry.selectedSlot = 0
 	Registry.get("Rooms").clearHeld(entry.player)
-	Net.fireAll("Effect", "downed", { userId = entry.key, solo = result == "Recovering" })
+	Registry.get("Expedition").fireRun("downed", { userId = entry.key, solo = result == "Recovering" })
 	Registry.get("Telemetry").downed(run, entry)
 end
 
@@ -112,7 +114,7 @@ function HealthService.damage(
 	if knockback and knockback.Magnitude > 0 then
 		Net.fire(entry.player, "Knockback", knockback.Unit, knockback.Magnitude)
 	end
-	Net.fireAll("Effect", "hit", { userId = entry.key, source = source })
+	Registry.get("Expedition").fireRun("hit", { userId = entry.key, source = source })
 	if result == "Downed" or result == "Recovering" then
 		onDowned(run, entry, result)
 	end
@@ -134,7 +136,7 @@ function HealthService.revive(run: Run, target: RosterEntry, by: RosterEntry): b
 	end
 	setAttributes(target)
 	Registry.get("Expedition").publishRosterEntry(run, target)
-	Net.fireAll("Effect", "revived", { userId = target.key, by = by.key })
+	Registry.get("Expedition").fireRun("revived", { userId = target.key, by = by.key })
 	Registry.get("Telemetry").revived(run, target, by)
 	return true
 end
@@ -188,11 +190,11 @@ function HealthService.step(run: Run, _dt: number)
 			if event == "SelfRecovered" then
 				local target = entry.lastSafe or run.runtime.spawns[1]
 				Registry.get("Characters").teleport(entry.player, target)
-				Net.fireAll("Effect", "selfRecovered", { userId = entry.key })
+				Registry.get("Expedition").fireRun("selfRecovered", { userId = entry.key })
 			elseif event == "Eliminated" then
 				ensureSpectatorBox(run)
 				Registry.get("Characters").teleport(entry.player, spectatorSpot(run))
-				Net.fireAll("Effect", "eliminated", { userId = entry.key })
+				Registry.get("Expedition").fireRun("eliminated", { userId = entry.key })
 			end
 		end
 		if #events > 0 then

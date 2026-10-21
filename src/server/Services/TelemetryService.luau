@@ -68,11 +68,13 @@ local function onboarding(player: Player, stepName: string)
 	end
 	local Profiles = Registry.get("Profiles")
 	local profile = Profiles.get(player)
-	if not profile or profile.flags.onboardingFunnel >= step then
+	-- Each step is logged once, in whatever order the player reaches it.
+	local bit = bit32.lshift(1, step - 1)
+	if not profile or bit32.btest(profile.flags.onboardingSteps, bit) then
 		return
 	end
 	Profiles.update(player, function(p: any)
-		p.flags.onboardingFunnel = step
+		p.flags.onboardingSteps = bit32.bor(p.flags.onboardingSteps, bit)
 	end)
 	safe("onboarding " .. stepName, function()
 		AnalyticsService:LogOnboardingFunnelStepEvent(player, step, stepName)
@@ -200,12 +202,17 @@ function TelemetryService.keyCollected(run: any, entry: any, keyId: string)
 	custom(entry.player, "KeyCollected", 1, keyId, run.mission.id)
 end
 
+-- Client-supplied labels are only logged when they are known values, so a modified client cannot fill the
+-- analytics with arbitrary strings.
 function TelemetryService.feedback(player: Player, rating: number, tag: string?)
-	custom(player, "Feedback", rating, tag or "", GameConfig.Version)
+	local knownTag = if tag and table.find(GameConfig.Feedback.Tags, tag) then tag else ""
+	custom(player, "Feedback", rating, knownTag, GameConfig.Version)
 end
 
 function TelemetryService.tutorialStep(player: Player, step: string)
-	custom(player, "TutorialStep", 1, string.sub(step, 1, 32))
+	if table.find(GameConfig.Onboarding.TutorialSteps, step) then
+		custom(player, "TutorialStep", 1, step)
+	end
 end
 
 function TelemetryService.ping(player: Player, kind: string)

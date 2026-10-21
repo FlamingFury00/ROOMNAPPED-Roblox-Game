@@ -93,6 +93,8 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 	wallPiece("WallFrontMid", at(0, H / 2, frontZ), Vector3.new(12, H, 1))
 	for _, x in { -10, 10 } do
 		wallPiece("ElevatorLintel", at(x, (10 + H) / 2, frontZ), Vector3.new(8, H - 10, 1))
+		-- Threshold under the doorway: the hall floor ends at the wall face and the car floor starts behind it.
+		Kit.solid(structure, "ElevatorSill", at(x, -0.5, frontZ), Vector3.new(8, 1, 1), theme.trim, M.Foil)
 	end
 	local function wainscot(cf: CFrame, length: number, axis: string)
 		local size = if axis == "x" then Vector3.new(length, 4.5, 0.3) else Vector3.new(0.3, 4.5, length)
@@ -444,9 +446,10 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 	spawn.Enabled = true
 	spawn.Parent = model
 
+	-- Returning squads step out of the departure elevator into the lobby (outside the ready zone).
 	local arrival = {}
-	for _, offset in { { -2, 0 }, { 2, 0 }, { -2, 3.5 }, { 2, 3.5 } } do
-		local p = at(-10 + offset[1], 3, D / 2 + 4 + offset[2]).Position
+	for _, offset in { { -2, 0 }, { 2, 0 }, { -2, -3.5 }, { 2, -3.5 } } do
+		local p = at(-10 + offset[1], 3, D / 2 - 3 + offset[2]).Position
 		table.insert(arrival, CFrame.lookAt(p, at(-10 + offset[1], 3, 0).Position))
 	end
 

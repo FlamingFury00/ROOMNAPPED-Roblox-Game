@@ -446,7 +446,9 @@ local function onCapture(position: Vector3?)
 	end
 	Vfx.burst(centre, "confetti", 60)
 	Vfx.flash(centre, Color3.fromRGB(255, 230, 150), 6, 40, 0.8)
-	CameraController.shake(0.5, 0.6)
+	if RunInfo.isParticipant() then
+		CameraController.shake(0.5, 0.6)
+	end
 end
 
 local function attachRun()

@@ -48,6 +48,8 @@ local HEADINGS: { [number]: Vector3 } = {
 }
 
 local PIT_KINDS: { [string]: boolean } = { Basin = true, Gap = true }
+-- Floors that can hurt (fire, live puddles, cart tracks) are never respawn checkpoints; their safe lanes are.
+local HAZARD_FLOOR_KINDS: { [string]: boolean } = { Fire = true, Puddle = true, Carts = true }
 local SINGLE_TILE: { [string]: boolean } = {
 	Elevator = true,
 	Turn = true,
@@ -345,7 +347,7 @@ local function walkRoute(ctx: Ctx, origin: CFrame)
 				run = run,
 				runAlong = (index - runStartIndex) * T,
 				hazard = mod.id,
-				safe = not PIT_KINDS[mod.kind],
+				safe = not PIT_KINDS[mod.kind] and not HAZARD_FLOOR_KINDS[mod.kind],
 			}
 			table.insert(runtime.tiles, tile)
 			table.insert(ctx.moduleTiles[moduleIndex], index)
@@ -1419,6 +1421,7 @@ local function buildFireWalkway(ctx: Ctx, tile: TileInfo, side: string)
 	})
 	local lane = box(tile.cf, s * (INNER - lw / 2), 2.5, 0, lw, 5, walkLength)
 	table.insert(ctx.runtime.ledges, lane)
+	table.insert(ctx.runtime.safeFloors, lane)
 end
 
 local function buildFireTile(ctx: Ctx, tile: TileInfo, mod: ModuleDef)

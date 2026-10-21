@@ -160,7 +160,7 @@ function InteractionService.cancelFor(player: Player)
 		if player.Parent == Players then
 			Net.fire(player, "Effect", "holdCancelled", { kind = hold.kind })
 		end
-		Net.fireAll("Effect", "holdStop", { userId = tostring(player.UserId), kind = hold.kind })
+		Registry.get("Expedition").fireRun("holdStop", { userId = tostring(player.UserId), kind = hold.kind })
 	end
 end
 
@@ -180,7 +180,7 @@ local function onHoldBegin(player: Player, kind: string, targetId: string)
 		return
 	end
 	holds[player] = { kind = kind, target = targetId, startedAt = os.clock(), duration = durationFor(kind) }
-	Net.fireAll("Effect", "holdStart", { userId = entry.key, kind = kind, target = targetId })
+	Registry.get("Expedition").fireRun("holdStart", { userId = entry.key, kind = kind, target = targetId })
 	if kind == "capture" then
 		Registry.get("Caretaker").noise(run, run.runtime.target.capturePoint, 30)
 	end
@@ -192,7 +192,7 @@ local function onHoldEnd(player: Player, kind: string, targetId: string, complet
 		return
 	end
 	holds[player] = nil
-	Net.fireAll("Effect", "holdStop", { userId = tostring(player.UserId), kind = kind })
+	Registry.get("Expedition").fireRun("holdStop", { userId = tostring(player.UserId), kind = kind })
 	if not completed then
 		return
 	end

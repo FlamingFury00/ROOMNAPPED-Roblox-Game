@@ -162,7 +162,7 @@ function Overlays.create(parent: Instance): Handle
 		Name = "Spectate",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -24),
-		Size = UDim2.fromOffset(560, 74),
+		Size = UDim2.fromOffset(580, 88),
 		BackgroundColor3 = C.panelDark,
 		BackgroundTransparency = 0.1,
 		Visible = false,
@@ -172,7 +172,7 @@ function Overlays.create(parent: Instance): Handle
 		text = Strings.t("hud.spectate.prev"),
 		icon = "arrowUp",
 		variant = "secondary",
-		size = UDim2.fromOffset(120, 54),
+		size = UDim2.fromOffset(124, 72),
 		position = UDim2.new(0, 10, 0.5, 0),
 		anchor = Vector2.new(0, 0.5),
 		parent = spectate,
@@ -184,7 +184,7 @@ function Overlays.create(parent: Instance): Handle
 		text = Strings.t("hud.spectate.next"),
 		icon = "arrowUp",
 		variant = "secondary",
-		size = UDim2.fromOffset(120, 54),
+		size = UDim2.fromOffset(124, 72),
 		position = UDim2.new(1, -10, 0.5, 0),
 		anchor = Vector2.new(1, 0.5),
 		parent = spectate,
@@ -207,10 +207,12 @@ function Overlays.create(parent: Instance): Handle
 		align = Enum.TextXAlignment.Center,
 		anchor = Vector2.new(0.5, 0.5),
 		position = UDim2.fromScale(0.5, 0.5),
-		size = UDim2.new(1, -280, 0, 32),
+		size = UDim2.new(1, -296, 0, 32),
 		stroke = true,
 		parent = spectate,
 	})
+	-- Long display names truncate instead of running over Prev / Next.
+	spectateLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	SpectateController.Changed:Connect(function(key: string?)
 		spectateLabel.Text = if key then Strings.t("hud.spectate.title", { name = RunInfo.displayName(key) }) else ""
 	end)

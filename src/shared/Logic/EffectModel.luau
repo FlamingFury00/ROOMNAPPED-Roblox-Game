@@ -308,12 +308,20 @@ local function fireShouldBurn(self: Model, id: string): boolean
 	return true
 end
 
-local function vineWatered(self: Model, id: string): boolean
+-- Returns (watered, frozen): a vine drinks from a water room or from liquid water in its basin. A frozen
+-- basin still holds its water but cannot feed the vine, which goes dormant like any other cold (R04).
+local function vineWatered(self: Model, id: string): (boolean, boolean)
 	if #self:sourcesFor(id, "water") > 0 then
-		return true
+		return true, false
 	end
 	local basin = self.defs.vines[id].waterBasin
-	return basin ~= nil and self:basinWet(basin)
+	if basin == nil then
+		return false, false
+	end
+	if self:basinSolid(basin) then
+		return false, true
+	end
+	return self:basinWet(basin), false
 end
 
 -- State machines -------------------------------------------------------------------------------------
@@ -447,8 +455,9 @@ end
 
 local function vineStep(self: Model, id: string, v: VineState, dt: number)
 	local t = self.timings
-	local grow = #self:sourcesFor(id, "vine") > 0 and vineWatered(self, id)
-	local cold = #self:sourcesFor(id, "cold") > 0
+	local watered, frozenWater = vineWatered(self, id)
+	local grow = #self:sourcesFor(id, "vine") > 0 and (watered or frozenWater)
+	local cold = #self:sourcesFor(id, "cold") > 0 or frozenWater
 	if grow then
 		if v.progress >= 1 then
 			setVinePhase(self, id, v, "Grown")
@@ -498,6 +507,7 @@ local function gateStep(self: Model, id: string, g: GateState, dt: number)
 		end
 	end
 	local before = g.open
+	local wasPassable = g.progress >= 0.5
 	if wantOpen then
 		g.open = true
 		g.progress = math.min(1, g.progress + dt / GATE_SECONDS)
@@ -507,6 +517,9 @@ local function gateStep(self: Model, id: string, g: GateState, dt: number)
 	end
 	if g.open ~= before then
 		g.since = self.now
+		self:_mark(id)
+	elseif (g.progress >= 0.5) ~= wasPassable then
+		-- Collision follows passability (gateOpen), which changes half way through the bars' travel.
 		self:_mark(id)
 	end
 end

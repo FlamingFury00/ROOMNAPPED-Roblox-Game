@@ -62,6 +62,23 @@ function ExpeditionService.current(): Run?
 	return current
 end
 
+-- Send a run moment (hits, downs, combos, cargo, Caretaker cues...) to the squad - players in the run,
+-- spectators included - rather than to everyone in the server: players waiting in the lobby never see or
+-- hear the expedition's feedback.
+function ExpeditionService.fireRun(name: string, params: any)
+	local run = current
+	if not run then
+		return
+	end
+	local players = {}
+	for _, entry in run.roster do
+		if entry.connected and not entry.left then
+			table.insert(players, entry.player)
+		end
+	end
+	Net.fireList(players, "Effect", name, params)
+end
+
 function ExpeditionService.phase(): string
 	return machine.phase
 end
@@ -307,7 +324,8 @@ function ExpeditionService.beginExplore(run: Run)
 	local Characters = Registry.get("Characters")
 	for i, userId in run.order do
 		local entry = run.roster[userId]
-		if entry.connected then
+		-- Players who left during the elevator ride stay in the lobby.
+		if entry.connected and not entry.left then
 			local spawn = run.runtime.spawns[((i - 1) % #run.runtime.spawns) + 1]
 			entry.lastSafe = spawn
 			Characters.teleport(entry.player, spawn)
@@ -465,12 +483,15 @@ function ExpeditionService.resultsAction(player: Player, action: string)
 end
 
 -- True once every roster member still in the server has chosen Replay or Lobby on the results panel.
+-- Members who left or disconnected got no results panel (a disconnected player may have rejoined as a new
+-- session), so they are never waited on.
 local function allAcked(): boolean
 	local roster = global:Get({ "roster" }) or {}
 	for key, info in roster do
 		local userId = tonumber(key)
 		local plr = if userId then Players:GetPlayerByUserId(userId) else nil
-		if plr and info.status ~= "Left" and resultsAcks[userId :: number] == nil then
+		local gone = info.status == "Left" or info.status == "Disconnected"
+		if plr and not gone and resultsAcks[userId :: number] == nil then
 			return false
 		end
 	end

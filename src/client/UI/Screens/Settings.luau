@@ -39,6 +39,8 @@ local toggles: { [string]: Components.ToggleHandle } = {}
 local controlsHeading: Frame
 local controlsList: Frame
 local runSection: Frame
+local unstuckButton: Components.ButtonHandle
+local unstuckReadyAt = 0 -- the server allows one unstuck every 8 seconds
 local leaveConfirm: Frame
 local firstSelectable: GuiObject? = nil
 
@@ -294,7 +296,7 @@ local function build()
 	}, {
 		Create.list(Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center),
 	})
-	Components.button({
+	unstuckButton = Components.button({
 		text = Strings.t("settings.unstuck"),
 		icon = "refresh",
 		variant = "blue",
@@ -303,6 +305,7 @@ local function build()
 		layoutOrder = 1,
 		onClick = function()
 			Net.send("RequestUnstuck")
+			unstuckReadyAt = os.clock() + 8
 			UIRoot.close("Settings")
 		end,
 		parent = runButtons,
@@ -372,6 +375,12 @@ local function scrollToControls()
 	end)
 end
 
+-- "I'm stuck!" only works for an active (not downed) player and once every 8 seconds, like on the server.
+local function refreshRunSection()
+	runSection.Visible = RunInfo.isParticipant()
+	unstuckButton.setEnabled(RunInfo.myStatus() == "Active" and os.clock() >= unstuckReadyAt)
+end
+
 function Settings.start()
 	build()
 	rebuildControls()
@@ -380,7 +389,7 @@ function Settings.start()
 		frame = window.frame,
 		onOpen = function(arg: any?)
 			syncWidgets()
-			runSection.Visible = RunInfo.isParticipant()
+			refreshRunSection()
 			if arg == "controls" then
 				scrollToControls()
 			else
@@ -407,11 +416,12 @@ function Settings.start()
 	end)
 	Device.Changed:Connect(rebuildControls)
 	RunInfo.PhaseChanged:Connect(function()
-		runSection.Visible = RunInfo.isParticipant()
+		refreshRunSection()
 		if not RunInfo.isParticipant() then
 			UIRoot.close("LeaveConfirm")
 		end
 	end)
+	RunInfo.StatusChanged:Connect(refreshRunSection)
 end
 
 return Settings

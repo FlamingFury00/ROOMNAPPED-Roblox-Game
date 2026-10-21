@@ -398,8 +398,8 @@ function Components.button(props: ButtonProps): ButtonHandle
 			label.Visible = text ~= ""
 		end,
 		setEnabled = function(value: boolean)
+			-- Stay Active: a disabled button still answers a tap with the error sound and a shake.
 			handle.enabled = value
-			root.Active = value
 			paint()
 		end,
 		setVariant = function(value: ButtonVariant)

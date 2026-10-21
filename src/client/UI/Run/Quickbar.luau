@@ -39,6 +39,7 @@ local localPlayer = Players.LocalPlayer
 
 local ACTION_SIZE = 136
 local TOUCH_GAP = 12
+local PING_HOLD_SECONDS = 0.35
 
 export type Handle = { frame: Frame, touch: Frame, setVisible: (boolean) -> () }
 
@@ -359,7 +360,7 @@ function Quickbar.create(parent: Instance): Handle
 	local drop, dropLabel = roundButton(small, "Drop", 72, "suitcase", C.orange)
 	dropLabel.Text = Strings.t("hud.drop")
 	drop.LayoutOrder = 1
-	local ping, pingLabel = roundButton(touch, "Ping", 64, "pin", C.blue)
+	local ping, pingLabel = roundButton(touch, "Ping", 72, "pin", C.blue)
 	pingLabel.Text = Strings.t("hud.ping")
 	ping.AnchorPoint = Vector2.new(1, 1)
 
@@ -426,13 +427,19 @@ function Quickbar.create(parent: Instance): Handle
 		InputController.trigger("Drop", "Begin")
 		InputController.trigger("Drop", "End")
 	end)
-	-- Tap = contextual ping, long press = wheel.
+	-- Tap = contextual ping, long press = the four-way wheel (its options are tapped); tapping Ping again
+	-- while the wheel is open puts it away.
 	local pingDown: number? = nil
 	ping.InputBegan:Connect(function(input: InputObject)
 		if
 			input.UserInputType == Enum.UserInputType.Touch
 			or input.UserInputType == Enum.UserInputType.MouseButton1
 		then
+			if PingController.isWheelOpen() then
+				PingController.closeWheel(false)
+				pingDown = nil
+				return
+			end
 			pingDown = os.clock()
 		end
 	end)
@@ -441,7 +448,7 @@ function Quickbar.create(parent: Instance): Handle
 			input.UserInputType == Enum.UserInputType.Touch
 			or input.UserInputType == Enum.UserInputType.MouseButton1
 		then
-			if pingDown and os.clock() - (pingDown :: number) < 0.35 then
+			if pingDown and os.clock() - (pingDown :: number) < PING_HOLD_SECONDS then
 				PingController.quickPing()
 			end
 			pingDown = nil
@@ -490,6 +497,10 @@ function Quickbar.create(parent: Instance): Handle
 		if relayoutClock >= 0.5 then
 			relayoutClock = 0
 			layoutTouch()
+		end
+		if pingDown and os.clock() - (pingDown :: number) >= PING_HOLD_SECONDS then
+			pingDown = nil
+			PingController.openWheel()
 		end
 		local candidate = PlacementController.candidate()
 		rotate.Visible = candidate ~= nil and candidate.dir ~= nil

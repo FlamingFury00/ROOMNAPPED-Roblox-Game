@@ -237,6 +237,25 @@ return function(ctx)
 			assertClean(sim)
 		end)
 
+		it("saves the lost-run notice when a player drops mid-run and rejoins the same server (U20, S21)", function()
+			local sim = boot()
+			local bots = joinAndLaunch(sim, { "Ivy", "Jon" })
+			local a, b = bots[1], bots[2]
+			sim:removeBot(a)
+			sim:run(0.5)
+			expect(sim:state(b, "global", "roster.1001.status")).toBe("Disconnected")
+			-- Rejoin on the same server: the new session waits for the old one's release save, then loads it.
+			local again = sim:addBot("Ivy", 1001)
+			sim:snapshot(again)
+			expect(sim:runUntil(function()
+				return sim:state(again, "me", "profile.status") == "Ready"
+			end, 30)).toBe(true)
+			sim:send(again, "ClientReady", "keyboard", "en-us")
+			sim:run(0.5)
+			expect(sim:inboxHas(again, "Toast", "toast.interruptedRun")).toBe(true)
+			assertClean(sim)
+		end)
+
 		it("launches one squad of at most four; the fifth player waits for the next run (S17)", function()
 			local sim = boot()
 			local names = { "Ann", "Ben", "Cal", "Dot", "Eli" }
@@ -263,6 +282,44 @@ return function(ctx)
 			end
 			expect(count).toBe(4)
 			expect(roster["2005"]).toBe(nil)
+			assertClean(sim)
+		end)
+
+		it("returns to the lobby without relaunching, and PLAY AGAIN relaunches (U18)", function()
+			local sim = boot()
+			local bot = sim:addBot("Gus", 2101)
+			sim:snapshot(bot)
+			sim:run(0.6)
+			sim:send(bot, "Debug", "give", "all")
+			sim:send(bot, "SetReady", true)
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Explore"
+			end, 30)).toBe(true)
+			sim:send(bot, "Debug", "phase", "win")
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Results"
+			end, 5)).toBe(true)
+			sim:send(bot, "ResultsAction", "lobby")
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Prep"
+			end, 40)).toBe(true)
+			-- Back in the lobby: nobody is readied by standing near the elevator, so no new run starts.
+			sim:run(8)
+			expect(phase(sim, bot)).toBe("Prep")
+			expect(sim:state(bot, "global", "players.2101.ready")).toBe(false)
+			-- A second run that ends with PLAY AGAIN goes straight back out.
+			sim:send(bot, "SetReady", true)
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Explore"
+			end, 30)).toBe(true)
+			sim:send(bot, "Debug", "phase", "fail")
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Results"
+			end, 5)).toBe(true)
+			sim:send(bot, "ResultsAction", "replay")
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Explore"
+			end, 60)).toBe(true)
 			assertClean(sim)
 		end)
 

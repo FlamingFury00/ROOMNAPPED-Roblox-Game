@@ -39,6 +39,9 @@ type Presence = {
 	device: string,
 	locale: string,
 	replay: boolean,
+	-- Walking into the departure elevator only readies a player who has been seen outside it since the last
+	-- run, so nobody standing in (or arriving back into) the car is launched without choosing to.
+	zoneArmed: boolean,
 }
 
 local global = StateServer.global("global")
@@ -356,6 +359,7 @@ function SessionService.onPrep(acks: { [number]: string })
 	for player, p in presence do
 		p.waiting = false
 		p.ready = false
+		p.zoneArmed = false
 		publishPlayer(player)
 	end
 	electLeader()
@@ -528,6 +532,7 @@ local function onPlayerAdded(player: Player)
 		device = "unknown",
 		locale = "",
 		replay = false,
+		zoneArmed = false,
 	}
 	electLeader()
 	publishPlayer(player)
@@ -614,7 +619,10 @@ function SessionService.Start()
 					local position = Characters.position(player)
 					if position and not p.waiting then
 						local inside = Lobby.isInReadyZone(position)
-						if inside and not p.ready then
+						if not inside then
+							p.zoneArmed = true
+						end
+						if inside and not p.ready and p.zoneArmed then
 							SessionService.setReady(player, true, true)
 						elseif not inside and p.ready then
 							SessionService.setReady(player, false, true)

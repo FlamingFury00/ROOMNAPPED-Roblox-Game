@@ -7,6 +7,7 @@
 	bootstrap ignores it; screens require it directly.
 ]]
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -149,6 +150,47 @@ function Common.headshot(image: ImageLabel, userId: number)
 	end)
 end
 
+-- Live feature flags (replicated by the server's FlagsService) -------------------------------------------
+
+function Common.missionDisabled(missionId: string): boolean
+	local disabled = ClientState.get("global", "flags.disabledMissions")
+	return type(disabled) == "table" and disabled[missionId] == true
+end
+
+function Common.featureOn(name: string): boolean
+	local features = ClientState.get("global", "flags.features")
+	return not (type(features) == "table" and features[name] == false)
+end
+
+-- Selection ----------------------------------------------------------------------------------------------
+
+local function shownWithin(object: GuiObject, root: Instance): boolean
+	local node: Instance? = object
+	while node and node ~= root do
+		if node:IsA("GuiObject") and not node.Visible then
+			return false
+		end
+		node = node.Parent
+	end
+	return node == root
+end
+
+-- Run `rebuild` (which may destroy and recreate buttons inside `root`) without losing the gamepad selection:
+-- the item selected before is selected again by name afterwards (cards are named after what they show).
+function Common.keepSelection(root: Instance, rebuild: () -> ())
+	local selected = GuiService.SelectedObject
+	local name = if selected and selected:IsDescendantOf(root) then selected.Name else nil
+	rebuild()
+	if name and (GuiService.SelectedObject == nil or not GuiService.SelectedObject:IsDescendantOf(root)) then
+		for _, d in root:GetDescendants() do
+			if d.Name == name and d:IsA("GuiObject") and d.Selectable and shownWithin(d, root) then
+				GuiService.SelectedObject = d
+				break
+			end
+		end
+	end
+end
+
 -- Windows ----------------------------------------------------------------------------------------------
 
 export type Window = {
@@ -198,7 +240,7 @@ function Common.window(name: string, title: string, icon: string?, size: Vector2
 	Responsive.Changed:Connect(fit)
 	local closeButton: ButtonHandle? = nil
 	if closable ~= false then
-		local close = Components.iconButton("cross", 58, function()
+		local close = Components.iconButton("cross", 72, function()
 			UIRoot.back()
 		end, "danger")
 		close.instance.Name = "Close"

@@ -11,8 +11,10 @@ local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
+local GameConfig = require(Shared.Config.GameConfig)
 local Strings = require(Shared.Config.Strings)
 local Net = require(Shared.Net.Net)
+local RunInfo = require(script.Parent.Parent.Parent.Core.RunInfo)
 local Theme = require(script.Parent.Parent.Theme)
 local Create = require(script.Parent.Parent.Create)
 local Components = require(script.Parent.Parent.Components)
@@ -29,7 +31,7 @@ local Feedback = {}
 Feedback.priority = 100
 
 local C = Theme.Colors
-local TAGS = { "fun", "confusing", "hard", "easy" }
+local TAGS = GameConfig.Feedback.Tags
 -- The engine's own rounded five-point "favorite" star (white, tinted per state). If it ever fails to load,
 -- the rating falls back to the vector star icon.
 local STAR_IMAGE = "rbxasset://textures/ui/InspectMenu/ico_favorite@3x.png"
@@ -154,7 +156,7 @@ local function build()
 		tagButtons[tag] = Components.button({
 			text = Strings.t("feedback.tag." .. tag),
 			variant = "secondary",
-			size = UDim2.fromOffset(150, 58),
+			size = UDim2.fromOffset(150, 72),
 			textSize = Theme.Text.body,
 			layoutOrder = index,
 			sound = "ui_toggle",
@@ -219,15 +221,25 @@ function Feedback.start()
 			return stars[4]
 		end,
 	})
-	Results.onClosed(function(_payload: any)
+	Results.onClosed(function(_payload: any, action: string)
+		-- PLAY AGAIN heads straight into the next run: never stand in the way with a survey.
+		if action == "replay" then
+			return
+		end
 		local profile = Common.profile()
 		local runs = if profile and type(profile.stats) == "table" then profile.stats.runs or 0 else 0
 		if shouldAsk(runs) then
 			askedThisSession = true
 			task.wait(0.6)
-			if not UIRoot.anyOpen() then
+			if not UIRoot.anyOpen() and not RunInfo.isParticipant() then
 				UIRoot.open("Feedback")
 			end
+		end
+	end)
+	-- Never carry the prompt into an expedition (it blocks gameplay input while open).
+	RunInfo.PhaseChanged:Connect(function()
+		if RunInfo.isParticipant() then
+			UIRoot.close("Feedback")
 		end
 	end)
 end

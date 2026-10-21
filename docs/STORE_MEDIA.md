@@ -17,7 +17,7 @@ Everything on the store page must show something a new player can actually do in
 > 🫧 Laundry floods basins and douses fires. 🌿 Greenhouse grows vine bridges. 🧲 Magnet drags metal crates.
 > 🔑 Combine rooms for combos, find golden keys and finish bonus challenges.
 > 🏃 Fold up the target room, carry the suitcase back to the elevator and escape before time runs out.
-> 👥 Play solo or with up to 4 friends — revive each other, ping the way and share the loot.
+> 👥 Play solo or in a squad of up to 4 — revive each other, ping the way and share the loot.
 > 🎨 Earn credits to unlock room skins and suitcases. No paid items.
 > Works on computer, phone, tablet and controller.
 

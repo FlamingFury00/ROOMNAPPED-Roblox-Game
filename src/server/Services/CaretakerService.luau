@@ -126,7 +126,8 @@ local function setMode(run: Run, s: State, mode: Mode)
 	s.modeSince = os.clock()
 	publish(run, s)
 	if mode == "Chase" and previous ~= "Lunge" and previous ~= "React" then
-		Net.fireAll("Effect", "caretakerSpotted", { target = if s.target then tostring(s.target) else nil })
+		Registry.get("Expedition")
+			.fireRun("caretakerSpotted", { target = if s.target then tostring(s.target) else nil })
 	end
 end
 
@@ -428,7 +429,7 @@ local function startLunge(run: Run, s: State, target: RosterEntry)
 	s.resumeMode = if s.mode == "Hunt" then "Hunt" else "Chase"
 	s.target = target.userId
 	setMode(run, s, "Lunge")
-	Net.fireAll("Effect", "caretakerLunge", { target = target.key })
+	Registry.get("Expedition").fireRun("caretakerLunge", { target = target.key })
 end
 
 local function tryStrike(run: Run, s: State): boolean
@@ -440,7 +441,7 @@ local function tryStrike(run: Run, s: State): boolean
 				local knock = (if flat.Magnitude > 0.1 then flat.Unit else s.lungeDir) + Vector3.new(0, 0.6, 0)
 				local landed = Registry.get("Health").damage(run, entry, 1, "caretaker", knock.Unit * 60)
 				if landed then
-					Net.fireAll("Effect", "caretakerHit", { userId = entry.key })
+					Registry.get("Expedition").fireRun("caretakerHit", { userId = entry.key })
 					Registry.get("Telemetry").caretakerHit(run, entry)
 					return true
 				end
@@ -475,7 +476,7 @@ local function beginPhase(run: Run, s: State, near: Vector3)
 	s.phaseTarget = spot
 	s.path = {}
 	setMode(run, s, "Phase")
-	Net.fireAll("Effect", "caretakerPhase", { position = s.position })
+	Registry.get("Expedition").fireRun("caretakerPhase", { position = s.position })
 end
 
 -- Run lifecycle ------------------------------------------------------------------------------------------------
@@ -557,7 +558,7 @@ function CaretakerService.wake(run: Run)
 	s.target = nil
 	s.path = {}
 	setMode(run, s, "Alert")
-	Net.fireAll("Effect", "caretakerAlert", {})
+	Registry.get("Expedition").fireRun("caretakerAlert", {})
 end
 
 function CaretakerService.hunt(run: Run)
@@ -581,7 +582,7 @@ function CaretakerService.noise(run: Run, position: Vector3, radius: number)
 		s.path = {}
 		s.repathAt = 0
 		setMode(run, s, "Investigate")
-		Net.fireAll("Effect", "caretakerHeard", { position = position })
+		Registry.get("Expedition").fireRun("caretakerHeard", { position = position })
 	end
 end
 
@@ -653,7 +654,7 @@ local function think(run: Run, s: State, dt: number)
 			s.progressAt = s.position
 			s.stuckTimer = 0
 			setMode(run, s, if run.captured then "Hunt" else "Search")
-			Net.fireAll("Effect", "caretakerReappear", { position = s.position })
+			Registry.get("Expedition").fireRun("caretakerReappear", { position = s.position })
 		end
 		return
 	end

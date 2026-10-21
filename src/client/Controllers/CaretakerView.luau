@@ -605,7 +605,9 @@ local function setMode(newMode: string)
 		if newMode == "Alert" then
 			AudioController.at("caretaker_alert", p, { volume = 1.2, rolloffMax = 400 })
 			Vfx.flash(p, Color3.fromRGB(255, 60, 40), 8, 50, 0.8)
-			CameraController.shake(0.8, 0.8)
+			if RunInfo.isParticipant() then
+				CameraController.shake(0.8, 0.8)
+			end
 		elseif newMode == "Search" or newMode == "Investigate" then
 			if previous ~= "Search" and previous ~= "Investigate" then
 				AudioController.at("caretaker_search", p, { volume = 0.9 })

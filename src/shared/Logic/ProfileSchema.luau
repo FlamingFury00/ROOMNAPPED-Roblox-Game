@@ -43,11 +43,12 @@ export type Profile = {
 	grants: { list: { { id: string, at: number } } },
 	rewardChoice: { [string]: string },
 	tutorialDone: boolean,
-	flags: { interruptedRunId: string, lastVersion: string, onboardingFunnel: number },
+	-- onboardingSteps: bit (step - 1) is set once onboarding funnel step `step` has been logged.
+	flags: { interruptedRunId: string, lastVersion: string, onboardingSteps: number },
 	feedbackCount: number,
 }
 
-local CURRENT = 3
+local CURRENT = 4
 
 local ProfileSchema = {}
 ProfileSchema.CURRENT = CURRENT
@@ -106,7 +107,7 @@ function ProfileSchema.default(
 		grants = { list = {} },
 		rewardChoice = {},
 		tutorialDone = false,
-		flags = { interruptedRunId = "", lastVersion = "", onboardingFunnel = 0 },
+		flags = { interruptedRunId = "", lastVersion = "", onboardingSteps = 0 },
 		feedbackCount = 0,
 	}
 end
@@ -143,6 +144,23 @@ local MIGRATIONS: { [number]: (any) -> any } = {
 			data.grants = { list = list }
 		end
 		data.schema = 3
+		return data
+	end,
+	-- v3 stored only the highest onboarding funnel step; v4 keeps one bit per logged step so a step that was
+	-- skipped (a failed first run jumping to "Replayed") can still be logged later.
+	[3] = function(data: any): any
+		if type(data.flags) == "table" then
+			local highest = data.flags.onboardingFunnel
+			local mask = 0
+			if type(highest) == "number" and highest == highest then
+				for step = 1, math.clamp(math.floor(highest), 0, 16) do
+					mask = bit32.bor(mask, bit32.lshift(1, step - 1))
+				end
+			end
+			data.flags.onboardingSteps = mask
+			data.flags.onboardingFunnel = nil
+		end
+		data.schema = 4
 		return data
 	end,
 }
@@ -206,6 +224,7 @@ function ProfileSchema.sanitize(data: Profile, template: Profile, content: Conte
 		data.skins.equipped.suitcase = content.defaultSuitcase
 	end
 	data.credits = math.max(0, math.floor(clampNumber(data.credits, 0, 1e9, 0)))
+	data.flags.onboardingSteps = math.floor(clampNumber(data.flags.onboardingSteps, 0, 0xFFFF, 0))
 	local s = data.settings
 	s.music = clampNumber(s.music, 0, 1, 0.55)
 	s.sfx = clampNumber(s.sfx, 0, 1, 0.85)

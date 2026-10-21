@@ -4,7 +4,7 @@
 	Usage (from the repo root):
 	  lune run tools/preview/export_gui.luau <place.rbxl> <scenario> <out.json>
 
-	Scenarios: lobby | explore | placement | escape | downed | spectate | results
+	Scenarios: lobby | squad (four players) | explore | placement | escape | downed | spectate | results
 	           menu:<ScreenName> (MissionBoard, Collection, Settings, Debug, Feedback ...)
 	           phone:<scenario> runs any of them on a touch phone (render with --size 750x311)
 
@@ -39,9 +39,15 @@ sim:run(0.3)
 local a = sim:addBot("Alice", 1001)
 sim:snapshot(a)
 local b: any = nil
-if scenario == "downed" or scenario == "spectate" then
+if scenario == "downed" or scenario == "spectate" or scenario == "squad" then
 	b = sim:addBot("Bob", 1002)
 	sim:snapshot(b)
+end
+if scenario == "squad" then
+	-- A full lobby with long display names: the tallest the squad panel gets.
+	for i, name in { "CaraTheCartographer", "DanielWithAVeryLongName" } do
+		sim:snapshot(sim:addBot(name, 1002 + i))
+	end
 end
 local client = ClientSim.attach(
 	sim,
@@ -96,7 +102,7 @@ local function walkTo(point: any, timeout: number?)
 	end, timeout or 30)
 end
 
-if scenario == "lobby" then
+if scenario == "lobby" or scenario == "squad" then
 	sim:run(1)
 elseif string.sub(scenario, 1, 5) == "menu:" then
 	local UIRoot = client:module("UI.UIRoot")
@@ -216,6 +222,7 @@ local function serialize(inst: any): any?
 			node.yAlign = inst.TextYAlignment.Name
 			node.wrapped = inst.TextWrapped
 			node.scaled = inst.TextScaled
+			node.truncate = inst.TextTruncate.Name
 			node.rich = inst.RichText
 		end
 		if inst:IsA("ScrollingFrame") then

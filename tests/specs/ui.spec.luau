@@ -216,7 +216,7 @@ return function(ctx)
 			-- Pick the bonus skin target for M2.
 			local skinButtons = {}
 			for _, d in client:find("TargetPicker"):GetDescendants() do
-				if d.ClassName == "TextButton" and d.Name == "Button" then
+				if d.ClassName == "TextButton" and string.sub(d.Name, 1, 7) == "Target_" then
 					table.insert(skinButtons, d)
 				end
 			end
@@ -357,10 +357,10 @@ return function(ctx)
 			client:patch("me", { "profile" }, p)
 			client:patch("me", { "results", "saving" }, "Saved")
 			task.wait(0.05)
-			client:press(client:find("Replay"))
+			client:press(client:find("Lobby"))
 			local acks = client:sentNamed("ResultsAction")
 			expect(#acks).toBe(1)
-			expect(acks[1].args[1]).toBe("replay")
+			expect(acks[1].args[1]).toBe("lobby")
 			expect(UIRoot.isOpen("Results")).toBe(false)
 			task.wait(0.8)
 			expect(UIRoot.isOpen("Feedback")).toBe(true)
@@ -394,8 +394,16 @@ return function(ctx)
 			expect(UIRoot.isOpen("Results")).toBe(true)
 			expect(textOf(client, "Headline")).toBe("CAUGHT!")
 			expect(client:find("Saving").Visible).toBe(false)
-			client:press(client:find("Lobby"))
-			expect(client:sentNamed("ResultsAction")[1].args[1]).toBe("lobby")
+			-- First finished run: the survey is due, but PLAY AGAIN goes straight back in without it.
+			local p = profile()
+			p.stats.runs = 1
+			client:patch("me", { "profile" }, p)
+			task.wait(0.05)
+			client:press(client:find("Replay"))
+			expect(client:sentNamed("ResultsAction")[1].args[1]).toBe("replay")
+			task.wait(0.8)
+			expect(UIRoot.isOpen("Results")).toBe(false)
+			expect(UIRoot.isOpen("Feedback")).toBe(false)
 			assertClean(client)
 		end)
 

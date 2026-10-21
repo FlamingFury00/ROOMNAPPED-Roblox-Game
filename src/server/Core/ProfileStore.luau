@@ -11,6 +11,8 @@
 	  * Data written by a newer schema is never downgraded: load reports "Newer" and the caller must not save.
 	  * Every save is an UpdateAsync that first checks the lock is still ours; if another server took it, the
 	    save is abandoned (lockLost) so two servers can never overwrite each other.
+	  * Locks are per player session (`token`), not per server: a player who rejoins the same server while
+	    their previous session is still saving waits for that save instead of sharing its lock.
 	  * Load failures never fall back to a blank profile, so a DataStore outage cannot wipe progress.
 ]]
 
@@ -54,9 +56,11 @@ local function waitForBudget(self: Store)
 	end
 end
 
--- Load (and lock) a profile. Returns status, profile.
-function ProfileStore.load(self: Store, key: string, userId: number): (LoadStatus, any?)
+-- Load (and lock) a profile. Returns status, profile. `token` identifies this player session (defaults to
+-- the server session id).
+function ProfileStore.load(self: Store, key: string, userId: number, token: string?): (LoadStatus, any?)
 	local o = self.options
+	local job = token or o.sessionId
 	for attempt = 1, o.loadAttempts do
 		waitForBudget(self)
 		local outcome: string? = nil
@@ -69,7 +73,7 @@ function ProfileStore.load(self: Store, key: string, userId: number): (LoadStatu
 					record = { profile = o.makeDefault(), lock = nil }
 				end
 				local lock = record.lock
-				if type(lock) == "table" and lock.job ~= o.sessionId then
+				if type(lock) == "table" and lock.job ~= job then
 					local age = o.now() - (tonumber(lock.t) or 0)
 					if age < o.lockStealAge and attempt < o.loadAttempts then
 						outcome = "locked"
@@ -82,7 +86,7 @@ function ProfileStore.load(self: Store, key: string, userId: number): (LoadStatu
 					return nil, nil
 				end
 				record.profile = migrated
-				record.lock = { job = o.sessionId, place = o.placeId, t = o.now() }
+				record.lock = { job = job, place = o.placeId, t = o.now() }
 				outcome = "ok"
 				loaded = migrated
 				return record, { userId }
@@ -104,9 +108,17 @@ function ProfileStore.load(self: Store, key: string, userId: number): (LoadStatu
 	return "Failed", nil
 end
 
--- Save a profile. Returns (saved, lockLost).
-function ProfileStore.save(self: Store, key: string, userId: number, profile: any, release: boolean): (boolean, boolean)
+-- Save a profile. Returns (saved, lockLost). `token` must be the one the profile was loaded with.
+function ProfileStore.save(
+	self: Store,
+	key: string,
+	userId: number,
+	profile: any,
+	release: boolean,
+	token: string?
+): (boolean, boolean)
 	local o = self.options
+	local job = token or o.sessionId
 	local lockLost = false
 	for attempt = 1, o.saveAttempts do
 		waitForBudget(self)
@@ -114,12 +126,12 @@ function ProfileStore.save(self: Store, key: string, userId: number, profile: an
 		local ok, problem = pcall(function()
 			o.store:UpdateAsync(key, function(current: any): (any, any)
 				outcome = nil
-				if type(current) == "table" and type(current.lock) == "table" and current.lock.job ~= o.sessionId then
+				if type(current) == "table" and type(current.lock) == "table" and current.lock.job ~= job then
 					outcome = "lost"
 					return nil, nil
 				end
 				outcome = "ok"
-				local lock = if release then nil else { job = o.sessionId, place = o.placeId, t = o.now() }
+				local lock = if release then nil else { job = job, place = o.placeId, t = o.now() }
 				return { profile = profile, lock = lock }, { userId }
 			end)
 		end)

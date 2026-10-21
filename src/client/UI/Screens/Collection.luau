@@ -284,7 +284,11 @@ local function showSkinDetail(skin: SkinDef)
 		local roomOwned = skin.kind == "suitcase" or owns(skin.room :: string)
 		local price = skin.price or 0
 		local affordable = credits() >= price
-		if not roomOwned then
+		local shopOpen = Common.featureOn("shop")
+		if not shopOpen then
+			detailStatus.Text = Strings.t("collection.shopClosed")
+			detailStatus.TextColor3 = C.orange
+		elseif not roomOwned then
 			detailStatus.Text = Strings.t("toast.roomLocked")
 			detailStatus.TextColor3 = C.orange
 		elseif not affordable then
@@ -297,7 +301,7 @@ local function showSkinDetail(skin: SkinDef)
 			Strings.t("collection.buy", { price = price }),
 			"coin",
 			"success",
-			roomOwned and affordable and not locked(),
+			shopOpen and roomOwned and affordable and not locked(),
 			1,
 			function()
 				pendingBuy = skin
@@ -568,10 +572,11 @@ local function refreshSkinRoomRow()
 	clear(skinRoomRow)
 	for index, def in RoomDefs.ordered do
 		local handle = Components.button({
+			name = "Filter_" .. def.id,
 			text = Common.roomName(def.id),
 			icon = Icons.roomIcon[def.id],
 			variant = if def.id == skinRoom then "primary" else "secondary",
-			size = UDim2.fromOffset(150, 62),
+			size = UDim2.fromOffset(150, 72),
 			textSize = Theme.Text.small,
 			layoutOrder = index,
 			sound = "ui_toggle",
@@ -614,18 +619,21 @@ end
 -- Refresh --------------------------------------------------------------------------------------------------------------------
 
 function Collection.refresh()
-	for id, page in pages do
-		page.Visible = id == currentTab
-	end
-	if currentTab == "rooms" then
-		refreshRooms()
-	elseif currentTab == "skins" then
-		refreshSkinRoomRow()
-		fillSkinGrid(skinGrid, SkinDefs.byRoom[skinRoom] or {})
-	else
-		fillSkinGrid(suitcaseGrid, SkinDefs.suitcases)
-	end
-	refreshDetail()
+	-- Cards are rebuilt on every change; a gamepad selection follows the card it was on.
+	Common.keepSelection(window.frame, function()
+		for id, page in pages do
+			page.Visible = id == currentTab
+		end
+		if currentTab == "rooms" then
+			refreshRooms()
+		elseif currentTab == "skins" then
+			refreshSkinRoomRow()
+			fillSkinGrid(skinGrid, SkinDefs.byRoom[skinRoom] or {})
+		else
+			fillSkinGrid(suitcaseGrid, SkinDefs.suitcases)
+		end
+		refreshDetail()
+	end)
 end
 
 -- Build ------------------------------------------------------------------------------------------------------------------------
@@ -712,7 +720,8 @@ local function build()
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
-		CanvasSize = UDim2.fromOffset(0, 410),
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		ScrollBarThickness = 8,
 		ScrollBarImageColor3 = C.gold,
@@ -751,14 +760,26 @@ local function build()
 	})
 	local allRooms = Common.heading(rooms, Strings.t("collection.allRooms"), "door")
 	allRooms.Position = UDim2.fromOffset(0, 190)
+	-- Room cards wrap onto more rows when the window is narrow (phones, large text), so every room stays
+	-- reachable; the page scrolls when the rows get taller than the window.
 	roomGrid = Create.new("Frame", {
 		Name = "Grid",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 234),
-		Size = UDim2.new(1, 0, 0, 170),
+		Size = UDim2.new(1, -10, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
 		Parent = rooms,
 	}, {
-		Create.list(Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top),
+		(function(): UIListLayout
+			local layout = Create.list(
+				Enum.FillDirection.Horizontal,
+				10,
+				Enum.HorizontalAlignment.Left,
+				Enum.VerticalAlignment.Top
+			)
+			layout.Wraps = true
+			return layout
+		end)(),
 	})
 
 	-- Skins page.

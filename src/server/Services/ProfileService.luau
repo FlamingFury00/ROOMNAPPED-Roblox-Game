@@ -44,6 +44,7 @@ type Session = {
 	player: Player,
 	userId: number,
 	key: string,
+	token: string, -- session lock owner: this server plus a per-session counter
 	status: Status,
 	data: Profile?,
 	dirty: boolean,
@@ -61,6 +62,7 @@ local sessions: { [Player]: Session } = {}
 local store: ProfileStore.Store
 local usingMemory = false
 local sessionId = if Engine.jobId() ~= "" then Engine.jobId() else HttpService:GenerateGUID(false)
+local sessionCounter = 0
 local shuttingDown = false
 
 local function contentInfo(): ProfileSchema.ContentInfo
@@ -169,7 +171,7 @@ local function performSave(session: Session, release: boolean): boolean
 	local snapshot = Tables.deepCopy(session.data)
 	snapshot.lastSeenAt = os.time()
 	session.dirty = false
-	local ok, lost = store:save(session.key, session.userId, snapshot, release)
+	local ok, lost = store:save(session.key, session.userId, snapshot, release, session.token)
 	session.saving = false
 	if ok then
 		session.savedAt = os.clock()
@@ -189,7 +191,7 @@ end
 local function load(session: Session)
 	session.status = "Loading"
 	publish(session)
-	local status, profile = store:load(session.key, session.userId)
+	local status, profile = store:load(session.key, session.userId, session.token)
 	if status == "Ready" then
 		session.data = profile
 		session.status = "Ready"
@@ -271,10 +273,12 @@ function ProfileService.retry(player: Player)
 end
 
 local function onPlayerAdded(player: Player)
+	sessionCounter += 1
 	local session: Session = {
 		player = player,
 		userId = player.UserId,
 		key = "u_" .. player.UserId,
+		token = sessionId .. "#" .. sessionCounter,
 		status = "Loading",
 		data = nil,
 		dirty = false,
@@ -292,7 +296,9 @@ local function onPlayerRemoving(player: Player)
 		return
 	end
 	if session.status == "Ready" and not shuttingDown then
-		task.spawn(function()
+		-- Deferred: other PlayerRemoving handlers (the run's disconnect bookkeeping) write to the profile
+		-- first, whatever order Roblox runs them in, and the release save copies the final data.
+		task.defer(function()
 			performSave(session, true)
 			session.status = "Released"
 			if sessions[player] == session then

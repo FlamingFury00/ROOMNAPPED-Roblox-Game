@@ -179,6 +179,23 @@ def strip_rich(text):
     return re.sub(r"<[^>]+>", "", text)
 
 
+def truncate_lines(lines, font, max_width, max_lines):
+    """TextTruncate: keep the lines that fit the box and end the last visible one with an ellipsis."""
+    clipped = len(lines) > max_lines
+    lines = lines[:max_lines]
+    out = []
+    for i, line in enumerate(lines):
+        last = i == len(lines) - 1
+        if font.getlength(line) <= max_width and not (last and clipped):
+            out.append(line)
+            continue
+        cut = line
+        while cut and font.getlength(cut + "…") > max_width:
+            cut = cut[:-1]
+        out.append(cut.rstrip() + "…")
+    return out
+
+
 # ---------------------------------------------------------------------------------------------------------
 # Layout
 
@@ -533,6 +550,8 @@ def draw_text(canvas, box):
     lines = wrap_lines(text, font, box.w if node.get("wrapped") else None)
     asc, desc = font.getmetrics()
     line_h = asc + desc
+    if node.get("truncate", "None") != "None":
+        lines = truncate_lines(lines, font, box.w, max(1, int(box.h // line_h)))
     total_h = line_h * len(lines)
     ya = node.get("yAlign", "Center")
     y = box.y + (0 if ya == "Top" else (box.h - total_h) / 2 if ya == "Center" else box.h - total_h)

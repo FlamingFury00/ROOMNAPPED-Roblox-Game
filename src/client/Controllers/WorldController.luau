@@ -26,7 +26,15 @@ local WorldController = {}
 WorldController.priority = 30
 
 type DoorRecord = { part: BasePart, closed: CFrame, offset: Vector3, open: boolean, tween: Tween? }
-type LampRecord = { part: BasePart, light: Light?, color: Color3?, brightness: number, flicker: boolean, seed: number }
+type LampRecord = {
+	part: BasePart,
+	light: Light?,
+	color: Color3?,
+	brightness: number,
+	flicker: boolean,
+	seed: number,
+	alarmed: boolean,
+}
 
 local doors: { [BasePart]: DoorRecord } = {}
 local lamps: { [BasePart]: LampRecord } = {}
@@ -122,6 +130,8 @@ local function addLamp(instance: Instance)
 	local light = part:FindFirstChildWhichIsA("Light")
 	-- Roughly one lamp in twelve flickers (stable per lamp so it does not change on rejoin).
 	local seed = MathUtil.hash(part:GetFullName()) % 1000
+	local levelModel = RunInfo.levelModel()
+	local alarmed = alarm and light ~= nil and levelModel ~= nil and part:IsDescendantOf(levelModel)
 	lamps[part] = {
 		part = part,
 		light = light,
@@ -129,8 +139,9 @@ local function addLamp(instance: Instance)
 		brightness = if light then light.Brightness else 0,
 		flicker = seed % 12 == 0 and light ~= nil,
 		seed = seed,
+		alarmed = alarmed,
 	}
-	if alarm and light then
+	if alarmed and light then
 		light.Color = light.Color:Lerp(ALARM_COLOR, 0.65)
 	end
 end
@@ -151,7 +162,9 @@ local function setAlarm(enabled: boolean)
 		local light = record.light
 		if light and record.color then
 			local inLevel = levelModel ~= nil and part:IsDescendantOf(levelModel)
-			if enabled and inLevel then
+			-- Only the hotel's lamps raise the alarm; the lobby stays calm for players waiting there.
+			record.alarmed = enabled and inLevel
+			if record.alarmed then
 				light.Color = (record.color :: Color3):Lerp(ALARM_COLOR, 0.65)
 			else
 				light.Color = record.color :: Color3
@@ -173,7 +186,7 @@ local function stepLamps(dt: number)
 	for part, record in lamps do
 		local light = record.light
 		if light and part.Parent then
-			if alarm then
+			if record.alarmed then
 				light.Brightness = record.brightness * (0.45 + 0.75 * pulse)
 			elseif record.flicker then
 				-- Mostly steady with short stutters.

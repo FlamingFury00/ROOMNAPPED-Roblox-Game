@@ -13,7 +13,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local MathUtil = require(Shared.Util.MathUtil)
-local Net = require(Shared.Net.Net)
 local Registry = require(script.Parent.Parent.Core.Registry)
 local StateServer = require(script.Parent.Parent.Core.StateServer)
 local RunTypes = require(script.Parent.Parent.Core.RunTypes)
@@ -86,7 +85,7 @@ local function combo(run: Run, comboId: string, entry: any?)
 	run.stats.combos[comboId] = true
 	table.insert(run.stats.comboOrder, comboId)
 	global:Set({ "run", "combos" }, run.stats.comboOrder)
-	Net.fireAll("Effect", "combo", { combo = comboId })
+	Registry.get("Expedition").fireRun("combo", { combo = comboId })
 	Registry.get("Telemetry").combo(run, comboId, entry)
 end
 EffectService.combo = combo
@@ -224,7 +223,7 @@ function EffectService.toggleLever(run: Run, entry: any, leverId: string): boole
 	if electrifiedBefore and not electrifiedAfter then
 		combo(run, "power_off", entry)
 	end
-	Net.fireAll("Effect", "lever", { lever = leverId, flipped = flipped })
+	Registry.get("Expedition").fireRun("lever", { lever = leverId, flipped = flipped })
 	Registry.get("Caretaker").noise(run, run.runtime.levers[leverId].cf.Position, GameConfig.Noise.Lever)
 	return true
 end
@@ -283,12 +282,12 @@ function EffectService.step(run: Run, dt: number)
 		if fire then
 			local phase = run.effect:firePhase(id)
 			if beforeFire[id] == "Burning" and phase == "Out" then
-				Net.fireAll("Effect", "extinguish", { zone = id })
+				Registry.get("Expedition").fireRun("extinguish", { zone = id })
 				if #run.effect:sourcesFor(fire.pool, "water") > 0 then
 					combo(run, "extinguish")
 				end
 			elseif phase == "Burning" and beforeFire[id] == "Warning" then
-				Net.fireAll("Effect", "ignite", { zone = id })
+				Registry.get("Expedition").fireRun("ignite", { zone = id })
 			end
 		end
 		local basin = run.runtime.basins[id]

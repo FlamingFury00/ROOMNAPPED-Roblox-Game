@@ -69,14 +69,19 @@ local function onPhase(phase: string, previous: string)
 	elseif phase == "Explore" and previous == "Launching" then
 		stopRide()
 		AudioController.setDuck(1, 1)
-		AudioController.play("elevator_ding", { volume = 1 })
+		if RunInfo.inThisRun() then
+			AudioController.play("elevator_ding", { volume = 1 })
+		end
 		task.delay(0.15, function()
 			fadeIn(0.7)
 		end)
 	elseif phase == "Capture" then
-		CameraController.punchFov(10, 1.2)
-		CameraController.shake(0.6, 0.9)
-	elseif phase == "Results" and RunInfo.inRunPhase() == false and previous ~= "Prep" then
+		if RunInfo.isParticipant() then
+			CameraController.punchFov(10, 1.2)
+			CameraController.shake(0.6, 0.9)
+		end
+	elseif phase == "Results" and previous ~= "Prep" and RunInfo.inThisRun() then
+		-- Only the squad rides back (bystanders in the lobby are never teleported, so no fade for them).
 		stopRide()
 		local outcome = RunInfo.run().outcome
 		if outcome == "Success" then

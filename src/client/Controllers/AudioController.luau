@@ -452,7 +452,8 @@ end
 
 local function desiredMusic(): string?
 	local phase = RunInfo.phase()
-	if phase == "Prep" then
+	if phase == "Prep" or not RunInfo.inThisRun() then
+		-- Players waiting in the lobby keep the lobby theme while a squad is out on a run.
 		return "music_lobby"
 	elseif phase == "Launching" then
 		return nil
@@ -472,7 +473,9 @@ function AudioController.refreshMusic()
 		return
 	end
 	AudioController.setMusic(desiredMusic())
-	AudioController.setAmbience(if RunInfo.isActivePhase() then "hotel_ambience_loop" else nil)
+	AudioController.setAmbience(
+		if RunInfo.isActivePhase() and RunInfo.isParticipant() then "hotel_ambience_loop" else nil
+	)
 end
 
 local function updateTension()
@@ -482,6 +485,7 @@ local function updateTension()
 	local phase = RunInfo.phase()
 	local remaining = if type(escapeEndsAt) == "number" then escapeEndsAt - RunInfo.serverNow() else math.huge
 	local wantClock = (phase == "Escape" or phase == "Capture")
+		and RunInfo.isParticipant()
 		and remaining <= GameConfig.Escape.WarningSeconds
 		and remaining > 0
 	if wantClock and not clockLoop then
@@ -514,11 +518,16 @@ function AudioController.start()
 	task.spawn(verifyAll)
 
 	RunInfo.PhaseChanged:Connect(function(phase: string, previous: string)
-		if phase == "Results" and previous ~= "Prep" then
+		if phase == "Results" and previous ~= "Prep" and RunInfo.inThisRun() then
+			-- The hotel falls quiet under the results sting.
+			AudioController.setAmbience(nil)
 			local outcome = RunInfo.run().outcome
 			AudioController.playSting(if outcome == "Success" then "music_results_win" else "music_results_fail")
 			return
 		end
+		AudioController.refreshMusic()
+	end)
+	RunInfo.RosterChanged:Connect(function()
 		AudioController.refreshMusic()
 	end)
 	RunInfo.StatusChanged:Connect(function(status: string)

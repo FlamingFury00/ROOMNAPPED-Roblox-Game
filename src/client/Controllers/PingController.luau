@@ -246,6 +246,8 @@ local function buildWheel()
 			parent = slice,
 		})
 		slice.Activated:Connect(function()
+			-- A clicked slice ends this press: the wheel must not reopen (or ping again) while Ping is held.
+			pressStarted = nil
 			PingController.pingKind(kind)
 			PingController.closeWheel(false)
 		end)
@@ -262,6 +264,10 @@ function PingController.openWheel()
 	frame.Visible = true
 	AudioController.ui("ui_open", 0.6)
 	PingController.WheelChanged:Fire(true)
+end
+
+function PingController.isWheelOpen(): boolean
+	return wheelOpen
 end
 
 function PingController.closeWheel(send: boolean)

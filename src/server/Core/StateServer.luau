@@ -34,6 +34,8 @@ local StateServer = {}
 
 local globalChannels: { [string]: Channel } = {}
 local privateChannels: { [Player]: Channel } = {}
+-- Players whose private channel was dropped on leave; it is never re-created for them.
+local departed: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local started = false
 
 local function queue(channel: Channel, patch: StatePath.Patch)
@@ -106,8 +108,9 @@ function StateServer.private(player: Player): Channel
 	local channel = privateChannels[player]
 	if not channel then
 		channel = newChannel("me", player)
-		-- Never retain channels for players who already left (avoids leaking state after PlayerRemoving).
-		if player.Parent == Players then
+		-- Never retain channels for players who already left (avoids leaking state after PlayerRemoving, even
+		-- when another PlayerRemoving handler writes to the channel after it was dropped).
+		if player.Parent == Players and not departed[player] then
 			privateChannels[player] = channel
 		end
 	end
@@ -150,6 +153,7 @@ function StateServer.start()
 		StateServer.flushAll()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
+		departed[player] = true
 		privateChannels[player] = nil
 	end)
 end

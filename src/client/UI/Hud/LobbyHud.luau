@@ -49,7 +49,7 @@ local readyButton: ButtonHandle
 local statusLabel: TextLabel
 local countdownLabel: TextLabel
 local readyChipHolder: Frame
-local squadRows: Frame
+local squadRows: ScrollingFrame
 local squadCount: TextLabel
 local noticeHolder: Frame
 local missionCard: TextButton
@@ -63,6 +63,18 @@ local changeButton: ButtonHandle
 
 local lastSecond = -1
 local pendingReady = false
+
+-- Squad rows: full height on tall canvases, compact on short ones (phones in landscape).
+local ROW_HEIGHT = 58
+local ROW_HEIGHT_COMPACT = 42
+local ROW_GAP = 6
+local COMPACT_CANVAS_HEIGHT = 600
+-- Notices are short and wrap to at most two lines in the panel; the Retry button is a fixed 72px.
+local NOTICE_HEIGHT = 54
+local RETRY_HEIGHT = 72
+local squadRowCount = 0
+local squadRowHeight = ROW_HEIGHT
+local noticeHeight = 0
 
 -- State helpers ------------------------------------------------------------------------------------------
 
@@ -120,8 +132,9 @@ local function refreshPlay()
 	playButton.instance.Visible = not (canPlay and ready)
 	playButton.setEnabled(canPlay)
 	if status == "Loading" or status == "Missing" then
-		playButton.setText(Strings.t("lobby.profileLoading"))
-		statusLabel.Text = ""
+		-- The button keeps its short label; the longer explanation goes underneath.
+		playButton.setText(Strings.t("lobby.play"))
+		statusLabel.Text = Strings.t("lobby.profileLoading")
 	elseif status == "Failed" then
 		playButton.setText(Strings.t("lobby.play"))
 		statusLabel.Text = Strings.t("lobby.profileFailed")
@@ -210,7 +223,30 @@ local function tag(parent: Instance, icon: string, color: Color3, order: number)
 	Icons.make(icon, C.textDark, color).Parent = inner
 end
 
+-- Caps the squad rows to the space above the mission card; a squad that still does not fit scrolls.
+local function fitSquad()
+	local content = squadRowCount * squadRowHeight + math.max(0, squadRowCount - 1) * ROW_GAP
+	squadRows.CanvasSize = UDim2.fromOffset(0, content)
+	local height = content
+	local gui = UIRoot.Guis.Hud
+	local canvas = Responsive.canvasSize(gui)
+	if canvas.Y > 0 then
+		local cardTop = if missionCard.Visible then canvas.Y - 14 - missionCard.Size.Y.Offset else canvas.Y
+		-- Panel top (12), padding (2 x 10), header (34), list gaps (2 x 6) and a 12px gap above the card.
+		local room = math.floor(cardTop - 12 - 20 - 34 - 12 - noticeHeight - 12)
+		height = math.max(math.min(content, room), math.min(content, squadRowHeight))
+	end
+	squadRows.Size = UDim2.new(1, 0, 0, height)
+	-- Only a list that actually scrolls needs a gamepad selection stop.
+	squadRows.Selectable = height < content
+end
+
 local function rebuildSquad()
+	local canvas = Responsive.canvasSize(UIRoot.Guis.Hud)
+	local compact = canvas.Y > 0 and canvas.Y < COMPACT_CANVAS_HEIGHT
+	squadRowHeight = if compact then ROW_HEIGHT_COMPACT else ROW_HEIGHT
+	local avatarSize = squadRowHeight - 12
+	local textLeft = avatarSize + 14
 	for _, child in squadRows:GetChildren() do
 		if child:IsA("Frame") then
 			child:Destroy()
@@ -233,14 +269,14 @@ local function rebuildSquad()
 			Name = "Player_" .. item.key,
 			BackgroundColor3 = if isMe then C.panelLight else C.panel,
 			BackgroundTransparency = 0.25,
-			Size = UDim2.new(1, 0, 0, 58),
+			Size = UDim2.new(1, 0, 0, squadRowHeight),
 			LayoutOrder = index,
 			Parent = squadRows,
 		}, { Create.corner(Theme.Radius.medium) })
 		local avatar = Create.new("ImageLabel", {
 			Name = "Avatar",
 			BackgroundColor3 = C.ink,
-			Size = UDim2.fromOffset(46, 46),
+			Size = UDim2.fromOffset(avatarSize, avatarSize),
 			Position = UDim2.fromOffset(6, 6),
 			Image = "",
 			Parent = row,
@@ -249,14 +285,28 @@ local function rebuildSquad()
 		if userId then
 			Common.headshot(avatar, userId)
 		end
+		-- Right-aligned tags: the leader's crown, then ready / loading / next-run.
+		local tagList: { { icon: string, color: Color3 } } = {}
+		if info.leader then
+			table.insert(tagList, { icon = "crown", color = C.gold })
+		end
+		if info.ready then
+			table.insert(tagList, { icon = "check", color = C.green })
+		elseif info.profile ~= "Ready" then
+			table.insert(tagList, { icon = "clock", color = C.textMuted })
+		elseif info.waiting then
+			table.insert(tagList, { icon = "zzz", color = C.orange })
+		end
+		-- Text runs up to the tags this row actually shows.
+		local textInset = textLeft + 12 + #tagList * 34
 		local name = if type(info.display) == "string" then info.display else (info.name or item.key)
 		Components.label({
 			name = "Name",
 			text = name,
 			font = Theme.Fonts.heading,
-			textSize = Theme.Text.body,
-			size = UDim2.new(1, -150, 0, 26),
-			position = UDim2.fromOffset(60, 6),
+			textSize = if compact then Theme.Text.small else Theme.Text.body,
+			size = UDim2.new(1, -textInset, 0, if compact then 20 else 26),
+			position = UDim2.fromOffset(textLeft, if compact then 2 else 6),
 			stroke = true,
 			parent = row,
 		}).TextTruncate =
@@ -278,12 +328,13 @@ local function rebuildSquad()
 			name = "Status",
 			text = subtitle,
 			font = Theme.Fonts.bodyBold,
-			textSize = Theme.Text.small,
+			textSize = if compact then Theme.Text.tiny else Theme.Text.small,
 			color = subColor,
-			size = UDim2.new(1, -150, 0, 20),
-			position = UDim2.fromOffset(60, 31),
+			size = UDim2.new(1, -textInset, 0, if compact then 17 else 20),
+			position = UDim2.fromOffset(textLeft, if compact then 22 else 31),
 			parent = row,
-		})
+		}).TextTruncate =
+			Enum.TextTruncate.AtEnd
 		local tags = Create.new("Frame", {
 			Name = "Tags",
 			BackgroundTransparency = 1,
@@ -299,17 +350,12 @@ local function rebuildSquad()
 				Enum.VerticalAlignment.Center
 			),
 		})
-		if info.leader then
-			tag(tags, "crown", C.gold, 1)
-		end
-		if info.ready then
-			tag(tags, "check", C.green, 2)
-		elseif info.profile ~= "Ready" then
-			tag(tags, "clock", C.textMuted, 2)
-		elseif info.waiting then
-			tag(tags, "zzz", C.orange, 2)
+		for order, entry in tagList do
+			tag(tags, entry.icon, entry.color, order)
 		end
 	end
+	squadRowCount = #list
+	fitSquad()
 end
 
 -- Mission card --------------------------------------------------------------------------------------------------
@@ -317,11 +363,13 @@ end
 local function refreshMission()
 	local missionId = lobbyState().mission
 	local mission = if type(missionId) == "string" then MissionDefs.byId[missionId] else nil
+	if missionCard.Visible ~= (mission ~= nil) then
+		missionCard.Visible = mission ~= nil
+		fitSquad()
+	end
 	if not mission then
-		missionCard.Visible = false
 		return
 	end
-	missionCard.Visible = true
 	local room = RoomDefs.byId[mission.targetRoom]
 	missionStripe.BackgroundColor3 = if room then room.color else C.gold
 	missionName.Text = Strings.t(mission.nameKey)
@@ -388,19 +436,24 @@ local function refreshNotices()
 		end
 	end
 	local profile = ClientState.get("me", "profile")
-	if type(profile) ~= "table" then
-		return
+	local height = 0
+	local function reserve(amount: number)
+		height += (if height > 0 then ROW_GAP else 0) + amount
 	end
-	if profile.memory == true then
+	if type(profile) == "table" and profile.memory == true then
 		Components.notice("alert", Strings.t("lobby.testServer"), C.orange, 1, C.textDark).Parent = noticeHolder
+		reserve(NOTICE_HEIGHT)
 	end
-	if profile.status == "Failed" then
+	local status = if type(profile) == "table" then profile.status else nil
+	if status == "Failed" then
 		Components.notice("cross", Strings.t("lobby.profileFailed"), C.red, 2).Parent = noticeHolder
+		reserve(NOTICE_HEIGHT)
+		reserve(RETRY_HEIGHT)
 		Components.button({
 			text = Strings.t("lobby.retryProfile"),
 			icon = "refresh",
 			variant = "blue",
-			size = UDim2.fromOffset(220, 56),
+			size = UDim2.fromOffset(220, RETRY_HEIGHT),
 			textSize = Theme.Text.body,
 			layoutOrder = 3,
 			onClick = function()
@@ -408,8 +461,13 @@ local function refreshNotices()
 			end,
 			parent = noticeHolder,
 		})
-	elseif profile.status == "Newer" then
+	elseif status == "Newer" then
 		Components.notice("alert", Strings.t("lobby.profileNewer"), C.red, 2).Parent = noticeHolder
+		reserve(NOTICE_HEIGHT)
+	end
+	if height ~= noticeHeight then
+		noticeHeight = height
+		fitSquad()
 	end
 end
 
@@ -564,14 +622,20 @@ local function build()
 		position = UDim2.fromScale(0.5, 0),
 		parent = header,
 	})
-	squadRows = Create.new("Frame", {
+	squadRows = Create.new("ScrollingFrame", {
 		Name = "Rows",
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = C.gold,
+		VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
+		Selectable = false,
 		LayoutOrder = 1,
 		Parent = squad,
-	}, { Create.list(Enum.FillDirection.Vertical, 6) })
+	}, { Create.list(Enum.FillDirection.Vertical, ROW_GAP) })
 	noticeHolder = Create.new("Frame", {
 		Name = "Notices",
 		BackgroundTransparency = 1,
@@ -638,7 +702,7 @@ local function build()
 		font = Theme.Fonts.bodyHeavy,
 		textSize = Theme.Text.body,
 		color = C.cream,
-		size = UDim2.new(1, -210, 0, 30),
+		size = UDim2.new(1, -226, 0, 30),
 		position = UDim2.fromOffset(60, 116),
 		stroke = true,
 		parent = missionCard,
@@ -653,6 +717,8 @@ local function build()
 		position = UDim2.fromOffset(24, 150),
 		parent = missionCard,
 	})
+	-- The whole card is the touch target (it opens the board too); this button only marks it for the leader, so
+	-- it stays short enough to sit under the chips.
 	changeButton = Components.button({
 		name = "Change",
 		text = Strings.t("lobby.change"),
@@ -684,6 +750,8 @@ local function build()
 	end
 	placeCluster()
 	Responsive.Changed:Connect(placeCluster)
+	-- Canvas changes can switch the squad between full and compact rows.
+	Responsive.Changed:Connect(rebuildSquad)
 end
 
 function LobbyHud.start()

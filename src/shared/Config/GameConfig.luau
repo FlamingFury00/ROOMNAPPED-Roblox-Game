@@ -10,7 +10,7 @@ local Tables = require(script.Parent.Parent.Util.Tables)
 
 local GameConfig = {
 	Version = "1.0.0",
-	SaveSchemaVersion = 3,
+	SaveSchemaVersion = 4,
 
 	Loadout = {
 		Slots = 2, -- brief: equipped room slots per player
@@ -215,6 +215,12 @@ local GameConfig = {
 	Onboarding = {
 		FirstUsefulActionTargetSeconds = 60, -- brief: measured from first controllable spawn
 		TutorialMissionId = "M0",
+		-- Tutorial milestones the client reports (anything else is ignored by the server).
+		TutorialSteps = { "moved", "selected", "deployed", "crossed", "foundTarget", "captured", "finished" },
+	},
+
+	Feedback = {
+		Tags = { "fun", "confusing", "hard", "easy" }, -- optional tag on the post-run rating
 	},
 
 	Performance = {
