@@ -26,6 +26,7 @@ local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local UIRoot = require(script.Parent.Parent.UIRoot)
 local Common = require(script.Parent.Common)
+local RoomPrefabs = require(Shared.World.RoomPrefabs)
 
 type ButtonHandle = Components.ButtonHandle
 
@@ -58,6 +59,7 @@ local actedRunId: string? = nil
 local planShownFor: string? = nil -- run whose reward plan is on screen (rendered once, then only the save state)
 local renderedKey = ""
 local spinnerConnection: RBXScriptConnection? = nil
+local rewardPreview: Common.Preview? = nil -- the stolen room turning in 3D, when the reward is a room
 local raysConnection: RBXScriptConnection? = nil
 local countToken = 0
 
@@ -211,6 +213,10 @@ end
 
 local function renderRewardCard(data: any)
 	stopRays()
+	if rewardPreview then
+		(rewardPreview :: Common.Preview).destroy()
+		rewardPreview = nil
+	end
 	clear(rewardCard)
 	local plan = data.plan
 	local title: string
@@ -261,7 +267,31 @@ local function renderRewardCard(data: any)
 		stroke = true,
 		parent = rewardCard,
 	})
-	bigIcon(rewardCard, icon, color, iconSize, UDim2.new(0.5, 0, 0, iconTop))
+	local roomId = if data.success and type(plan) == "table" then plan.blueprint else nil
+	if type(roomId) == "string" and RoomDefs.byId[roomId] then
+		-- The stolen room itself, turning slowly, with its icon as a badge in the corner.
+		local width = math.floor(iconSize * 2.1)
+		local height = math.floor(iconSize * 1.12)
+		local preview = Common.preview(
+			rewardCard,
+			UDim2.fromOffset(width, height),
+			UDim2.new(0.5, -width // 2, 0, iconTop - height // 2 + iconSize // 2)
+		)
+		preview.show(function(): Model?
+			return RoomPrefabs.build(roomId, nil, CFrame.new(), "results")
+		end, "room")
+		rewardPreview = preview
+		Motion.pop(preview.frame, 0.4)
+		bigIcon(
+			rewardCard,
+			icon,
+			color,
+			math.floor(iconSize * 0.42),
+			UDim2.new(0.5, width // 2 - math.floor(iconSize * 0.21), 0, iconTop + height - math.floor(iconSize * 0.62))
+		)
+	else
+		bigIcon(rewardCard, icon, color, iconSize, UDim2.new(0.5, 0, 0, iconTop))
+	end
 	local nameLabel = Components.label({
 		text = name,
 		font = Theme.Fonts.heading,

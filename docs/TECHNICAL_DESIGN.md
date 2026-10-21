@@ -135,8 +135,12 @@ vision cone and line of sight and hears noises (deploys, splashes, levers, crate
 Investigate, Search, Chase, Lunge (0.4 s telegraphed wind-up), React, Hunt (after the capture), Phase (it
 fades through walls when stuck or when no path exists). Cold slows it; wind pushes it back a bounded
 distance and then it braces, so wind can never stun-lock it. Pressure scales with squad size through speed.
-Clients render it from interpolated snapshots as a part-built bellhop with procedural gait, lantern, key
-jingle and per-mode body language (`CaretakerView`). In the tutorial it naps inside the target room, snoring
+Clients render it from interpolated snapshots (`CaretakerView`). Its body is an R15 character the server
+dresses from catalog items as a lanky night bellhop (`CaretakerLook`, built with
+`Players:CreateHumanoidModelFromDescriptionAsync`; a failing piece retries with Roblox-made stand-ins, then
+plain colours) and every client puppets with Roblox's own Elder and Werewolf animation packs plus head turns,
+lunges, a lantern and glowing eyes on top (`CaretakerHuman`). The part-built bellhop with its procedural gait
+is the fallback when no dressed body exists. In the tutorial it naps inside the target room, snoring
 (so players can hear where it sleeps), until the theft wakes it.
 
 ## 7. Health, revive and spectating (S16, U03, U12)
@@ -189,6 +193,26 @@ with the reason and a tip on the results.
 
 ## 9. Client presentation
 
+* **Real models and textures** (A01, A10). Builders ask for props by key (`World/Assets.place`): each slot
+  holds a procedural fallback until `AssetLibraryService` has loaded the key's curated free Creator Store
+  models (`Content/AssetManifest`) with `AssetService:LoadAssetAsync` (the place file sets
+  `AssetService.AllowInsertFreeAssets`), stripped every script, sound, GUI and constraint, turned it so its
+  front faces the slot (its seats, else the side its thumbnail shows, which follows from its pivot), scaled
+  it into the slot's box (a "stretch" fit makes tables and desks exactly the right height) and published it
+  to `ReplicatedStorage.RN_Assets`; slots then swap the fallback for a clone in place. Real models never
+  collide: builders place invisible boxes. Wallpapers, carpets, parquet, marble, tiles, brick, concrete and
+  ice are MaterialVariants in the place file (`src/MaterialService`) that themes and room skins put on their
+  surfaces (`Palette.dress`). Picture frames hang public-domain paintings shaped to each canvas.
+* **Bodies** (`PoseController`): every client blends poses onto every visible player's animated joints after
+  the Animator runs — a straight-armed suitcase carry with a lean away from the weight, a slumped downed pose
+  with stars circling the head, a squat over a teammate while reviving, arms out leaning back while stealing
+  a room — and plays Roblox's Cheer when the squad escapes.
+* **Cinematic shots** (`CinematicController`): the doors part on the squad on arrival, the camera pulls back
+  to watch the room fold during a theft and pushes in on the waking Caretaker, and watches the elevator
+  close on an escape. Shots are short, skipped with Reduced Motion and always hand control back.
+* **Particles** (`Vfx`): curated flipbook flames and smoke, snowflakes, sparks, wind streaks, bubbles, hearts
+  and coins, each with an engine-bundled fallback swapped in if it fails to load.
+
 * **Controllers**: input actions (keyboard, gamepad, touch share one action map), camera feel (decaying
   shake, FOV punches, safe cinematic shots), placement preview, the single context action with
   server-verified holds, pings (contextual tap, four-way wheel), hints and the guided tutorial,
@@ -221,7 +245,8 @@ with the reason and a tip on the results.
 * **Honest controls**: anything the server would refuse is shown as unavailable with the reason before it is
   pressed — missions disabled by a live flag, the shop when it is switched off, *Unstuck* outside an active
   run or during its cooldown.
-* **Icons** are vector compositions of frames (`Icons.luau`); the only images are engine-bundled textures.
+* **Icons** are vector compositions of frames (`Icons.luau`); the interface uses no uploaded images. The
+  results card shows a stolen room turning in 3D.
 * **Accessibility** (S29): separate volume groups, reduced motion, low effects, text and UI size, hints
   toggle, icons paired with words and never colour-only, every important event has both a sound and a
   visual, the whole mission is playable muted and without chat.
