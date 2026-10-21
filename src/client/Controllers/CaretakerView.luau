@@ -12,7 +12,7 @@
 	  Chase/Hunt  fast stride, red eyes and lantern, louder steps and hum, "!" when it spots someone
 	  Lunge       wind-up crouch, arms out
 	  React       blown back / stunned: wobble and circling stars
-	  Dormant     slumped asleep with floating Zs (tutorial)
+	  Dormant     slumped asleep with floating Zs and a snore you can follow (tutorial)
 	  Phase       fades into the walls and reappears in a puff
 	  Alert       flash and scream when the room is stolen
 	Cold (chilled) adds frost and a blue tint; bracing against wind leans it into the gust.
@@ -93,6 +93,7 @@ type Rig = {
 	badge: BillboardGui,
 	badgeLabel: TextLabel,
 	hum: AudioController.LoopHandle?,
+	snore: AudioController.LoopHandle?,
 	moveParts: { BasePart }, -- fixed order matching the animation buffer
 }
 
@@ -410,6 +411,7 @@ local function buildRig(): Rig
 		badge = badge,
 		badgeLabel = badgeLabel,
 		hum = nil,
+		snore = nil,
 		moveParts = {},
 	}
 	local order: { BasePart } = {
@@ -437,6 +439,9 @@ local function buildRig(): Rig
 	end
 	built.moveParts = order
 	built.hum = AudioController.loop("caretaker_hum_loop", { parent = torso, rolloffMin = 10, rolloffMax = 90 })
+	-- Silent until the mode style turns it up (asleep only).
+	built.snore =
+		AudioController.loop("caretaker_snore_loop", { parent = head, volume = 0, rolloffMin = 8, rolloffMax = 75 })
 	return built
 end
 
@@ -448,6 +453,9 @@ local function destroyRig()
 	rig = nil
 	if r.hum then
 		r.hum.stop(0.4)
+	end
+	if r.snore then
+		r.snore.stop(0.4)
 	end
 	r.model:Destroy()
 end
@@ -581,13 +589,15 @@ local function applyModeStyle(r: Rig)
 		else style.badgeColor or Theme.Colors.gold
 	local hunting = mode == "Chase" or mode == "Hunt" or mode == "Lunge" or mode == "Alert"
 	r.highlight.OutlineTransparency = if hunting then 0.2 else 1
-	r.sleepy.Enabled = mode == "Dormant"
+	local asleep = mode == "Dormant"
+	r.sleepy.Enabled = asleep
 	if r.hum then
-		(r.hum :: AudioController.LoopHandle).setVolume(
-			if hunting then 1.2 elseif mode == "Dormant" then 0.25 else 0.7,
-			0.5
-		);
+		-- Asleep, the snore replaces the presence hum.
+		(r.hum :: AudioController.LoopHandle).setVolume(if hunting then 1.2 elseif asleep then 0 else 0.7, 0.5);
 		(r.hum :: AudioController.LoopHandle).setPitch(if hunting then 1.12 else 1)
+	end
+	if r.snore then
+		(r.snore :: AudioController.LoopHandle).setVolume(if asleep then 1 else 0, if asleep then 0.8 else 0.15)
 	end
 end
 

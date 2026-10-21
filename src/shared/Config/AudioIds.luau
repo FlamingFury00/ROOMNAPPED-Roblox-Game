@@ -29,6 +29,11 @@ local AudioIds: { [string]: AudioId } = {
 		name = "Floor Creaks Short Med Wood Creaks 12 (SFX)",
 		alternates = { 9114840555, 9125562923 },
 	},
+	caretaker_snore_loop = {
+		id = 9113862735,
+		name = "Comic Snoring Male Vocals Steady Pace 5 (SFX)",
+		alternates = { 9113862891, 9113863048 },
+	},
 	caretaker_step = {
 		id = 9116478399,
 		name = "Massive Footstep Impact 22 (SFX)",

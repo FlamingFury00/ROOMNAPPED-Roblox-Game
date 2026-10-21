@@ -115,7 +115,8 @@ Investigate, Search, Chase, Lunge (0.4 s telegraphed wind-up), React, Hunt (afte
 fades through walls when stuck or when no path exists). Cold slows it; wind pushes it back a bounded
 distance and then it braces, so wind can never stun-lock it. Pressure scales with squad size through speed.
 Clients render it from interpolated snapshots as a part-built bellhop with procedural gait, lantern, key
-jingle and per-mode body language (`CaretakerView`).
+jingle and per-mode body language (`CaretakerView`). In the tutorial it naps inside the target room, snoring
+(so players can hear where it sleeps), until the theft wakes it.
 
 ## 7. Health, revive and spectating (S16, U03, U12)
 

@@ -1247,6 +1247,30 @@
     ],
     "notes": "Key chosen: caretaker_hum_loop. PSE 'Spirit Presence, constant, airy hissing, high-end ringing' (30 s). Alts: 'Spooky Presence' (48 s, typed Music), 'Breathing Presence ... airy breaths' (35 s) if you prefer a breath loop. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
+  "caretaker_snore_loop": {
+    "id": 9113862735,
+    "name": "Comic Snoring Male Vocals Steady Pace 5 (SFX)",
+    "duration": 8,
+    "source": "partner",
+    "creator": "ProSoundEffects (userId 7462895450)",
+    "alternates": [
+      {
+        "id": 9113862891,
+        "name": "Comic Snoring Male Vocals Steady Pace 7 (SFX)",
+        "duration": 6,
+        "source": "partner",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9113863048,
+        "name": "Comic Snoring Male Vocals Steady Pace 9 (SFX)",
+        "duration": 6,
+        "source": "partner",
+        "creator": "ProSoundEffects"
+      }
+    ],
+    "notes": "Key chosen: caretaker_snore_loop. PSE comic male snoring at a steady pace (8 s, loops cleanly): the tutorial Caretaker naps inside the target room until the theft, so players hear where it sleeps. Alts: Steady Pace 7 and 9 (6 s each). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+  },
   "caretaker_grab": {
     "id": 9120729973,
     "name": "Whoosh Impact 1 (SFX)",

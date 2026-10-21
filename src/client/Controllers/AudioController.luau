@@ -69,6 +69,7 @@ local TRIM: { [string]: number } = {
 	ui_reward = 0.5,
 	capture_charge_loop = 0.45,
 	caretaker_hum_loop = 0.6,
+	caretaker_snore_loop = 0.55,
 	caretaker_step = 0.45,
 	caretaker_keys = 0.5,
 	caretaker_search = 0.5,
