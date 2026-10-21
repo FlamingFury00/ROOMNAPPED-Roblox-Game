@@ -28,6 +28,9 @@ export type RunSummary = {
 	anyDowns: boolean,
 	combos: { [string]: boolean },
 	durationSeconds: number,
+	-- False for a success faster than anyone can play the route (a teleporting client): it pays the practice
+	-- credits and counts toward nothing else. Missing means plausible.
+	plausible: boolean?,
 }
 
 export type RewardLine = { key: string, amount: number?, item: string? }
@@ -41,6 +44,7 @@ export type RewardPlan = {
 	firstClear: boolean,
 	challenges: { [string]: boolean },
 	lines: { RewardLine },
+	unranked: boolean?, -- an implausible run: no stats, records, unlock progress or mastery
 }
 
 export type Preview = { kind: "blueprint" | "skin" | "credits" | "practice", item: string?, credits: number }
@@ -167,10 +171,14 @@ function RewardRules.compute(
 		lines = {},
 	}
 	local preview = RewardRules.preview(profile, mission, config)
-	if preview.kind == "practice" then
+	if preview.kind == "practice" or summary.plausible == false then
 		plan.practice = true
 		plan.credits = config.ExtractionCredits
 		table.insert(plan.lines, { key = "reward.practice", amount = config.ExtractionCredits })
+		if summary.plausible == false then
+			plan.unranked = true
+			return plan
+		end
 		-- Challenges still count toward the mission's stars; they just do not pay again.
 		for _, challenge in mission.challenges do
 			if RewardRules.challengeMet(challenge, summary) then
@@ -238,6 +246,15 @@ function RewardRules.apply(
 	if RewardRules.hasGrant(profile, summary.runId) then
 		return false, {}
 	end
+	local list = profile.grants.list
+	table.insert(list, { id = summary.runId, at = now })
+	while #list > maxHistory do
+		table.remove(list, 1)
+	end
+	if plan.unranked then
+		profile.credits += plan.credits
+		return true, {}
+	end
 	if plan.blueprint then
 		profile.rooms[plan.blueprint :: string] = true
 	end
@@ -263,13 +280,7 @@ function RewardRules.apply(
 	if summary.keysTotal > 0 and summary.keysCollected >= summary.keysTotal then
 		profile.stats.allKeys[summary.missionId] = true
 	end
-	local mastery = Mastery.grant(profile :: any)
-	local list = profile.grants.list
-	table.insert(list, { id = summary.runId, at = now })
-	while #list > maxHistory do
-		table.remove(list, 1)
-	end
-	return true, mastery
+	return true, Mastery.grant(profile :: any)
 end
 
 return RewardRules

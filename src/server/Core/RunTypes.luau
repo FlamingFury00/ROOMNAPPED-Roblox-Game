@@ -27,7 +27,6 @@ export type RosterEntry = {
 	health: HealthModel.HealthState,
 	lastSafe: CFrame?,
 	device: string,
-	rewardChoice: string?,
 	selectedSlot: number,
 	damageTaken: number,
 }

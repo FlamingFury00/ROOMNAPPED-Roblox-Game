@@ -163,9 +163,11 @@ function TelemetryService.captured(run: any, _entry: any)
 end
 
 function TelemetryService.runEnded(run: any, summary: any)
+	-- A success too fast to have been played is logged as such (a sign of a modified client), outside the funnels.
+	local played = summary.plausible ~= false
 	for _, entry in run.roster do
 		if entry.connected and not entry.left then
-			if summary.success then
+			if summary.success and played then
 				onboarding(entry.player, "FirstExtraction")
 				expedition(run, entry, 5, "Extract")
 			end
@@ -173,7 +175,7 @@ function TelemetryService.runEnded(run: any, summary: any)
 				entry.player,
 				"RunResult",
 				math.floor(summary.durationSeconds),
-				summary.outcome,
+				if played then summary.outcome else "Implausible",
 				run.mission.id,
 				tostring(#run.order)
 			)
@@ -209,10 +211,23 @@ function TelemetryService.feedback(player: Player, rating: number, tag: string?)
 	custom(player, "Feedback", rating, knownTag, GameConfig.Version)
 end
 
+-- Tutorial steps the client reported this session: each is logged once, however often a client sends it.
+local tutorialStepsSent: { [Player]: { [string]: boolean } } = {}
+
 function TelemetryService.tutorialStep(player: Player, step: string)
-	if table.find(GameConfig.Onboarding.TutorialSteps, step) then
-		custom(player, "TutorialStep", 1, step)
+	if not table.find(GameConfig.Onboarding.TutorialSteps, step) then
+		return
 	end
+	local sent = tutorialStepsSent[player]
+	if not sent then
+		sent = {}
+		tutorialStepsSent[player] = sent
+	end
+	if sent[step] then
+		return
+	end
+	sent[step] = true
+	custom(player, "TutorialStep", 1, step)
 end
 
 function TelemetryService.ping(player: Player, kind: string)
@@ -252,6 +267,10 @@ function TelemetryService.Init()
 	Registry.add("Telemetry", TelemetryService)
 end
 
-function TelemetryService.Start() end
+function TelemetryService.Start()
+	Players.PlayerRemoving:Connect(function(player: Player)
+		tutorialStepsSent[player] = nil
+	end)
+end
 
 return TelemetryService

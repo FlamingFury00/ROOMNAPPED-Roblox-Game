@@ -11,7 +11,7 @@ ROOMNAPPED expects two places:
 | Environment | Purpose | How the server knows |
 | --- | --- | --- |
 | **test** | Private place for the team and recruited testers. Admin test tools, verbose logs. | Its place id is listed in `FeatureFlags.TestPlaceIds` (`src/shared/Config/FeatureFlags.luau`). |
-| **live** | The public experience. | Any other published place id. |
+| **live** | The public experience. No admin test tools unless switched on for a while with `{"features": {"debugTools": true}}` in `flags/live`. | Any other published place id. |
 | studio | Local play in Studio. In-memory saves unless API access is enabled. | `RunService:IsStudio()` |
 
 Both places read live switches from the `RoomnappedConfig` DataStore (key `flags/test` or `flags/live`) at
@@ -105,7 +105,8 @@ republishing, and running servers follow within five minutes (see §6).
       minutes the Magnet room shows as *Resting* in the collection, leaves any loadout and cannot be
       equipped, and profiles still own it; remove the override and it comes back. (The admin console command
       `flag Magnet off` rehearses the same thing on one server instantly.)
-- [ ] Admin tools appear only for the owner (or group rank 254+) and for ids in `adminUserIds`.
+- [ ] Admin tools appear only for the owner (or group rank 254+) and for ids in `adminUserIds`. On the live
+      place they stay hidden for everyone until `flags/live` switches `debugTools` on.
 
 ## 6. Rollback
 

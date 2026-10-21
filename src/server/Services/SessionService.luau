@@ -43,6 +43,10 @@ type Presence = {
 	-- Walking into the departure elevator only readies a player who has been seen outside it since the last
 	-- run, so nobody standing in (or arriving back into) the car is launched without choosing to.
 	zoneArmed: boolean,
+	-- The client reports in once and is asked for feedback at most once a session; repeats are ignored, so
+	-- a modified client cannot flood analytics or stuff ratings.
+	reported: boolean,
+	feedbackSent: boolean,
 }
 
 local global = StateServer.global("global")
@@ -526,9 +530,10 @@ end
 
 local function onClientReady(player: Player, device: string, locale: string?)
 	local p = presence[player]
-	if not p then
+	if not p or p.reported then
 		return
 	end
+	p.reported = true
 	p.device = if VALID_DEVICES[device] then device else "unknown"
 	p.locale = if type(locale) == "string" then string.sub(locale, 1, 12) else ""
 	publishPlayer(player)
@@ -536,9 +541,11 @@ local function onClientReady(player: Player, device: string, locale: string?)
 end
 
 local function onFeedback(player: Player, rating: number, tag: string?)
-	if rating < 1 or rating > 5 then
+	local p = presence[player]
+	if not p or p.feedbackSent or rating < 1 or rating > 5 then
 		return
 	end
+	p.feedbackSent = true
 	profiles().update(player, function(profile: any)
 		profile.feedbackCount += 1
 	end)
@@ -558,6 +565,8 @@ local function onPlayerAdded(player: Player)
 		locale = "",
 		replay = false,
 		zoneArmed = false,
+		reported = false,
+		feedbackSent = false,
 	}
 	electLeader()
 	publishPlayer(player)

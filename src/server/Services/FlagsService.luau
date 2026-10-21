@@ -105,7 +105,11 @@ local function cleanOverrides(raw: any): (any, { string })
 			key == "adminGroup"
 			and type(value) == "table"
 			and type(value.id) == "number"
+			and value.id > 0
 			and type(value.minRank) == "number"
+			-- Rank 0 is everyone outside the group: such an entry would make every player an admin.
+			and value.minRank >= 1
+			and value.minRank <= 255
 		then
 			clean.adminGroup = { id = value.id, minRank = value.minRank }
 		else

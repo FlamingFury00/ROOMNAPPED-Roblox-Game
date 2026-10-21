@@ -52,6 +52,14 @@ type CartState = {
 	pinKey: string,
 }
 
+-- Movement guard state for one run member (see guardEntry).
+type Guard = {
+	root: BasePart,
+	anchor: Vector3, -- last accepted position
+	budget: number, -- studs the character may still cover right now
+	seen: number, -- server teleports already accounted for
+}
+
 type Scratch = {
 	crates: { [string]: CrateState },
 	carts: { [string]: CartState },
@@ -59,12 +67,14 @@ type Scratch = {
 	sampleTimer: number,
 	keyTaken: { [string]: boolean },
 	tickTimer: number,
+	guards: { [number]: Guard },
 }
 
 local HazardService = {}
 
 local global = StateServer.global("global")
 local H = GameConfig.Hazards
+local I = GameConfig.Integrity
 
 local function serverNow(): number
 	return workspace:GetServerTimeNow()
@@ -289,6 +299,52 @@ local function onLedge(run: Run, position: Vector3): boolean
 	return false
 end
 
+-- Movement guard. The client owns its character, so a modified client can put it anywhere: next to the
+-- target room, or into the exit with the suitcase. Every frame, before the suitcase, capture and Caretaker
+-- checks run, each run member may only have covered what legitimate movement allows: MaxMoveSpeed plus a
+-- burst allowance that covers launches, boosted slides, knockback and a lagging client whose position arrives
+-- all at once. Anything further is a teleport and the character goes back to where it was last accepted. Server
+-- teleports (falls, checkpoints, unstuck) start the guard again from where they put the character; reports a
+-- client sends before it hears about one just put it there again.
+local function flatDistance(a: Vector3, b: Vector3): number
+	return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
+end
+
+local function guardEntry(s: Scratch, entry: RosterEntry, dt: number, now: number)
+	local Characters = Registry.get("Characters")
+	local root = Characters.root(entry.player)
+	if not root or entry.health.status == "Eliminated" then
+		s.guards[entry.userId] = nil
+		return
+	end
+	local position = root.CFrame.Position
+	local existing = s.guards[entry.userId]
+	local g: Guard
+	if existing and existing.root == root then
+		g = existing
+	else
+		g = { root = root, anchor = position, budget = I.MoveBurstStuds, seen = 0 }
+		s.guards[entry.userId] = g
+	end
+	local teleport = Characters.lastTeleport(entry.player)
+	if teleport and teleport.count ~= g.seen then
+		g.seen = teleport.count
+		-- A teleport this recent may not have reached the client yet: count from where it puts the character.
+		if now - teleport.at < I.TeleportSettleSeconds then
+			g.anchor = teleport.to
+			g.budget = I.MoveBurstStuds
+		end
+	end
+	g.budget = math.min(I.MoveBurstStuds, g.budget + I.MaxMoveSpeed * dt)
+	local moved = flatDistance(position, g.anchor)
+	if moved <= g.budget then
+		g.budget -= moved
+		g.anchor = position
+		return
+	end
+	Characters.snapBack(entry.player, g.anchor)
+end
+
 local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: boolean)
 	local Characters = Registry.get("Characters")
 	local Health = Registry.get("Health")
@@ -457,6 +513,7 @@ function HazardService.startRun(run: Run)
 		sampleTimer = 0,
 		keyTaken = {},
 		tickTimer = 0,
+		guards = {},
 	}
 	run.scratch.hazards = s
 	for _, d in run.model:GetDescendants() do
@@ -512,6 +569,12 @@ function HazardService.step(run: Run, dt: number)
 	local s = scratch(run)
 	if not s then
 		return
+	end
+	local clock = os.clock()
+	for _, entry in Registry.get("Expedition").participants(run) do
+		if entry.player.Parent == Players then
+			guardEntry(s, entry, dt, clock)
+		end
 	end
 	stepCrates(run, dt)
 	for _, state in s.carts do

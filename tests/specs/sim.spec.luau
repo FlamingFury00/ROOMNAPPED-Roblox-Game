@@ -220,6 +220,49 @@ return function(ctx)
 			expect(phase(sim, bot)).toBe("Explore")
 		end)
 
+		it("puts a teleporting client back, and pays a success too fast to be played like practice (S20)", function()
+			local sim = boot()
+			local bot = joinAndLaunch(sim, { "Tess" })[1]
+			local level = sim:state(bot, "global", "level")
+			local start = sim:position(bot)
+			local target = level.target.capturePoint
+			-- A modified client moves its own character to the target room: the server puts it back.
+			sim:teleportBot(bot, target + V3.new(0, 3, 0))
+			sim:run(0.2)
+			expect(near(sim, bot, start, 3)()).toBe(true)
+			-- Ordinary movement is never touched (the bot walks a few tiles and stays where it walked).
+			local tile = level.tiles[4].cf.Position + V3.new(0, 3, 0)
+			sim:walk(bot, { tile })
+			expect(sim:runUntil(near(sim, bot, tile), 10)).toBe(true)
+			sim:run(0.5)
+			expect(near(sim, bot, tile)()).toBe(true)
+			-- Server teleports are respected. Here an admin tool carries the bot to the target and back out with
+			-- the suitcase - a run nobody can play this fast, so it pays the practice credits and nothing else.
+			sim:send(bot, "Debug", "tp", "target")
+			sim:run(0.5)
+			expect(near(sim, bot, target, 4)()).toBe(true)
+			sim:send(bot, "HoldBegin", "capture", "target")
+			sim:run(3.05)
+			sim:send(bot, "HoldEnd", "capture", "target", true)
+			sim:run(0.3)
+			expect(phase(sim, bot)).toBe("Capture")
+			sim:send(bot, "Debug", "tp", "exit")
+			expect(sim:runUntil(function()
+				return phase(sim, bot) == "Results"
+			end, 10)).toBe(true)
+			expect(sim:state(bot, "global", "run.outcome")).toBe("Success")
+			expect(sim:runUntil(function()
+				return sim:state(bot, "me", "results.saving") == "Saved"
+			end, 10)).toBe(true)
+			expect(sim:state(bot, "me", "results.plan.practice")).toBe(true)
+			expect(sim:state(bot, "me", "results.plan.blueprint")).toBe(nil)
+			expect(sim:state(bot, "me", "results.next")).toBe(false)
+			expect(sim:state(bot, "me", "profile.rooms.Laundry")).toBe(nil)
+			expect(sim:state(bot, "me", "profile.tutorialDone")).toBe(false)
+			expect(sim:state(bot, "me", "profile.stats.cleared.M0")).toBe(nil)
+			assertClean(sim)
+		end)
+
 		it("keeps a two-player run going when one player disconnects; orphaned rooms fold (S19)", function()
 			local sim = boot()
 			local bots = joinAndLaunch(sim, { "Dee", "Eve" })
@@ -596,6 +639,9 @@ return function(ctx)
 			-- Garbage as a whole is simply "no overrides".
 			local none = Flags.cleanOverrides("oops")
 			expect(next(none)).toBe(nil)
+			-- An admin group open to rank 0 (everyone outside the group) is refused.
+			local open = Flags.cleanOverrides({ adminGroup = { id = 7, minRank = 0 } })
+			expect(open.adminGroup).toBe(nil)
 		end)
 
 		it("never launches a mission that is switched off, even the tutorial (S32)", function()

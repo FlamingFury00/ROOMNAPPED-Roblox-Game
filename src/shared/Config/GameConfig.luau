@@ -71,6 +71,20 @@ local GameConfig = {
 		LineOfSightSlack = 1.5,
 	},
 
+	-- The client owns its character, so a modified client could put it anywhere. The server keeps every run
+	-- member to what legitimate movement can do (HazardService), and a success faster than anyone can play the
+	-- route pays like practice (RewardRules).
+	Integrity = {
+		-- Studs/s across the floor: walking is 16, ice and wind lanes stay under 26; the short bursts above this
+		-- (boosted slide 46, launch flight, knockback) fit easily in the allowance below.
+		MaxMoveSpeed = 40,
+		-- Catch-up allowance: a lagging client's position can arrive all at once (nearly four seconds of walking),
+		-- yet it is a small part of any wing, so it never skips a room.
+		MoveBurstStuds = 60,
+		TeleportSettleSeconds = 2, -- a server teleport this recent may not have reached the client yet
+		MinRunPace = 24, -- studs/s over the whole route, there and back: no squad keeps this up
+	},
+
 	Squad = {
 		MaxPlayers = 4, -- brief: one squad of up to four per server
 		LaunchCountdownSeconds = 15,

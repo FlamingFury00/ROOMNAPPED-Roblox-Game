@@ -60,6 +60,19 @@ interface down.
 * **Server checks** on every gameplay action: phase, roster membership and status (downed / eliminated
   players cannot act), distance with latency tolerance (`GameConfig.Interaction`), line of sight, and for
   holds the full duration measured on the server. Admin commands re-check permissions on the server.
+* **Client-owned characters** (`GameConfig.Integrity`). Roblox lets each client move its own character, so
+  distance checks alone would trust a teleporting client. Every frame, before the suitcase, capture and
+  Caretaker checks, `HazardService` holds each run member to `MaxMoveSpeed` (40 studs/s) plus a 60-stud
+  allowance that covers launches, boosted slides, knockback and a lagging client's catch-up; anything further
+  puts the character back where it was last accepted. Server teleports (`CharacterService.teleport`: spawns,
+  fall recoveries, unstuck) restart the guard from where they put the character. A success faster than the
+  route there and back at `MinRunPace` (24 studs/s, beyond any squad) pays the practice credits and counts
+  toward nothing else (`RewardRules`, `plausible`) and is logged as an `Implausible` run result, outside the
+  funnels; outcomes forced with the admin tools are exempt. What remains possible - acting on an object
+  from a spot the client reported for a single frame before the guard moved it back, or reporting the speed
+  that earns the ice launch - saves a walk or earns a bonus a player can earn anyway, never more.
+* **Telemetry and feedback** accept one `ClientReady` and one `Feedback` per session and log each tutorial
+  step once per session, so a modified client cannot flood analytics or stuff ratings.
 
 ## 4. The run (S02, S10, S17–S19)
 
@@ -211,7 +224,9 @@ with the reason and a tip on the results.
   session).
 * **Debug tools** (`DebugService`, `Debug` screen): force phases, spawn rooms, give items, simulate downs
   and disconnects, toggle the Caretaker, teleports, set the escape timer, print run ids and stats. Only the
-  owner, group rank 254+ and listed admin ids can use them; every command is re-checked on the server.
+  owner, group rank 254+ and listed admin ids can use them (a configured admin group never admits rank 0,
+  i.e. non-members); every command is re-checked on the server. They are off on the live place unless
+  `flags/live` switches `debugTools` on.
 
 ## 11. Performance (S27)
 

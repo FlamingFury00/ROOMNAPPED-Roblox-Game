@@ -75,7 +75,8 @@ function DebugService.isAdmin(player: Player): boolean
 		end
 		local group = Flags.adminGroup()
 		if not admin and group then
-			admin = rankIn(player, group.id) >= group.minRank
+			-- Members only: rank 0 (outside the group) never qualifies, whatever the configured minimum.
+			admin = rankIn(player, group.id) >= math.max(1, group.minRank)
 		end
 	end
 	adminCache[player] = admin

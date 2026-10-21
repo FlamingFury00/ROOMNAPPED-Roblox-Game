@@ -199,7 +199,6 @@ local function newEntry(player: Player, profile: any, solo: boolean): RosterEntr
 		health = HealthModel.new(healthConfig, solo, os.clock()),
 		lastSafe = nil,
 		device = Registry.get("Session").deviceOf(player),
-		rewardChoice = nil,
 		selectedSlot = 0,
 		damageTaken = 0,
 	}
@@ -290,7 +289,6 @@ function ExpeditionService.launch(players: { Player }, missionId: string): boole
 	for _, player in valid do
 		local profile = Profiles.get(player)
 		local entry = newEntry(player, profile, solo)
-		entry.rewardChoice = (profile :: any).rewardChoice[mission.id]
 		run.roster[player.UserId] = entry
 		table.insert(run.order, player.UserId)
 	end
@@ -387,6 +385,18 @@ end
 
 -- Results ------------------------------------------------------------------------------------------------
 
+-- The fastest anyone can play a run: the route there and back at a pace no squad keeps up (launches and
+-- boosted slides included). A success sooner than this was not played; it pays like practice (RewardRules).
+-- Outcomes an admin forces with the test tools are taken as given.
+function ExpeditionService.minPlausibleSeconds(run: Run): number
+	local tiles = run.runtime.tiles
+	local length = 0
+	for i = 2, #tiles do
+		length += (tiles[i].cf.Position - tiles[i - 1].cf.Position).Magnitude
+	end
+	return 2 * length / GameConfig.Integrity.MinRunPace
+end
+
 local function buildSummary(run: Run, outcome: string): any
 	local keysCollected = 0
 	for _ in run.stats.keys do
@@ -396,6 +406,7 @@ local function buildSummary(run: Run, outcome: string): any
 	for _ in run.runtime.keys do
 		keysTotal += 1
 	end
+	local duration = os.clock() - run.exploreStartedAt
 	return {
 		runId = run.id,
 		missionId = run.mission.id,
@@ -406,7 +417,8 @@ local function buildSummary(run: Run, outcome: string): any
 		keysTotal = keysTotal,
 		anyDowns = run.stats.anyDowns,
 		combos = table.clone(run.stats.combos),
-		durationSeconds = os.clock() - run.exploreStartedAt,
+		durationSeconds = duration,
+		plausible = run.scratch.forced == true or duration >= ExpeditionService.minPlausibleSeconds(run),
 	}
 end
 
@@ -449,9 +461,10 @@ function ExpeditionService.finish(run: Run, outcome: string)
 	end
 	run.ended = true
 	run.outcome = outcome
+	local summary = buildSummary(run, outcome)
 	-- Someone just finished Check-In for the first time (a replay is practice): the lobby moves on afterwards.
 	tutorialCleared = false
-	if run.tutorial and outcome == "Success" then
+	if run.tutorial and outcome == "Success" and summary.plausible then
 		local Profiles = Registry.get("Profiles")
 		for _, entry in run.roster do
 			local profile = Profiles.get(entry.player)
@@ -470,7 +483,6 @@ function ExpeditionService.finish(run: Run, outcome: string)
 	publishPhase(outcome, if outcome == "Wiped" then run.stats.lastKnockout or "unknown" else nil)
 	resultsStartedAt = os.clock()
 	table.clear(resultsAcks)
-	local summary = buildSummary(run, outcome)
 	Registry.get("Telemetry").runEnded(run, summary)
 	task.spawn(function()
 		Registry.get("Rewards").grant(run, summary)
@@ -625,6 +637,9 @@ end
 
 function ExpeditionService.debugForce(target: string): string
 	local run = current
+	if run then
+		run.scratch.forced = true
+	end
 	if target == "results" or target == "fail" then
 		if run then
 			ExpeditionService.finish(run, "Wiped")

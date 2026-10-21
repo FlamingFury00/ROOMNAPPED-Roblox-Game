@@ -70,6 +70,12 @@ function CharacterService.eye(player: Player): Vector3?
 	return if root then root.CFrame.Position + Vector3.new(0, 1.5, 0) else nil
 end
 
+-- The latest server teleport of each player, so the movement guard (HazardService) can tell a server move
+-- from a client moving its own character.
+export type TeleportRecord = { count: number, to: Vector3, at: number }
+local teleports: { [Player]: TeleportRecord } = {}
+local snapNoticeAt: { [Player]: number } = {}
+
 function CharacterService.teleport(player: Player, cf: CFrame)
 	local character = player.Character
 	if not character then
@@ -80,7 +86,31 @@ function CharacterService.teleport(player: Player, cf: CFrame)
 		Engine.stop(root)
 	end
 	character:PivotTo(cf)
+	local previous = teleports[player]
+	teleports[player] = { count = (if previous then previous.count else 0) + 1, to = cf.Position, at = os.clock() }
 	Net.fire(player, "Teleported", cf)
+end
+
+function CharacterService.lastTeleport(player: Player): TeleportRecord?
+	return teleports[player]
+end
+
+-- Put a character back where the movement guard last accepted it. It runs every frame the client insists, so
+-- the client hears about it at most four times a second.
+function CharacterService.snapBack(player: Player, position: Vector3)
+	local character = player.Character
+	local root = CharacterService.root(player)
+	if not character or not root then
+		return
+	end
+	Engine.stop(root)
+	local cf = CFrame.new(position) * root.CFrame.Rotation
+	character:PivotTo(cf)
+	local now = os.clock()
+	if now - (snapNoticeAt[player] or -math.huge) >= 0.25 then
+		snapNoticeAt[player] = now
+		Net.fire(player, "Teleported", cf)
+	end
 end
 
 function CharacterService.setGroup(part: BasePart, group: string)
@@ -143,6 +173,10 @@ function CharacterService.Start()
 	for _, player in Players:GetPlayers() do
 		hook(player)
 	end
+	Players.PlayerRemoving:Connect(function(player: Player)
+		teleports[player] = nil
+		snapNoticeAt[player] = nil
+	end)
 	Net.on("RequestUnstuck", function(player: Player)
 		Registry.get("Expedition").unstuck(player)
 	end)

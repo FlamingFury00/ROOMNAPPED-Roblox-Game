@@ -39,7 +39,7 @@ local FeatureFlags = {
 			pings = true,
 			feedbackPrompt = true,
 			analytics = true,
-			debugTools = true, -- still restricted to admins (see DebugService)
+			debugTools = true, -- still restricted to admins (see DebugService); off on the live place
 			caretaker = true,
 			keys = true,
 			shop = true,
@@ -53,7 +53,9 @@ local FeatureFlags = {
 	Environments = {
 		studio = { features = { debugTools = true } },
 		test = { features = { debugTools = true } },
-		live = { features = { debugTools = true } },
+		-- The public place has no test tools (they can grant items and force a win for a whole squad); switch
+		-- them on for a while with {"features": {"debugTools": true}} in RoomnappedConfig / flags/live.
+		live = { features = { debugTools = false } },
 	} :: { [string]: any },
 }
 

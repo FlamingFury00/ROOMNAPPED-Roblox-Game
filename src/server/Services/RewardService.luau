@@ -111,7 +111,11 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 	-- Beat this player's own record on the mission (first clears are celebrated by their reward line).
 	-- Best times are stored in whole seconds: compare like with like, so "New best" never repeats the record.
 	local previousBest = (profile :: any).stats.bestTimes[run.mission.id]
-	if type(previousBest) == "number" and math.floor(summary.durationSeconds + 0.5) < previousBest then
+	if
+		not plan.unranked
+		and type(previousBest) == "number"
+		and math.floor(summary.durationSeconds + 0.5) < previousBest
+	then
 		payload.newBest = true
 	end
 	publishResults(player, payload)
@@ -121,7 +125,7 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 		applied, mastery = RewardRules.apply(p :: any, plan, summary, os.time(), GameConfig.Data.MaxGrantHistory)
 		if applied then
 			p.stats.runs += 1
-			if run.tutorial then
+			if run.tutorial and not plan.unranked then
 				p.tutorialDone = true
 			end
 		end

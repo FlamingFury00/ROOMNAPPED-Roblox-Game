@@ -174,10 +174,11 @@ function RoomService.occupants(run: Run, socketId: string): { string }
 	end
 	local cf, size = Geometry.roomOccupancy(socket.roomCF)
 	local Characters = Registry.get("Characters")
-	for _, player in Players:GetPlayers() do
-		local position = Characters.position(player)
+	-- Only the squad counts: nobody else belongs in the level, so nobody else can hold a room open.
+	for _, entry in Registry.get("Expedition").participants(run) do
+		local position = Characters.position(entry.player)
 		if position and MathUtil.pointInBox(cf, size, position, 0.25) then
-			table.insert(out, player.DisplayName)
+			table.insert(out, entry.player.DisplayName)
 		end
 	end
 	local cargo = Registry.get("Cargo").position(run)
