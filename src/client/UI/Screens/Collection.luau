@@ -28,6 +28,7 @@ local Components = require(script.Parent.Parent.Components)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local UIRoot = require(script.Parent.Parent.UIRoot)
+local NewItems = require(script.Parent.Parent.NewItems)
 local Common = require(script.Parent.Common)
 
 type ButtonHandle = Components.ButtonHandle
@@ -44,6 +45,7 @@ local PREVIEW_HEIGHT = 196
 
 local window: Common.Window
 local tabs: Common.Tabs
+local tabBadges: { [string]: Components.BadgeHandle } = {}
 local pages: { [string]: GuiObject } = {}
 local creditsLabel: TextLabel
 -- Rooms page.
@@ -395,7 +397,16 @@ local function roomCard(def: RoomDefs.RoomDef, order: number, parent: Instance):
 		elseif resting then Strings.t("room.resting")
 		elseif isOwned then Strings.t("room.owned")
 		else Strings.t("room.locked")
-	local tagColor = if slot then C.gold elseif resting then C.orange elseif isOwned then C.greenDark else C.panel
+	local fresh = isOwned and not slot and not resting and NewItems.isNew("room", def.id)
+	if fresh then
+		tagText = Strings.t("collection.new")
+	end
+	local tagColor = if slot
+		then C.gold
+		elseif resting then C.orange
+		elseif fresh then C.red
+		elseif isOwned then C.greenDark
+		else C.panel
 	local chip = Components.chip(nil, tagText, tagColor, 0, if slot then C.textDark else C.white)
 	chip.AnchorPoint = Vector2.new(0.5, 0)
 	chip.Position = UDim2.new(0.5, 0, 0, 118)
@@ -551,6 +562,8 @@ local function skinCard(skin: SkinDef, order: number, parent: Instance): TextBut
 	local chipIcon: string?
 	if equipped then
 		chipText, chipColor, chipIcon = Strings.t("collection.equipped"), C.gold, "check"
+	elseif owned and NewItems.isNew("skin", skin.id) then
+		chipText, chipColor, chipIcon = Strings.t("collection.new"), C.red, "sparkle"
 	elseif owned then
 		chipText, chipColor, chipIcon = Strings.t("room.owned"), C.greenDark, nil
 	elseif skin.source == "shop" then
@@ -625,7 +638,29 @@ end
 
 -- Refresh --------------------------------------------------------------------------------------------------------------------
 
+-- Badges on the tabs that hold new rooms or skins.
+local function refreshTabBadges()
+	local counts = { rooms = #NewItems.list("room"), skins = 0, suitcases = 0 }
+	for _, id in NewItems.list("skin") do
+		local skin = SkinDefs.byId[id]
+		if skin then
+			local tab = if skin.kind == "suitcase" then "suitcases" else "skins"
+			counts[tab] += 1
+		end
+	end
+	for id, badge in tabBadges do
+		badge.set(counts[id] or 0)
+	end
+end
+
 function Collection.refresh()
+	-- Looking at an item is what makes it old news.
+	if currentTab == "rooms" then
+		NewItems.markSeen("room", focusedRoom)
+	elseif focusedSkin then
+		NewItems.markSeen("skin", focusedSkin)
+	end
+	refreshTabBadges()
 	-- Cards are rebuilt on every change; a gamepad selection follows the card it was on.
 	Common.keepSelection(window.frame, function()
 		for id, page in pages do
@@ -674,6 +709,9 @@ local function build()
 		end
 		Collection.refresh()
 	end, 210)
+	for id, button in tabs.buttons do
+		tabBadges[id] = Components.badge(button.instance)
+	end
 
 	local pill = Create.new("Frame", {
 		Name = "Credits",

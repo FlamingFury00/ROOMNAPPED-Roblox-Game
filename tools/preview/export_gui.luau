@@ -4,7 +4,8 @@
 	Usage (from the repo root):
 	  lune run tools/preview/export_gui.luau <place.rbxl> <scenario> <out.json>
 
-	Scenarios: lobby | squad (four players) | explore | placement | escape | downed | spectate | results
+	Scenarios: lobby | squad (four players) | unlock (new items) | explore | placement | escape | downed | spectate
+	           | results
 	           menu:<ScreenName> (MissionBoard, Collection, Settings, Debug, Feedback ...)
 	           phone:<scenario> runs any of them on a touch phone (render with --size 750x311)
 
@@ -103,6 +104,13 @@ local function walkTo(point: any, timeout: number?)
 end
 
 if scenario == "lobby" or scenario == "squad" then
+	sim:run(1)
+elseif scenario == "unlock" then
+	-- A blueprint and a skin arrive mid-session: NEW badges on the Rooms button, the tabs and the cards.
+	sim:send(a, "Debug", "give", "room", "Greenhouse")
+	sim:send(a, "Debug", "give", "skin", "case_polka")
+	sim:run(1)
+	client:module("UI.UIRoot").open("Collection", "Freezer")
 	sim:run(1)
 elseif string.sub(scenario, 1, 5) == "menu:" then
 	local UIRoot = client:module("UI.UIRoot")

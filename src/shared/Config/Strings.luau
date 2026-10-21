@@ -62,6 +62,7 @@ local catalog: { [string]: string } = {
 	["room.locked"] = "Locked",
 	["room.owned"] = "Owned",
 	["room.resting"] = "Resting",
+	["collection.new"] = "NEW",
 	["room.equipped"] = "Equipped",
 
 	-- Skins ---------------------------------------------------------------------------------------------

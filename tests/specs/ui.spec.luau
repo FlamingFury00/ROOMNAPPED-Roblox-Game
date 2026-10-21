@@ -459,6 +459,40 @@ return function(ctx)
 			assertClean(client)
 		end)
 
+		it("marks rooms unlocked this session as NEW until the player looks at them", function()
+			local client = boot()
+			local UIRoot = client:module("UI.UIRoot")
+			local badge = client:find("Item_suitcase"):FindFirstChild("Badge", true)
+			expect(badge).toBeTruthy()
+			expect(badge.Visible).toBe(false) -- what the profile loaded with is old news
+			-- A run ends with a new blueprint.
+			local p = profile()
+			p.rooms.Greenhouse = true
+			client:patch("me", { "profile" }, p)
+			task.wait(0.05)
+			expect(badge.Visible).toBe(true)
+			expect(badge:FindFirstChild("Count", true).Text).toBe("1")
+			UIRoot.open("Collection")
+			local card = nil
+			for _, candidate in client:findAll("Room_Greenhouse") do
+				if candidate.ClassName == "TextButton" then
+					card = candidate
+				end
+			end
+			local isNew = false
+			for _, d in card:GetDescendants() do
+				if d.ClassName == "TextLabel" and d.Text == "NEW" then
+					isNew = true
+				end
+			end
+			expect(isNew).toBe(true)
+			-- Looking at it clears the mark.
+			client:press(card)
+			task.wait(0.05)
+			expect(badge.Visible).toBe(false)
+			assertClean(client)
+		end)
+
 		it("hides lobby-only interface during an expedition", function()
 			local client = boot()
 			client:patch("global", { "roster" }, {

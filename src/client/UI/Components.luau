@@ -842,6 +842,43 @@ function Components.slider(
 end
 
 -- Small pill badge with icon + text (status chips, prices, hazards).
+export type BadgeHandle = { frame: Frame, set: (number) -> () }
+
+-- Notification badge on a button's top-right corner: a count (9+ beyond nine) that pops when it rises and
+-- hides at zero.
+function Components.badge(parent: GuiObject): BadgeHandle
+	local frame = Create.new("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -8, 0, 8),
+		Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = C.red,
+		Visible = false,
+		Parent = parent,
+	}, { Create.corner(Theme.Radius.pill), Create.stroke(C.white, 2, 0) })
+	local label = Components.label({
+		name = "Count",
+		text = "",
+		font = Theme.Fonts.heading,
+		textSize = Theme.Text.small,
+		align = Enum.TextXAlignment.Center,
+		size = UDim2.fromScale(1, 1),
+		parent = frame,
+	})
+	local shown = 0
+	return {
+		frame = frame,
+		set = function(count: number)
+			label.Text = if count > 9 then "9+" else tostring(count)
+			frame.Visible = count > 0
+			if count > shown then
+				Motion.pop(frame, 0.5)
+			end
+			shown = count
+		end,
+	}
+end
+
 function Components.chip(icon: string?, text: string, color: Color3, layoutOrder: number?, textColor: Color3?): Frame
 	local chip = Create.new("Frame", {
 		Name = "Chip",

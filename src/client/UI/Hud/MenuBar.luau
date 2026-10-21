@@ -22,6 +22,7 @@ local Components = require(script.Parent.Parent.Components)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local UIRoot = require(script.Parent.Parent.UIRoot)
+local NewItems = require(script.Parent.Parent.NewItems)
 local Common = require(script.Parent.Parent.Screens.Common)
 
 type ButtonHandle = Components.ButtonHandle
@@ -176,6 +177,12 @@ function MenuBar.start()
 		item.frame.Parent = root
 		table.insert(items, item)
 	end
+	-- Rooms and skins unlocked this session that the player has not looked at yet.
+	local newBadge = Components.badge(collection.button.instance)
+	NewItems.start()
+	NewItems.Changed:Connect(function()
+		newBadge.set(NewItems.count())
+	end)
 
 	-- Credits pill (second row, right aligned under the buttons).
 	creditsPill = Create.new("Frame", {
