@@ -45,6 +45,15 @@ republishing, and running servers follow within five minutes (see §6).
      ```bash
      ROBLOX_PLACE_ID=<place id> tools/publish.sh release/ROOMNAPPED.rbxl Published
      ```
+     On Windows (PowerShell), the same request:
+     ```powershell
+     $placeId = <place id>
+     $universeId = (Invoke-RestMethod "https://apis.roblox.com/universes/v1/places/$placeId/universe").universeId
+     Invoke-RestMethod -Method Post `
+       -Uri "https://apis.roblox.com/universes/v1/$universeId/places/$placeId/versions?versionType=Published" `
+       -Headers @{ "x-api-key" = $env:ROBLOX_API_KEY } `
+       -ContentType "application/octet-stream" -InFile "release\ROOMNAPPED.rbxl"
+     ```
      The place must already exist (create the experience once in Studio or the Creator Hub). `Saved` instead
      of `Published` stores a version without putting it live.
 3. Run the published-test checks in §5 on the test place.
