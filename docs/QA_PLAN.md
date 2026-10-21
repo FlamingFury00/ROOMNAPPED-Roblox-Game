@@ -30,7 +30,7 @@ only that input, every prompt shows the right glyphs, and nothing on the HUD ove
 
 | Device | Input | Focus |
 | --- | --- | --- |
-| Windows or macOS desktop, 1080p and 1440p | Keyboard + mouse | Key prompts (1/2, E, R, Q, G, F, M), shift-lock, menu navigation with the mouse. |
+| Windows or macOS desktop, 1080p and 1440p | Keyboard + mouse | Key prompts (1/2, E, R, Q, G, F, M), shift-lock, menu navigation with the mouse, chat window at the middle of the right edge (clear of the squad panel and hearts) with `/` still opening it. |
 | Desktop | Xbox or PlayStation controller | D-pad slot selection, X hold, Y turn, B back/cancel, menu selection never lost, Select opens Settings. |
 | Phone, notched (e.g. iPhone 13–15) | Touch | Safe areas, slot buttons, action button above the jump button, ping long-press wheel, readable text. |
 | Phone, small (e.g. iPhone SE / 360 dp Android) | Touch | Objective text fits or truncates cleanly, menus scroll, Results compact layout. |

@@ -11,6 +11,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local TextChatService = game:GetService("TextChatService")
 
 local Shared = ReplicatedStorage.Shared
 local Net = require(Shared.Net.Net)
@@ -71,6 +72,33 @@ task.spawn(function()
 		end
 		task.wait(0.25)
 	end
+end)
+
+-- Chat: Roblox opens the chat window top-left, over the hearts and team cards in a run and the squad panel in
+-- the lobby. With a keyboard or controller it sits at the middle of the right edge instead, which both HUDs keep
+-- clear. Touch keeps Roblox's placement next to the chat button, because the touch controls own the right edge.
+task.spawn(function()
+	local config: ChatWindowConfiguration? = nil
+	for _ = 1, 40 do
+		config = TextChatService:FindFirstChildOfClass("ChatWindowConfiguration")
+		if config then
+			break
+		end
+		task.wait(0.25)
+	end
+	if not config then
+		return
+	end
+	local window = config :: ChatWindowConfiguration
+	local function place(kind: Device.Kind)
+		local touch = kind == "touch"
+		pcall(function()
+			window.HorizontalAlignment = if touch then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Right
+			window.VerticalAlignment = if touch then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Center
+		end)
+	end
+	place(Device.kind())
+	Device.Changed:Connect(place)
 end)
 
 -- Discovered modules ----------------------------------------------------------------------------------------
