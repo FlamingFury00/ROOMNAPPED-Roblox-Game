@@ -496,14 +496,49 @@ function AssetManifest.get(key: string): Entry?
 	return entries[key]
 end
 
--- Keys in a stable order (the server loads them in this order, a few at a time).
+-- What players see first (the lobby, then every corridor) loads first; the rest follows alphabetically.
+local FIRST: { string } = {
+	"receptionDesk",
+	"chandelier",
+	"wallSconce",
+	"sofa",
+	"armchair",
+	"grandfatherClock",
+	"statue",
+	"rug",
+	"coffeeTable",
+	"floorLamp",
+	"tableLamp",
+	"keyRack",
+	"deskBell",
+	"bigPlant",
+	"luggageCart",
+	"ceilingLamp",
+	"sideTable",
+	"bench",
+	"smallPlant",
+	"flowerVase",
+}
+
+-- Keys in loading order (the server loads them in this order, a few at a time).
 function AssetManifest.keys(): { string }
 	local keys = {}
 	for key in entries do
-		table.insert(keys, key)
+		if not table.find(FIRST, key) then
+			table.insert(keys, key)
+		end
 	end
 	table.sort(keys)
-	return keys
+	local ordered = {}
+	for _, key in FIRST do
+		if entries[key] then
+			table.insert(ordered, key)
+		end
+	end
+	for _, key in keys do
+		table.insert(ordered, key)
+	end
+	return ordered
 end
 
 -- Every model id in the manifest (for the content record and the tests).
