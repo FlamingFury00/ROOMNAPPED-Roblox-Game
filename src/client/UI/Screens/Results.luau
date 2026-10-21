@@ -280,7 +280,15 @@ local function renderStats(data: any)
 		order += 1
 		Components.chip(icon, text, color, order).Parent = statsRow
 	end
-	add("clock", Strings.t("results.time", { time = Common.formatTime(data.duration) }), C.panelLight)
+	if data.success and data.newBest == true then
+		add("trophy", Strings.t("results.newBest", { time = Common.formatTime(data.duration) }), C.goldDark)
+		local chip = statsRow:FindFirstChild("Chip")
+		if chip and chip:IsA("GuiObject") then
+			Motion.pop(chip, 0.6)
+		end
+	else
+		add("clock", Strings.t("results.time", { time = Common.formatTime(data.duration) }), C.panelLight)
+	end
 	if data.success and (data.timeLeft or 0) > 0 then
 		add("bolt", Strings.t("results.timeLeft", { seconds = data.timeLeft }), C.blue)
 	end

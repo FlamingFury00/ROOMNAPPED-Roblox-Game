@@ -532,6 +532,40 @@ return function(ctx)
 			assertClean(sim)
 		end)
 
+		it("celebrates a new personal best only when the record is beaten (S31)", function()
+			local sim = boot()
+			local bot = sim:addBot("Oz", 2501)
+			sim:snapshot(bot)
+			sim:run(0.6)
+			sim:send(bot, "Debug", "give", "all")
+			sim:send(bot, "SelectMission", "M1")
+			sim:run(0.3)
+			local function winAfter(seconds: number)
+				sim:send(bot, "SetReady", true)
+				expect(sim:runUntil(function()
+					return phase(sim, bot) == "Explore"
+				end, 30)).toBe(true)
+				local runId = sim:state(bot, "global", "run.id")
+				sim:run(seconds)
+				sim:send(bot, "Debug", "phase", "win")
+				expect(sim:runUntil(function()
+					return sim:state(bot, "me", "results.runId") == runId
+						and sim:state(bot, "me", "results.saving") == "Saved"
+				end, 20)).toBe(true)
+				local newBest = sim:state(bot, "me", "results.newBest") == true
+				sim:send(bot, "ResultsAction", "lobby")
+				expect(sim:runUntil(function()
+					return phase(sim, bot) == "Prep"
+				end, 40)).toBe(true)
+				sim:run(1)
+				return newBest
+			end
+			expect(winAfter(8)).toBe(false) -- first clear: no record to beat yet
+			expect(winAfter(14)).toBe(false) -- slower
+			expect(winAfter(2)).toBe(true) -- faster than the record
+			assertClean(sim)
+		end)
+
 		it("cycles ten runs without growing the instance count (S27)", function()
 			local sim = boot()
 			local bot = sim:addBot("Finn", 2001)

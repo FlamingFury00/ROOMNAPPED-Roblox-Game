@@ -283,6 +283,7 @@ local catalog: { [string]: string } = {
 	["results.successBody"] = "The {room} Room is yours.",
 	["results.failBody"] = "The hotel keeps its room this time. Nothing you owned was lost.",
 	["results.time"] = "Time {time}",
+	["results.newBest"] = "New best {time}!",
 	["results.timeLeft"] = "{seconds}s to spare",
 	["results.keys"] = "Keys {count}/{total}",
 	["results.combo"] = "Best combo: {combo}",

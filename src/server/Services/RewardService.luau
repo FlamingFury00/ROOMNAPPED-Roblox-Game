@@ -103,6 +103,11 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 	end
 	payload.plan = Tables.deepCopy(plan)
 	payload.saving = "Saving"
+	-- Beat this player's own record on the mission (first clears are celebrated by their reward line).
+	local previousBest = (profile :: any).stats.bestTimes[run.mission.id]
+	if type(previousBest) == "number" and summary.durationSeconds < previousBest then
+		payload.newBest = true
+	end
 	publishResults(player, payload)
 	local applied = false
 	Profiles.update(player, function(p: any)
