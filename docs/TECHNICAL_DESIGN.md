@@ -65,12 +65,16 @@ interface down.
   Caretaker checks, `HazardService` holds each run member to `MaxMoveSpeed` (40 studs/s) plus a 60-stud
   allowance that covers launches, boosted slides, knockback and a lagging client's catch-up; anything further
   puts the character back where it was last accepted. Server teleports (`CharacterService.teleport`: spawns,
-  fall recoveries, unstuck) restart the guard from where they put the character. A success faster than the
+  fall recoveries, unstuck) restart the guard from where they put the character: for `TeleportSettleSeconds`
+  a report counts only if the character could have walked there from the destination since, so a late
+  report from before the teleport puts it straight back at the destination instead of undoing the teleport. A success faster than the
   route there and back at `MinRunPace` (24 studs/s, beyond any squad) pays the practice credits and counts
   toward nothing else (`RewardRules`, `plausible`) and is logged as an `Implausible` run result, outside the
-  funnels; outcomes forced with the admin tools are exempt. What remains possible - acting on an object
-  from a spot the client reported for a single frame before the guard moved it back, or reporting the speed
-  that earns the ice launch - saves a walk or earns a bonus a player can earn anyway, never more.
+  funnels; outcomes forced with the admin tools are exempt. The guard limits speed, not path: a client can
+  still fly over a pit or pass through a wall at walking pace, act on an object from a spot it reported for a
+  single frame before the guard moved it back, or report the speed that earns the ice launch. Such a run
+  still takes at least the pace limit and pays exactly what a played run pays, so it skips puzzles but never
+  out-earns honest play.
 * **Telemetry and feedback** accept one `ClientReady` and one `Feedback` per session and log each tutorial
   step once per session, so a modified client cannot flood analytics or stuff ratings.
 

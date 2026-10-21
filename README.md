@@ -90,7 +90,7 @@ python3 tools/preview/render.py tools/preview/out/scene.json tools/preview/out/L
 ```
 
 Scenarios: `lobby`, `squad` (four players), `unlock` (NEW badges), `mastery` (mission stars), `explore`,
-`placement`, `escape`, `downed`, `spectate`, `results`, `menu:<Screen>` (MissionBoard, Collection, Settings,
+`placement`, `escape`, `downed`, `spectate`, `results`, `results6` (the longest reward plan), `menu:<Screen>` (MissionBoard, Collection, Settings,
 Debug, Feedback), each optionally prefixed with `phone:`.
 
 ## Project layout

@@ -5,7 +5,7 @@
 	  lune run tools/preview/export_gui.luau <place.rbxl> <scenario> <out.json>
 
 	Scenarios: lobby | squad (four players) | unlock (new items) | mastery (stars) | explore | placement | escape
-	           | downed | spectate | results
+	           | downed | spectate | results | results6 (the longest reward plan)
 	           menu:<ScreenName> (MissionBoard, Collection, Settings, Debug, Feedback ...)
 	           phone:<scenario> runs any of them on a touch phone (render with --size 750x311)
 
@@ -141,7 +141,7 @@ elseif scenario == "placement" then
 	walkTo(level.sockets.S1.interactPoint)
 	client:tap("RN_Slot1")
 	sim:run(0.6)
-elseif scenario == "escape" or scenario == "results" then
+elseif scenario == "escape" or scenario == "results" or scenario == "results6" then
 	launch()
 	local level = sim:state(a, "global", "level")
 	walkTo(level.sockets.S1.interactPoint)
@@ -157,7 +157,28 @@ elseif scenario == "escape" or scenario == "results" then
 		return phase() == "Escape"
 	end, 6)
 	sim:run(3)
-	if scenario == "results" then
+	if scenario == "results6" then
+		-- The longest reward plan (blueprint, extraction, keys, first clear and two challenges): the breakdown
+		-- should show every line without scrolling.
+		local RewardRules = sim:module("ReplicatedStorage.Shared.Logic.RewardRules")
+		local compute = RewardRules.compute
+		RewardRules.compute = function(...)
+			local plan = compute(...)
+			if plan then
+				plan.lines = {
+					{ key = "reward.blueprint", item = "Laundry" },
+					{ key = "reward.extraction", amount = 20 },
+					{ key = "reward.keys", amount = 30 },
+					{ key = "reward.firstClear", amount = 30 },
+					{ key = "reward.challenge", amount = 25, item = "M1_douse" },
+					{ key = "reward.challenge", amount = 30, item = "M1_keys" },
+				}
+				plan.credits = 135
+			end
+			return plan
+		end
+	end
+	if scenario ~= "escape" then
 		walkTo(level.tiles[1].cf.Position + V3.new(0, 3, 0), 60)
 		sim:walk(a, { level.exit.cf.Position })
 		sim:runUntil(function()

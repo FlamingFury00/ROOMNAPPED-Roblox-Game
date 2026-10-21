@@ -303,18 +303,39 @@ local function renderStats(data: any)
 	end
 end
 
--- Reward lines shrink (down to 28) so every line fits without scrolling where it can, phones included.
+-- Height the total takes under the list.
+local function totalReserve(): number
+	return if compact then 44 else 56
+end
+
+-- Reward lines shrink so every line fits without scrolling: the longest plan (six lines) on a desktop, and on a
+-- phone (which leaves the room or skin to the reward card) five credit lines.
 local function lineHeight(count: number): number
-	local reserve = if compact then 40 else 56 -- the total under the list
-	local available = breakdownHeight - reserve - 12 - 4 * math.max(0, count - 1)
-	return math.clamp(math.floor(available / math.max(count, 1)), 28, 40)
+	local available = breakdownHeight - totalReserve() - 12 - 4 * math.max(0, count - 1)
+	return math.clamp(math.floor(available / math.max(count, 1)), if compact then 22 else 26, 40)
 end
 
 local function sizeLine(row: Frame, height: number)
 	row.Size = UDim2.new(1, 0, 0, height)
 	local chip = row:FindFirstChild("Chip")
-	if chip and chip:IsA("Frame") then
-		chip.Size = UDim2.fromOffset(0, math.min(34, height - 2))
+	if not (chip and chip:IsA("Frame")) then
+		return
+	end
+	-- A short row gets a matching chip: thinner padding, a smaller icon and text.
+	local chipHeight = math.min(34, height - 2)
+	local inner = math.min(26, chipHeight - 4)
+	chip.Size = UDim2.fromOffset(0, chipHeight)
+	for _, child in chip:GetChildren() do
+		if child:IsA("TextLabel") then
+			child.Size = UDim2.fromOffset(0, inner)
+			child.TextSize = math.min(Theme.Text.small, inner - 2)
+		elseif child:IsA("Frame") then
+			child.Size = UDim2.fromOffset(math.min(22, inner), math.min(22, inner))
+		elseif child:IsA("UIPadding") then
+			local pad = UDim.new(0, if chipHeight < 30 then 2 else 4)
+			child.PaddingTop = pad
+			child.PaddingBottom = pad
+		end
 	end
 end
 
@@ -349,8 +370,15 @@ local function renderLines(data: any)
 		})
 		return
 	end
-	local height = lineHeight(#(plan.lines or {}))
-	for index, line in plan.lines or {} do
+	local shown = {}
+	for _, line in plan.lines or {} do
+		-- On a phone the reward card beside the list already shows the room or skin won: list the credits only.
+		if not (compact and (line.key == "reward.blueprint" or line.key == "reward.skin")) then
+			table.insert(shown, line)
+		end
+	end
+	local height = lineHeight(#shown)
+	for index, line in shown do
 		local row = Create.new("Frame", {
 			Name = "Line",
 			BackgroundColor3 = C.panel,
@@ -394,7 +422,7 @@ local function renderLines(data: any)
 			end)
 		end
 	end
-	countUp(plan.credits or 0, 0.12 * #(plan.lines or {}) + 0.25)
+	countUp(plan.credits or 0, 0.12 * #shown + 0.25)
 end
 
 local function stopSpinner()
@@ -688,7 +716,7 @@ local function build()
 		breakdown.Position = UDim2.fromOffset(346, top)
 		breakdown.Size = UDim2.new(1, -346, 0, middle)
 		breakdownHeight = middle
-		linesList.Size = UDim2.new(1, -12, 1, if compact then -40 else -56)
+		linesList.Size = UDim2.new(1, -12, 1, -totalReserve())
 		totalLabel.Size = UDim2.new(1, -24, 0, if compact then 34 else 40)
 		totalLabel.Position = UDim2.new(1, -12, 1, if compact then -4 else -6)
 		fitLines()
@@ -699,6 +727,7 @@ local function build()
 		local data = payload()
 		if compact ~= wasCompact and data and shownRunId == data.runId and UIRoot.isOpen("Results") then
 			renderRewardCard(data)
+			renderLines(data) -- the phone list leaves out what the card shows
 		end
 	end)
 end

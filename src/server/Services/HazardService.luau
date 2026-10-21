@@ -58,6 +58,8 @@ type Guard = {
 	anchor: Vector3, -- last accepted position
 	budget: number, -- studs the character may still cover right now
 	seen: number, -- server teleports already accounted for
+	settleTo: Vector3?, -- destination of a server teleport the client may not have applied yet
+	settleAt: number,
 }
 
 type Scratch = {
@@ -303,9 +305,14 @@ end
 -- target room, or into the exit with the suitcase. Every frame, before the suitcase, capture and Caretaker
 -- checks run, each run member may only have covered what legitimate movement allows: MaxMoveSpeed plus a
 -- burst allowance that covers launches, boosted slides, knockback and a lagging client whose position arrives
--- all at once. Anything further is a teleport and the character goes back to where it was last accepted. Server
--- teleports (falls, checkpoints, unstuck) start the guard again from where they put the character; reports a
--- client sends before it hears about one just put it there again.
+-- all at once. Anything further is a teleport and the character goes back to where it was last accepted.
+--
+-- Server teleports (falls, checkpoints, unstuck) take a moment to reach the client, which keeps reporting where
+-- it was until then. For TeleportSettleSeconds after one, a report counts only if the character could have
+-- walked there from the destination since the teleport; anything else goes straight back to the destination,
+-- and the allowance is left untouched. Then the guard carries on from wherever the character legitimately is.
+local SETTLE_SLACK = 4 -- studs around the destination that always count as arrived
+
 local function flatDistance(a: Vector3, b: Vector3): number
 	return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
 end
@@ -323,17 +330,34 @@ local function guardEntry(s: Scratch, entry: RosterEntry, dt: number, now: numbe
 	if existing and existing.root == root then
 		g = existing
 	else
-		g = { root = root, anchor = position, budget = I.MoveBurstStuds, seen = 0 }
+		g = { root = root, anchor = position, budget = I.MoveBurstStuds, seen = 0, settleTo = nil, settleAt = 0 }
 		s.guards[entry.userId] = g
 	end
 	local teleport = Characters.lastTeleport(entry.player)
 	if teleport and teleport.count ~= g.seen then
 		g.seen = teleport.count
-		-- A teleport this recent may not have reached the client yet: count from where it puts the character.
 		if now - teleport.at < I.TeleportSettleSeconds then
-			g.anchor = teleport.to
-			g.budget = I.MoveBurstStuds
+			g.settleTo = teleport.to
+			g.settleAt = teleport.at
 		end
+	end
+	local settleTo = g.settleTo
+	if settleTo then
+		local arrived = flatDistance(position, settleTo) <= SETTLE_SLACK + I.MaxMoveSpeed * (now - g.settleAt)
+		if now - g.settleAt < I.TeleportSettleSeconds then
+			if not arrived then
+				Characters.snapBack(entry.player, settleTo)
+			end
+			return
+		end
+		-- Settled: carry on from where the character now is (or from the destination, if it still is not there).
+		g.settleTo = nil
+		g.anchor = if arrived then position else settleTo
+		g.budget = I.MoveBurstStuds
+		if not arrived then
+			Characters.snapBack(entry.player, settleTo)
+		end
+		return
 	end
 	g.budget = math.min(I.MoveBurstStuds, g.budget + I.MaxMoveSpeed * dt)
 	local moved = flatDistance(position, g.anchor)

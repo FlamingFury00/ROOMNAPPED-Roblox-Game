@@ -28,6 +28,9 @@ republishing, and running servers follow within five minutes (see §6).
       and `ProfileSchema` has a migration with a unit test from the previous version.
 - [ ] `docs/CONTENT_OWNERSHIP.md` is current: `python3 tools/content/gen_audio.py` ran cleanly and every
       `rbxasset://` / `rbxassetid://` reference in `src/` is listed.
+- [ ] The test place's id is in `FeatureFlags.TestPlaceIds` (`src/shared/Config/FeatureFlags.luau`). Any
+      other published place runs as **live**, where the admin test tools are off, so without it the test
+      place has no tools for the §5 rehearsals.
 - [ ] Strings are final (no placeholder keys visible in the interface renders under `tools/preview`).
 - [ ] The QA plan's release matrix is signed off for this build (`docs/QA_PLAN.md`).
 

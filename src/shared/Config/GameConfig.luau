@@ -81,7 +81,7 @@ local GameConfig = {
 		-- Catch-up allowance: a lagging client's position can arrive all at once (nearly four seconds of walking),
 		-- yet it is a small part of any wing, so it never skips a room.
 		MoveBurstStuds = 60,
-		TeleportSettleSeconds = 2, -- a server teleport this recent may not have reached the client yet
+		TeleportSettleSeconds = 1.5, -- a server teleport this recent may not have reached the client yet
 		MinRunPace = 24, -- studs/s over the whole route, there and back: no squad keeps this up
 	},
 

@@ -418,7 +418,10 @@ local function buildSummary(run: Run, outcome: string): any
 		anyDowns = run.stats.anyDowns,
 		combos = table.clone(run.stats.combos),
 		durationSeconds = duration,
-		plausible = run.scratch.forced == true or duration >= ExpeditionService.minPlausibleSeconds(run),
+		-- Only a success can be too fast: a squad can be wiped out as quickly as the Caretaker likes.
+		plausible = outcome ~= "Success"
+			or run.scratch.forced == true
+			or duration >= ExpeditionService.minPlausibleSeconds(run),
 	}
 end
 

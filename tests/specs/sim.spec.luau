@@ -220,6 +220,32 @@ return function(ctx)
 			expect(phase(sim, bot)).toBe("Explore")
 		end)
 
+		it("keeps a server teleport when the client's last report from before it arrives late (S20)", function()
+			local sim = boot()
+			local bot = joinAndLaunch(sim, { "Lag" })[1]
+			local level = sim:state(bot, "global", "level")
+			local tile = level.tiles[4].cf.Position + V3.new(0, 3, 0)
+			sim:walk(bot, { tile })
+			expect(sim:runUntil(near(sim, bot, tile), 10)).toBe(true)
+			sim:run(0.5)
+			local before = sim:position(bot)
+			-- The server moves the bot back to the start (as for a fall or Unstuck), 50+ studs away...
+			sim:send(bot, "Debug", "tp", "start")
+			local destination = sim:position(bot)
+			expect(V3.new(before.X - destination.X, 0, before.Z - destination.Z).Magnitude > 40).toBe(true)
+			sim:run(1 / 60)
+			-- ...a report the client sent before it heard arrives, then its real position.
+			sim:teleportBot(bot, before)
+			sim:run(4 / 60)
+			sim:teleportBot(bot, destination)
+			sim:run(1)
+			expect(near(sim, bot, destination, 2)()).toBe(true)
+			-- Afterwards the player walks on as usual.
+			sim:walk(bot, { tile })
+			expect(sim:runUntil(near(sim, bot, tile), 10)).toBe(true)
+			assertClean(sim)
+		end)
+
 		it("puts a teleporting client back, and pays a success too fast to be played like practice (S20)", function()
 			local sim = boot()
 			local bot = joinAndLaunch(sim, { "Tess" })[1]
