@@ -91,9 +91,13 @@ local catalog: { [string]: string } = {
 	["skin.case_polka"] = "Polka Dot",
 	["skin.case_gold"] = "Golden",
 	["skin.case_midnight"] = "Midnight Neon",
+	["skin.case_bronze"] = "Bronze Medal Case",
+	["skin.case_silver"] = "Silver Medal Case",
+	["skin.case_legend"] = "Hotel Legend Case",
 	["skin.source.default"] = "Default",
 	["skin.source.shop"] = "{price} credits",
 	["skin.source.mission"] = "Reward from {mission}",
+	["skin.source.mastery"] = "Earn {stars} mission stars",
 
 	-- Missions ------------------------------------------------------------------------------------------
 	["mission.M0.name"] = "Check-In",
@@ -122,6 +126,9 @@ local catalog: { [string]: string } = {
 	["mission.cleared"] = "Cleared x{count}",
 	["mission.best"] = "Best {time}",
 	["mission.mastery"] = "{count}/3 stars",
+	["mission.starsTotal"] = "{count}/{max}",
+	["mission.nextMedal"] = "{item} at {stars} stars",
+	["mission.allMedals"] = "Every medal case earned!",
 	["mission.select"] = "Choose mission",
 	["mission.leaderOnly"] = "Only the squad leader can change the mission",
 	["mission.hazards"] = "Hazards",
@@ -439,6 +446,7 @@ local catalog: { [string]: string } = {
 	["toast.cargoReturned"] = "The suitcase returned to safety",
 	["toast.escapeHurry"] = "Hurry! 20 seconds left",
 	["toast.newRoom"] = "New room unlocked: {room}!",
+	["toast.masterySkin"] = "Mission stars earned you the {item}!",
 
 	-- Menus & lobby (UI) ------------------------------------------------------------------------------------------
 	["menu.rooms"] = "Rooms",
@@ -477,6 +485,7 @@ local catalog: { [string]: string } = {
 	["collection.needCredits"] = "{amount} more credits needed",
 	["collection.shopClosed"] = "The shop is closed right now",
 	["collection.missionHint"] = "Earn it from a mission - pick it as your bonus skin on the mission board",
+	["collection.masteryHint"] = "Mission stars: {have}/{need} - clear missions, find every key, beat the challenges",
 	["collection.buyTitle"] = "Buy this skin?",
 	["collection.buyConfirm"] = "Buy {item} for {price} credits?",
 	["collection.buyYes"] = "Buy",

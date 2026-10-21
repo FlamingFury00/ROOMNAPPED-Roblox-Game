@@ -114,8 +114,9 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 	end
 	publishResults(player, payload)
 	local applied = false
+	local mastery: { string } = {}
 	Profiles.update(player, function(p: any)
-		applied = RewardRules.apply(p :: any, plan, summary, os.time(), GameConfig.Data.MaxGrantHistory)
+		applied, mastery = RewardRules.apply(p :: any, plan, summary, os.time(), GameConfig.Data.MaxGrantHistory)
 		if applied then
 			p.stats.runs += 1
 			if run.tutorial then
@@ -133,7 +134,12 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 	if plan.credits > 0 then
 		Registry.get("Telemetry").creditsEarned(player, plan.credits, (Profiles.get(player) :: any).credits)
 	end
-	Net.fire(player, "Effect", "reward", { blueprint = plan.blueprint, skin = plan.skin, credits = plan.credits })
+	Net.fire(
+		player,
+		"Effect",
+		"reward",
+		{ blueprint = plan.blueprint, skin = plan.skin, credits = plan.credits, mastery = mastery }
+	)
 	-- Save with retries; the client keeps showing "Saving..." until this resolves.
 	local saved = false
 	for attempt = 1, 3 do

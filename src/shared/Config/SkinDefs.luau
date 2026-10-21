@@ -6,6 +6,7 @@
 	  default - owned by everyone
 	  shop    - bought with credits earned in expeditions (never with Robux)
 	  mission - earned by choosing it as the reward target of a mission and extracting
+	  mastery - granted once the player holds `stars` mission stars in total (Logic/Mastery)
 ]]
 
 local Tables = require(script.Parent.Parent.Util.Tables)
@@ -30,9 +31,10 @@ export type SkinDef = {
 	kind: "room" | "suitcase",
 	room: string?,
 	nameKey: string,
-	source: "default" | "shop" | "mission",
+	source: "default" | "shop" | "mission" | "mastery",
 	price: number?,
 	missionId: string?,
+	stars: number?,
 	order: number,
 	palette: Palette,
 }
@@ -571,6 +573,73 @@ local list: { SkinDef } = {
 			light = rgb(120, 200, 255),
 			lightBrightness = 1.2,
 			style = "midnight",
+		},
+	},
+	-- Mastery: medal cases for mission stars.
+	{
+		id = "case_bronze",
+		kind = "suitcase",
+		nameKey = "skin.case_bronze",
+		source = "mastery",
+		stars = 7,
+		order = 6,
+		palette = {
+			wall = rgb(176, 104, 52),
+			wallMaterial = M.Foil,
+			floor = rgb(120, 70, 36),
+			floorMaterial = M.Leather,
+			trim = rgb(236, 170, 110),
+			trimMaterial = M.Metal,
+			accent = rgb(255, 214, 160),
+			accentMaterial = M.Foil,
+			prop = rgb(90, 52, 26),
+			light = rgb(255, 200, 150),
+			lightBrightness = 1,
+			style = "medal",
+		},
+	},
+	{
+		id = "case_silver",
+		kind = "suitcase",
+		nameKey = "skin.case_silver",
+		source = "mastery",
+		stars = 14,
+		order = 7,
+		palette = {
+			wall = rgb(196, 204, 214),
+			wallMaterial = M.Foil,
+			floor = rgb(120, 128, 140),
+			floorMaterial = M.Metal,
+			trim = rgb(240, 246, 255),
+			trimMaterial = M.Metal,
+			accent = rgb(255, 255, 255),
+			accentMaterial = M.Foil,
+			prop = rgb(80, 86, 96),
+			light = rgb(220, 235, 255),
+			lightBrightness = 1.1,
+			style = "medal",
+		},
+	},
+	{
+		id = "case_legend",
+		kind = "suitcase",
+		nameKey = "skin.case_legend",
+		source = "mastery",
+		stars = 21,
+		order = 8,
+		palette = {
+			wall = rgb(42, 22, 64),
+			wallMaterial = M.Leather,
+			floor = rgb(28, 14, 44),
+			floorMaterial = M.Leather,
+			trim = rgb(255, 210, 90),
+			trimMaterial = M.Neon,
+			accent = rgb(255, 236, 170),
+			accentMaterial = M.Foil,
+			prop = rgb(255, 196, 70),
+			light = rgb(255, 214, 120),
+			lightBrightness = 1.3,
+			style = "legend",
 		},
 	},
 }

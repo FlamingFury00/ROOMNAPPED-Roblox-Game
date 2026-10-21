@@ -23,6 +23,7 @@ local RoomDefs = require(Shared.Config.RoomDefs)
 local SkinDefs = require(Shared.Config.SkinDefs)
 local ProfileSchema = require(Shared.Logic.ProfileSchema)
 local RewardRules = require(Shared.Logic.RewardRules)
+local Mastery = require(Shared.Logic.Mastery)
 local Net = require(Shared.Net.Net)
 local Log = require(Shared.Util.Log)
 local Registry = require(script.Parent.Parent.Core.Registry)
@@ -84,6 +85,7 @@ local function publishPlayer(player: Player)
 	if not p then
 		return
 	end
+	local profile = profiles().get(player)
 	global:Set({ "players", tostring(player.UserId) }, {
 		name = player.Name,
 		display = player.DisplayName,
@@ -93,6 +95,8 @@ local function publishPlayer(player: Player)
 		leader = leader == player,
 		device = p.device,
 		order = p.joinOrder,
+		-- The squad sees who brings which rooms before launching.
+		loadout = if profile then table.clone(profile.loadout) else nil,
 	})
 end
 
@@ -585,6 +589,13 @@ function SessionService.Start()
 	end
 	local Profiles = profiles()
 	Profiles.Loaded:Connect(function(player: Player, profile: any)
+		-- Medal suitcases for stars earned before they existed (checked on a copy; written only if due).
+		local probe = { stats = profile.stats, skins = { owned = table.clone(profile.skins.owned) } }
+		if #Mastery.grant(probe) > 0 then
+			Profiles.update(player, function(p: any)
+				Mastery.grant(p)
+			end)
+		end
 		publishPlayer(player)
 		refreshPreviews(player)
 		if leader == player then
@@ -606,6 +617,7 @@ function SessionService.Start()
 	end)
 	Profiles.Changed:Connect(function(player: Player)
 		refreshPreviews(player)
+		publishPlayer(player) -- a loadout change shows in the squad list
 	end)
 
 	-- A mission switched off live is never launched: the leader's pick falls back to an allowed one.

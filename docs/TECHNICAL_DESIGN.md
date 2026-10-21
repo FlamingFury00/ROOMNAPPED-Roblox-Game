@@ -160,6 +160,9 @@ with the reason and a tip on the results.
   the first real mission (the results button reads NEXT MISSION). The grant and the run id are written in
   one save (bounded grant ledger), so retries and reconnects can never pay twice.
 * Credits only buy cosmetic skins (`SessionService`), each purchase deducts exactly once. No Robux sales.
+* Mission stars (`Logic/Mastery`, shared by the board and the server) unlock three medal suitcases at 7, 14
+  and 21 stars. `RewardRules.apply` grants them in the same write as the run that earned them (the player is
+  told), and a profile that loads with enough stars receives any it is missing.
 
 ## 9. Client presentation
 

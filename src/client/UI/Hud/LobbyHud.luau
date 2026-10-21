@@ -317,8 +317,18 @@ local function rebuildSquad()
 		elseif info.waiting then
 			table.insert(tagList, { icon = "zzz", color = C.orange })
 		end
-		-- Text runs up to the tags this row actually shows.
-		local textInset = textLeft + 12 + #tagList * 34
+		-- The two rooms this player brings, left of the tags.
+		local rooms: { string } = {}
+		if type(info.loadout) == "table" then
+			for _, roomId in info.loadout do
+				if type(roomId) == "string" and RoomDefs.byId[roomId] then
+					table.insert(rooms, roomId)
+				end
+			end
+		end
+		local roomSize = if compact then 20 else 24
+		-- Text runs up to the tags and rooms this row actually shows.
+		local textInset = textLeft + 12 + #tagList * 34 + (if #rooms > 0 then #rooms * (roomSize + 4) + 4 else 0)
 		local name = if type(info.display) == "string" then info.display else (info.name or item.key)
 		Components.label({
 			name = "Name",
@@ -372,6 +382,41 @@ local function rebuildSquad()
 		})
 		for order, entry in tagList do
 			tag(tags, entry.icon, entry.color, order)
+		end
+		if #rooms > 0 then
+			local loadout = Create.new("Frame", {
+				Name = "Loadout",
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -(8 + #tagList * 34 + 2), 0.5, 0),
+				Size = UDim2.fromOffset(#rooms * (roomSize + 4), roomSize),
+				Parent = row,
+			}, {
+				Create.list(
+					Enum.FillDirection.Horizontal,
+					4,
+					Enum.HorizontalAlignment.Right,
+					Enum.VerticalAlignment.Center
+				),
+			})
+			for order, roomId in rooms do
+				local def = RoomDefs.byId[roomId]
+				local holder = Create.new("Frame", {
+					Name = "Room_" .. roomId,
+					BackgroundColor3 = C.panelDark,
+					Size = UDim2.fromOffset(roomSize, roomSize),
+					LayoutOrder = order,
+					Parent = loadout,
+				}, { Create.corner(Theme.Radius.pill), Create.stroke(def.color, 1.5, 0.2) })
+				local inner = Create.new("Frame", {
+					BackgroundTransparency = 1,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromScale(0.72, 0.72),
+					Parent = holder,
+				})
+				Icons.make(Icons.roomIcon[roomId] or "star", def.color, C.panelDark).Parent = inner
+			end
 		end
 	end
 	squadContent = #list * squadRowHeight + math.max(0, #list - 1) * ROW_GAP

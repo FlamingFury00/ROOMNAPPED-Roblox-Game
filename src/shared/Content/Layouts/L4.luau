@@ -10,7 +10,8 @@
 	the Lost & Found alcove A1.
 
 	Obstacles and their solutions:
-	  G1 broken floor     Fan at S1 blows C1 into the slot (crate_bridge) | beam on the left
+	  G1 broken floor     Fan at S1 blows C1 into the slot (crate_bridge) | Magnet at S6 pulls the metal crate in
+	                      from the far side | beam on the left
 	  CT1 + CT2 carts     Freezer at S2 chills both | Fans blowing Across at S2 / S3 pin them | timing
 	  G2 broken floor     Fan at S4 blows C3 into the slot | beam on the right
 	  CT3 express cart    Fan at S5 Across pins it | Freezer at S5 chills it | timing
@@ -30,7 +31,7 @@ local layout: LayoutTypes.LayoutDef = {
 			kind = "Hall",
 			len = 2,
 			sockets = { [1] = { R = "S1" } },
-			crates = { { id = "C1", at = 2, lateral = 0 } },
+			crates = { { id = "C1", at = 2, lateral = 0, metal = true } },
 		},
 		{
 			kind = "Gap",
@@ -40,7 +41,7 @@ local layout: LayoutTypes.LayoutDef = {
 			beam = "L",
 			keys = { { id = "K1", at = 1, lateral = -6.1, along = 0 } },
 		},
-		{ kind = "Hall", len = 1 },
+		{ kind = "Hall", len = 1, sockets = { [1] = { R = "S6" } } },
 		{ kind = "Turn", dir = "L" },
 		{ kind = "Carts", id = "CT1", sockets = { [1] = { R = "S2" } } },
 		{ kind = "Carts", id = "CT2", cartSpeed = 10, sockets = { [1] = { L = "S3" } } },
@@ -77,6 +78,7 @@ local layout: LayoutTypes.LayoutDef = {
 		S3 = { wind = { "Across" }, cold = { "CT2" } },
 		S4 = { wind = { "Forward", "Backward" } },
 		S5 = { wind = { "Across" }, cold = { "CT3" } },
+		S6 = { magnet = { "C1" }, wind = { "Forward", "Backward" } },
 	},
 	gates = {
 		GT1 = { signals = { "plate:PL1" } },
@@ -129,6 +131,28 @@ local layout: LayoutTypes.LayoutDef = {
 				{ escape = true },
 			},
 			combos = { "cart_pin", "cart_freeze" },
+			keys = { "K1", "K3" },
+		},
+		{
+			name = "collector: a Magnet bridges the first gap from the far side",
+			loadout = { "Freezer", "Magnet" },
+			steps = {
+				{ cross = "G1", by = "beam" },
+				{ deploy = "S6", room = "Magnet" },
+				{ deploy = "S2", room = "Freezer" },
+				{ cross = "CT1", by = "slow" },
+				{ cross = "CT2", by = "slow" },
+				{ cross = "G2", by = "beam" },
+				{ cross = "CT3", by = "timing" },
+				{ capture = true },
+				{ cross = "CT3", by = "timing" },
+				{ cross = "G2", by = "beam" },
+				{ cross = "CT2", by = "slow" },
+				{ cross = "CT1", by = "slow" },
+				{ cross = "G1", by = "crate" },
+				{ escape = true },
+			},
+			combos = { "crate_bridge", "cart_freeze" },
 			keys = { "K1", "K3" },
 		},
 	},

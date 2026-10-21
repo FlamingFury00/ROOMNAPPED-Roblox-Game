@@ -12,8 +12,11 @@
 	mission) and does not count toward mission unlocks. Its challenges and keys still count for mastery.
 
 	Idempotency: apply() records the run id in the profile's bounded grant ledger in the same write as the
-	reward itself, so retried saves, duplicate calls and reconnects can never award twice.
+	reward itself, so retried saves, duplicate calls and reconnects can never award twice. The same write grants
+	any medal suitcase the run's new stars have earned (Logic/Mastery).
 ]]
+
+local Mastery = require(script.Parent.Mastery)
 
 export type RunSummary = {
 	runId: string,
@@ -223,16 +226,17 @@ function RewardRules.hasGrant(profile: ProfileLike, runId: string): boolean
 	return false
 end
 
--- Apply a plan to a profile exactly once. Returns false (and changes nothing) for a repeated run id.
+-- Apply a plan to a profile exactly once. Returns false (and changes nothing) for a repeated run id; on
+-- success also returns the medal suitcases the run's stars just earned.
 function RewardRules.apply(
 	profile: ProfileLike,
 	plan: RewardPlan,
 	summary: RunSummary,
 	now: number,
 	maxHistory: number
-): boolean
+): (boolean, { string })
 	if RewardRules.hasGrant(profile, summary.runId) then
-		return false
+		return false, {}
 	end
 	if plan.blueprint then
 		profile.rooms[plan.blueprint :: string] = true
@@ -259,12 +263,13 @@ function RewardRules.apply(
 	if summary.keysTotal > 0 and summary.keysCollected >= summary.keysTotal then
 		profile.stats.allKeys[summary.missionId] = true
 	end
+	local mastery = Mastery.grant(profile :: any)
 	local list = profile.grants.list
 	table.insert(list, { id = summary.runId, at = now })
 	while #list > maxHistory do
 		table.remove(list, 1)
 	end
-	return true
+	return true, mastery
 end
 
 return RewardRules

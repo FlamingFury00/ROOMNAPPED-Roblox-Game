@@ -14,7 +14,7 @@ local Players = game:GetService("Players")
 local Shared = ReplicatedStorage.Shared
 local MissionDefs = require(Shared.Config.MissionDefs)
 local RoomDefs = require(Shared.Config.RoomDefs)
-local Layouts = require(Shared.Content.Layouts)
+local Mastery = require(Shared.Logic.Mastery)
 local SkinDefs = require(Shared.Config.SkinDefs)
 local Strings = require(Shared.Config.Strings)
 local Net = require(Shared.Net.Net)
@@ -129,51 +129,8 @@ local function challengeDone(challengeId: string): boolean
 	return type(done) == "table" and done[challengeId] == true
 end
 
--- Golden keys placed in a mission's layout: module keys and keys waiting in Lost & Found alcoves (the same two
--- sources LevelBuilder places), counted once per id.
-local function keyCount(mission: MissionDef): number
-	local layout = Layouts[mission.layoutId]
-	local ids: { [string]: boolean } = {}
-	if layout then
-		for _, mod in layout.modules do
-			local m = mod :: any
-			if type(m.alcoves) == "table" then
-				for _, alcove in m.alcoves do
-					if type(alcove) == "table" and type(alcove.key) == "string" then
-						ids[alcove.key] = true
-					end
-				end
-			end
-			if type(m.keys) == "table" then
-				for _, key in m.keys do
-					if type(key) == "table" and type(key.id) == "string" then
-						ids[key.id] = true
-					end
-				end
-			end
-		end
-	end
-	local count = 0
-	for _ in ids do
-		count += 1
-	end
-	return count
-end
-
--- Mission mastery stars: cleared, every golden key in one extraction, every bonus challenge done.
 local function masteryStars(mission: MissionDef): { boolean }
-	local stats = profileStats()
-	local cleared = type(stats.cleared) == "table" and (stats.cleared[mission.id] or 0) > 0
-	local keys = if keyCount(mission) == 0
-		then cleared
-		else type(stats.allKeys) == "table" and stats.allKeys[mission.id] == true
-	local challenges = #mission.challenges > 0
-	for _, challenge in mission.challenges do
-		if not challengeDone(challenge.id) then
-			challenges = false
-		end
-	end
-	return { cleared, keys, challenges }
+	return Mastery.missionStars(profileStats(), mission)
 end
 
 local function clear(frame: Instance)
@@ -318,11 +275,61 @@ local function buildCard(mission: MissionDef, order: number): Card
 	return card
 end
 
+-- Top of the list: every star earned so far and the medal suitcase the next ones unlock.
+local function buildStarSummary()
+	local existing = list:FindFirstChild("StarSummary")
+	if existing then
+		existing:Destroy()
+	end
+	local total = Mastery.totalStars(profileStats())
+	local nextSkin: any = nil
+	for _, skin in SkinDefs.suitcases do
+		if skin.source == "mastery" and (skin.stars or 0) > total then
+			if nextSkin == nil or (skin.stars or 0) < (nextSkin.stars or 0) then
+				nextSkin = skin
+			end
+		end
+	end
+	local summary = Create.new("Frame", {
+		Name = "StarSummary",
+		BackgroundColor3 = C.ink,
+		BackgroundTransparency = 0.35,
+		Size = UDim2.new(1, -12, 0, 44),
+		LayoutOrder = 0,
+		Parent = list,
+	}, { Create.corner(Theme.Radius.medium), Create.stroke(C.goldDark, 1.5, 0.4) })
+	local chip = Components.chip(
+		"star",
+		Strings.t("mission.starsTotal", { count = total, max = Mastery.maxStars() }),
+		C.goldDark,
+		1
+	)
+	chip.AnchorPoint = Vector2.new(0, 0.5)
+	chip.Position = UDim2.new(0, 6, 0.5, 0)
+	chip.Parent = summary
+	local text = Components.label({
+		name = "Next",
+		text = if nextSkin
+			then Strings.t("mission.nextMedal", { item = Common.skinName(nextSkin.id), stars = nextSkin.stars or 0 })
+			else Strings.t("mission.allMedals"),
+		font = Theme.Fonts.bodyBold,
+		textSize = Theme.Text.small,
+		color = C.goldLight,
+		align = Enum.TextXAlignment.Right,
+		anchor = Vector2.new(1, 0.5),
+		position = UDim2.new(1, -10, 0.5, 0),
+		size = UDim2.new(1, -150, 1, 0),
+		parent = summary,
+	})
+	text.TextTruncate = Enum.TextTruncate.AtEnd
+end
+
 local function rebuildList()
 	for _, card in cards do
 		card.button:Destroy()
 	end
 	table.clear(cards)
+	buildStarSummary()
 	for index, mission in MissionDefs.list do
 		cards[mission.id] = buildCard(mission, index)
 	end

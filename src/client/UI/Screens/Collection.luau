@@ -20,6 +20,7 @@ local SkinDefs = require(Shared.Config.SkinDefs)
 local Strings = require(Shared.Config.Strings)
 local Net = require(Shared.Net.Net)
 local RoomPrefabs = require(Shared.World.RoomPrefabs)
+local Mastery = require(Shared.Logic.Mastery)
 local ClientState = require(script.Parent.Parent.Parent.Core.ClientState)
 local RunInfo = require(script.Parent.Parent.Parent.Core.RunInfo)
 local Theme = require(script.Parent.Parent.Theme)
@@ -121,6 +122,8 @@ local function sourceText(skin: SkinDef): string
 		return Strings.t("skin.source.shop", { price = skin.price or 0 })
 	elseif skin.source == "mission" then
 		return Strings.t("skin.source.mission", { mission = Common.missionName(skin.missionId) })
+	elseif skin.source == "mastery" then
+		return Strings.t("skin.source.mastery", { stars = skin.stars or 0 })
 	end
 	return Strings.t("skin.source.default")
 end
@@ -321,6 +324,11 @@ local function showSkinDetail(skin: SkinDef)
 				UIRoot.open("BuyConfirm")
 			end
 		)
+	elseif skin.source == "mastery" then
+		local profile = Common.profile()
+		local stars = if profile and type(profile.stats) == "table" then Mastery.totalStars(profile.stats) else 0
+		detailStatus.Text = Strings.t("collection.masteryHint", { have = stars, need = skin.stars or 0 })
+		detailStatus.TextColor3 = C.gold
 	else
 		detailStatus.Text = Strings.t("collection.missionHint")
 		detailStatus.TextColor3 = C.blue
@@ -568,6 +576,8 @@ local function skinCard(skin: SkinDef, order: number, parent: Instance): TextBut
 		chipText, chipColor, chipIcon = Strings.t("room.owned"), C.greenDark, nil
 	elseif skin.source == "shop" then
 		chipText, chipColor, chipIcon = Common.formatNumber(skin.price or 0), C.goldDark, "coin"
+	elseif skin.source == "mastery" then
+		chipText, chipColor, chipIcon = tostring(skin.stars or 0), C.goldDark, "star"
 	else
 		chipText, chipColor, chipIcon = Common.missionName(skin.missionId), C.blue, "board"
 	end

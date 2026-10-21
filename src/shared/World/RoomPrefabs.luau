@@ -825,6 +825,20 @@ function RoomPrefabs.suitcase(skinId: string?, scale: number?, roomColor: Color3
 		end
 	elseif palette.style == "midnight" or palette.style == "gold" then
 		piece("Glow", CFrame.new(0, -2.95 * s, 0), Vector3.new(2.6, 0.08, 0.9), palette.trim, M.Neon)
+	elseif palette.style == "medal" or palette.style == "legend" then
+		-- A medal on the lid (a diamond on a ribbon); the legend case adds a glowing rim.
+		piece("Ribbon", CFrame.new(0, -1.25 * s, -0.53 * s), Vector3.new(0.34, 0.9, 0.04), palette.trim, M.Fabric)
+		piece(
+			"Medal",
+			CFrame.new(0, -1.85 * s, -0.55 * s) * CFrame.Angles(0, 0, math.pi / 4),
+			Vector3.new(0.55, 0.55, 0.06),
+			palette.accent,
+			palette.accentMaterial
+		)
+		if palette.style == "legend" then
+			piece("Glow", CFrame.new(0, -2.95 * s, 0), Vector3.new(2.6, 0.08, 0.9), palette.trim, M.Neon)
+			piece("Crown", CFrame.new(0, -0.5 * s, 0), Vector3.new(2.6, 0.08, 0.9), palette.trim, M.Neon)
+		end
 	end
 	if roomColor then
 		-- Captured-room cargo: a glowing tag in the room's colour.

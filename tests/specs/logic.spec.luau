@@ -9,6 +9,7 @@ return function(ctx)
 	local HealthModel = ctx.module("ReplicatedStorage.Shared.Logic.HealthModel")
 	local ProfileSchema = ctx.module("ReplicatedStorage.Shared.Logic.ProfileSchema")
 	local RewardRules = ctx.module("ReplicatedStorage.Shared.Logic.RewardRules")
+	local Mastery = ctx.module("ReplicatedStorage.Shared.Logic.Mastery")
 	local NavGraph = ctx.module("ReplicatedStorage.Shared.Logic.NavGraph")
 	local Missions = ctx.module("ReplicatedStorage.Shared.Config.MissionDefs")
 	local Skins = ctx.module("ReplicatedStorage.Shared.Config.SkinDefs")
@@ -419,6 +420,78 @@ return function(ctx)
 			expect(RewardRules.preview(p, Missions.byId.M1, cfg).kind).toBe("blueprint")
 			p.rooms.Laundry = true
 			expect(RewardRules.preview(p, Missions.byId.M1, cfg).item).toBe("laundry_royal")
+		end)
+	end)
+
+	describe("Mastery (S23)", function()
+		local function profile()
+			return ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
+		end
+		-- Every star of `count` missions (in board order).
+		local function master(p, count: number)
+			for i = 1, count do
+				local mission = Missions.list[i]
+				p.stats.cleared[mission.id] = 1
+				p.stats.allKeys[mission.id] = true
+				for _, challenge in mission.challenges do
+					p.stats.challengesDone[challenge.id] = true
+				end
+			end
+		end
+		it("counts three stars per mission: cleared, every key, every challenge", function()
+			local p = profile()
+			expect(Mastery.totalStars(p.stats)).toBe(0)
+			p.stats.cleared.M1 = 2
+			expect(Mastery.totalStars(p.stats)).toBe(1)
+			p.stats.allKeys.M1 = true
+			expect(Mastery.totalStars(p.stats)).toBe(2)
+			for _, challenge in Missions.byId.M1.challenges do
+				p.stats.challengesDone[challenge.id] = true
+			end
+			expect(Mastery.totalStars(p.stats)).toBe(3)
+			expect(Mastery.maxStars()).toBe(#Missions.list * 3)
+		end)
+		it("grants each medal suitcase once its star total is reached", function()
+			local p = profile()
+			master(p, 2) -- 6 stars: nothing yet
+			expect(#Mastery.grant(p)).toBe(0)
+			master(p, 3) -- 9 stars: bronze
+			local granted = Mastery.grant(p)
+			expect(#granted).toBe(1)
+			expect(granted[1]).toBe("case_bronze")
+			expect(p.skins.owned.case_bronze).toBe(true)
+			expect(#Mastery.grant(p)).toBe(0) -- never twice
+			master(p, #Missions.list) -- every star: silver and legend
+			granted = Mastery.grant(p)
+			expect(#granted).toBe(2)
+			expect(p.skins.owned.case_silver).toBe(true)
+			expect(p.skins.owned.case_legend).toBe(true)
+		end)
+		it("grants medals in the same write as the run that earned them", function()
+			local p = profile()
+			master(p, 2)
+			-- Third mission cleared with every key and challenge in this run: 9 stars.
+			local mission = Missions.list[3]
+			for _, challenge in mission.challenges do
+				p.stats.challengesDone[challenge.id] = true
+			end
+			p.stats.allKeys[mission.id] = true
+			local s = {
+				runId = "medal",
+				missionId = mission.id,
+				success = true,
+				timeLeft = 60,
+				keysCollected = 0,
+				keysTotal = 0,
+				anyDowns = false,
+				combos = {},
+				durationSeconds = 120,
+			}
+			local applied, medals =
+				RewardRules.apply(p, RewardRules.compute(p, mission, s, GameConfig.Rewards) :: any, s, 1, 64)
+			expect(applied).toBe(true)
+			expect(#medals).toBe(1)
+			expect(p.skins.owned.case_bronze).toBe(true)
 		end)
 	end)
 

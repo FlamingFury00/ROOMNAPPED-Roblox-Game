@@ -269,6 +269,13 @@ HANDLERS.reward = function(p: any)
 	if type(p.credits) == "number" and p.credits > 0 then
 		AudioController.ui("ui_coin", 0.8)
 	end
+	if type(p.mastery) == "table" then
+		for _, skinId in p.mastery do
+			if type(skinId) == "string" then
+				Toasts.key("success", "toast.masterySkin", { item = "skin." .. skinId })
+			end
+		end
+	end
 end
 
 function EffectsController.start()
