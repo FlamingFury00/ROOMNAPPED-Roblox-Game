@@ -40,12 +40,13 @@ republishing, and running servers follow within five minutes (see §6).
    artifact).
 2. Publish to the **test** place first, either:
    - Studio: open the `.rbxl`, then *File → Publish to Roblox As…* (first time) or *Publish to Roblox*; or
-   - Open Cloud (API key with `universe-places:write`):
+   - Open Cloud, with an API key that has *Place Publishing* (`universe-places`) write access to the
+     experience in `ROBLOX_API_KEY` (the universe id is looked up from the place id):
      ```bash
-     curl -X POST "https://apis.roblox.com/universes/v1/$UNIVERSE_ID/places/$PLACE_ID/versions?versionType=Published" \
-       -H "x-api-key: $ROBLOX_API_KEY" -H "Content-Type: application/octet-stream" \
-       --data-binary @build/ROOMNAPPED.rbxl
+     ROBLOX_PLACE_ID=<place id> tools/publish.sh release/ROOMNAPPED.rbxl Published
      ```
+     The place must already exist (create the experience once in Studio or the Creator Hub). `Saved` instead
+     of `Published` stores a version without putting it live.
 3. Run the published-test checks in §5 on the test place.
 4. Publish the same file to the **live** place. Never publish a build to live that has not run on test.
 
