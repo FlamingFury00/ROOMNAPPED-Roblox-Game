@@ -152,7 +152,7 @@ local function build()
 			Parent = left,
 		})
 		local layout = Instance.new("UIGridLayout")
-		layout.CellSize = UDim2.fromOffset(190, 56)
+		layout.CellSize = UDim2.fromOffset(196, 72)
 		layout.CellPadding = UDim2.fromOffset(8, 8)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Parent = grid
@@ -160,7 +160,7 @@ local function build()
 			local handle = Components.button({
 				text = item.label,
 				variant = item.variant or "secondary",
-				size = UDim2.fromOffset(190, 56),
+				size = UDim2.fromOffset(196, 72),
 				textSize = Theme.Text.small,
 				layoutOrder = index,
 				onClick = function()
@@ -185,7 +185,7 @@ local function build()
 	input = Create.new("TextBox", {
 		Name = "Input",
 		Position = UDim2.fromOffset(10, 10),
-		Size = UDim2.new(1, -150, 0, 56),
+		Size = UDim2.new(1, -150, 0, 72),
 		BackgroundColor3 = C.panelDark,
 		PlaceholderText = "room S1 Freezer",
 		PlaceholderColor3 = C.textMuted,
@@ -206,14 +206,14 @@ local function build()
 		text = "Run",
 		icon = "play",
 		variant = "primary",
-		size = UDim2.fromOffset(124, 56),
+		size = UDim2.fromOffset(124, 72),
 		position = UDim2.new(1, -10, 0, 10),
 		anchor = Vector2.new(1, 0),
 		textSize = Theme.Text.body,
 		onClick = runInput,
 		parent = right,
 	})
-	log = Common.scroll(right, UDim2.new(1, -20, 1, -86), UDim2.fromOffset(10, 76), 4)
+	log = Common.scroll(right, UDim2.new(1, -20, 1, -102), UDim2.fromOffset(10, 92), 4)
 	log.Name = "Log"
 end
 

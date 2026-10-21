@@ -80,7 +80,10 @@ interface down.
    grow the instance count (tested).
 
 Players who join mid-run wait in the lobby and cannot affect or profit from the running mission. Leavers
-drop the suitcase safely; their deployed rooms become orphaned and fold once empty (S19).
+drop the suitcase safely; their deployed rooms become orphaned and fold once empty (S19). A player who drops
+and rejoins is a new session: the old roster entry is marked Disconnected, the player waits for the next run
+and is told the interrupted run's loot was lost. Run-wide moments (stings, cinematics, alarms) are sent only
+to the squad (`ExpeditionService.fireRun`), so the lobby never hears another squad's run.
 
 ## 5. Rooms and effects (S05–S09, R01–R13)
 
@@ -124,9 +127,11 @@ client through roster data and player attributes; `SpectateController` follows l
 ## 8. Persistence and rewards (S21–S23)
 
 * `ProfileStore` stores `{ profile, lock }` per user in the `RoomnappedProfiles_v1` DataStore. Loading takes
-  a session lock with `UpdateAsync` (waits and retries while another live server holds it, takes over stale
-  or long-held locks); every save re-checks the lock and abandons if another server took it. Load failures
-  never fall back to blank data; data from a newer schema is never downgraded.
+  a session lock with `UpdateAsync` (waits and retries while another live session holds it, takes over stale
+  or long-held locks); every save re-checks the lock and abandons if another session took it. Locks belong
+  to a player session (a token), not to a server, so the release of a player's previous session can never
+  clobber a quick rejoin on the same server. Load failures never fall back to blank data; data from a newer
+  schema is never downgraded.
 * `ProfileSchema` versions the save (`GameConfig.SaveSchemaVersion`), migrates older shapes and sanitises
   every field. Disabled or removed content stays in the profile untouched.
 * `ProfileService` autosaves every 120 s, saves on leave and in `BindToClose`, and exposes `saveNow()` so
@@ -150,7 +155,12 @@ client through roster data and player attributes; `SpectateController` follows l
   Everything is laid out on a 1280×720 virtual canvas that `Responsive` scales to the core-UI safe area
   (`ScreenInsets.CoreUISafeInsets`), clamped between 0.62 and 1.55 and multiplied by the player's text size
   setting. Phones (≈ 750×311 safe area) get a shorter canvas; windows refit, long panels scroll, Results
-  switches to a compact layout and the touch action cluster is anchored to the real jump button.
+  switches to a compact layout, the lobby squad list goes compact (and scrolls rather than run under the
+  mission card) and the touch action cluster is anchored to the real jump button. Touch targets are at
+  least 72 virtual px (≈ 44 pt on a phone) unless the whole surrounding card is the target.
+* **Honest controls**: anything the server would refuse is shown as unavailable with the reason before it is
+  pressed — missions disabled by a live flag, the shop when it is switched off, *Unstuck* outside an active
+  run or during its cooldown.
 * **Icons** are vector compositions of frames (`Icons.luau`); the only images are engine-bundled textures.
 * **Accessibility** (S29): separate volume groups, reduced motion, low effects, text and UI size, hints
   toggle, icons paired with words and never colour-only, every important event has both a sound and a
@@ -162,8 +172,8 @@ client through roster data and player attributes; `SpectateController` follows l
   < live overrides from the `RoomnappedConfig` DataStore. Rooms and missions can be disabled without
   touching profiles; features (pings, feedback prompt, analytics, debug tools, Caretaker, keys, shop) can be
   switched off. See [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md).
-* **Analytics** (`TelemetryService`): onboarding funnel (one-time per player, highest step stored in the
-  profile), the recurring `Expedition` funnel keyed by run id, and custom events (room deployed, combo, run
+* **Analytics** (`TelemetryService`): onboarding funnel (each whitelisted step logged once per player, the
+  steps already sent stored as a bitmask in the profile — schema v4), the recurring `Expedition` funnel keyed by run id, and custom events (room deployed, combo, run
   result, room pair, feedback, ping, key, Caretaker hit) with device and build fields. Every call is
   pcall-wrapped; Studio only logs.
 * **Feedback** (`Feedback` screen): a two-tap rating after some runs (1st, 3rd, then every 5th; once per

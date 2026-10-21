@@ -8,16 +8,17 @@ before each release. Anything the automation already proves is not repeated by h
 | Check | What it proves |
 | --- | --- |
 | StyLua, selene, luau-lsp `--!strict` analysis | Formatting, lint and type errors are caught before runtime. |
-| `logic.spec`, `effectmodel.spec`, `util.spec` | Room effects and combos, deploy rules and limits, health/downed/revive rules, reward plans, profile schema and migrations, run state machine, cart timelines, rate limiter and utilities. |
+| `logic.spec`, `effectmodel.spec`, `util.spec` | Room effects and combos (order independence, safe exits, vines that go dormant on frozen water, gates reported exactly when they open or block), deploy rules and limits, health/downed/revive rules, reward plans, profile schema and every migration up to v4, run state machine, cart timelines, rate limiter and utilities. |
 | `layouts.spec` | For every mission: each authored solo playthrough completes under the shared rules, a starter-only (Freezer + Fan) solution exists next to a genuinely different alternative, every bonus challenge is achievable, and the escape fits comfortably in the window. |
 | `world.spec` | Every layout builds without validation errors, every mission references a layout, every room builds with every skin inside its reserved bounds, and every suitcase skin builds. |
-| `sim.spec` (real server, bot players) | Full tutorial solo run with banking and save; Caretaker catch → safe failure; spoofed and malformed remotes rejected without breaking the run; disconnect mid-run (orphaned rooms fold, run continues); squad cap of four; ten consecutive runs without instance growth. |
+| `sim.spec` (real server, bot players) | Full tutorial solo run with banking and save; Caretaker catch → safe failure; spoofed and malformed remotes rejected without breaking the run; disconnect mid-run (orphaned rooms fold, run continues); dropping and rejoining the same server keeps the save and reports the lost run; one squad of at most four (the fifth player waits); Results → lobby does not relaunch while PLAY AGAIN does; ten consecutive runs without instance growth. |
 | `layout_sims.spec` (real server **and** real client) | Every mission played start to finish by a scripted player using only starter rooms where required; no client or server error allowed; the run must succeed without the player being hurt. |
 | `play.spec` (real server **and** real client) | Lobby → PLAY → tutorial through the client's own input bindings; revive through the context hold; downed lock and recovery; spectating after the downed window; pings, turning a fan and recalling it; a touch phone (844×390, 750×311 safe area) using slot buttons and the touch action button, with layout assertions that keep the action button clear of the jump button and the top bar. |
-| `ui.spec` | The real client bootstrap shows the lobby HUD and menu bar; PLAY readies up; the mission board browses and selects; the collection edits the loadout, equips and buys skins; settings apply instantly and save; Results reports success and failure honestly and the feedback prompt follows; lobby-only UI hides during a run; admins get the test tools; toasts render. |
+| `ui.spec` | The real client bootstrap shows the lobby HUD and menu bar; PLAY readies up; the mission board browses, selects and picks a bonus target; the collection edits the loadout, equips and buys skins; settings apply instantly and save; Results reports success and failure honestly, the feedback prompt follows a return to the lobby and never follows PLAY AGAIN; lobby-only UI hides during a run; admins get the test tools; toasts render. |
 
 Visual QA: `tools/preview` renders every interface scenario on desktop (`<scenario>`) and on a phone safe
-area (`phone:<scenario>`) plus world geometry for each layout. Review the renders whenever UI or layout code
+area (`phone:<scenario>`) plus world geometry for each layout. The `squad` scenario fills the lobby with four
+players and long names (the tallest the squad panel gets). Review the renders whenever UI or layout code
 changes.
 
 ## 2. Device and input matrix (A11)
