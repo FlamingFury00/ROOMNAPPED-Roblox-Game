@@ -505,7 +505,7 @@ local catalog: { [string]: string } = {
 	["controls.touch.rotate"] = "Turn button",
 	["controls.touch.cancel"] = "Cancel button",
 	["controls.touch.ping"] = "Ping button",
-	["controls.touch.drop"] = "Drop button",
+	["controls.touch.drop"] = "Hold the Drop button",
 	["controls.touch.menu"] = "Gear button",
 
 	["results.newRoom"] = "NEW ROOM!",

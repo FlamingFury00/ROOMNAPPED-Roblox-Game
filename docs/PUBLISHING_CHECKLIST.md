@@ -68,6 +68,9 @@ republishing, and running servers follow within five minutes (see §6).
 
 **Communication**
 - [ ] Text chat uses `TextChatService` (Roblox filtering and age rules apply automatically).
+- [ ] In a published test server on desktop, the chat window sits at the middle of the right edge (the client
+      moves it there); on a phone it opens top-left from the chat button. If a Roblox update stops the move,
+      the window simply stays top-left, over the squad panel - acceptable, but note it.
 
 **Monetization**
 - [ ] No developer products or passes are sold; skins are bought with earned credits only. If paid items

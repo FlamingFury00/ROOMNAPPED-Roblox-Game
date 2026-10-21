@@ -49,7 +49,9 @@ only that input, every prompt shows the right glyphs, and nothing on the HUD ove
 | Two players deploy into the same socket at the same moment | Exactly one room unfolds; the other player gets a clear rejection. |
 | Player leaves mid-run (solo, squad, carrying the suitcase) | Run fails or continues as designed; the suitcase drops or returns; the leaver is told unbanked loot was lost. |
 | Last player leaves | Run ends, the hotel resets, no orphan instances. |
-| Squad wipe | Results show the failure; nothing owned is lost. |
+| Squad wipe | Results show the failure and its cause (CAUGHT! only for the Caretaker), with a tip; nothing owned is lost. |
+| Finish Check-In, then PLAY AGAIN | The button reads NEXT MISSION and launches Soggy Suites; a later Check-In replay pays practice credits only and unlocks nothing. |
+| A run that lifts the star total past 7 / 14 / 21 | The medal suitcase is granted once (toast, NEW badge in the collection) and survives a rejoin; a profile that already had the stars receives it on join. |
 | Replay from Results ×3 | Each run starts clean; rewards are granted once per run. |
 | DataStore failure during save (Studio: disable API access mid-session) | "Couldn't save yet" toast, retries, Results never claims "Saved" before a confirmed write. |
 | Rejoin the same server and another server | Profile persists; the session lock prevents double writes. |
