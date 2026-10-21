@@ -127,8 +127,8 @@ danger, a 20 s downed window with a 3 s team revive, one automatic solo self-rec
 elimination and spectating. The Humanoid never dies from gameplay. Downed and spectating states reach the
 client through roster data and player attributes; `SpectateController` follows living teammates.
 
-A downed squad member pings Help automatically for their whole revive window (the marker clears when they
-are revived or out), the squad hears and reads when a teammate is out, a solo player sees their extra life
+A downed squad member pings Help automatically for their whole revive window (after a fall it moves to the
+spot they are put back on; it clears when they are revived, out or leave), the squad hears and reads when a teammate is out, a solo player sees their extra life
 beside the hearts, spectators keep the Ping button (anywhere inside the level), and "I'm stuck!" never costs
 the last heart. Check-In forgives falls. The server records what landed the last knock-out, so a wipe reads
 "CAUGHT!" only when the Caretaker did it ("KNOCKED OUT!" otherwise, "TIME'S UP!" when the clock ran out),
@@ -156,8 +156,9 @@ with the reason and a tip on the results.
   blueprint of the captured room if new, else the reward skin they targeted, else duplicate credits that grow
   with the mission's difficulty — plus extraction, key, first-clear and challenge credits. A replayed Check-In
   is practice: extraction credits only, no unlock progress (its challenges and keys still count for the
-  stars), so the tutorial is never the best place to farm. After a successful Check-In the lobby moves on to
-  the first real mission (the results button reads NEXT MISSION). The grant and the run id are written in
+  stars), so the tutorial is never the best place to farm. After someone's first successful Check-In the
+  lobby moves on to the first real mission, Soggy Suites (the results button reads NEXT MISSION); a practice
+  replay keeps PLAY AGAIN. The grant and the run id are written in
   one save (bounded grant ledger), so retries and reconnects can never pay twice.
 * Credits only buy cosmetic skins (`SessionService`), each purchase deducts exactly once. No Robux sales.
 * Mission stars (`Logic/Mastery`, shared by the board and the server) unlock three medal suitcases at 7, 14
@@ -220,8 +221,8 @@ with the reason and a tip on the results.
   so the physics load is the players and a few crates.
 * Replication is batched per frame per channel; the Caretaker uses an unreliable 15 Hz stream.
 * Clients render zone and room visuals from replicated state with tweens and engine-bundled particle
-  textures. Low Effects (the setting, or switched on for the session when frames average over ~36 ms for
-  8 s during a run) scales live particle emitters to 25 %, turns off depth of field and light shadows, softens
+  textures. Low Effects (the setting, or a session-only override when frames average over ~36 ms for 8 s
+  during a run - the Settings toggle shows it and the player can switch it back off) scales live particle emitters to 25 %, turns off depth of field and light shadows, softens
   bloom and skips room rescale animations. At most four corridor lamps per level cast shadows (plus the
   elevator car); room lights, the Caretaker's moving lantern and small moving parts cast none, and
   `PrioritizeLightingQuality` is off so the engine can trade lighting quality before view distance.

@@ -378,9 +378,15 @@ function SessionService.onPrep(acks: { [number]: string }, tutorialCleared: bool
 		publishPlayer(player)
 	end
 	electLeader()
-	-- Check-In is done: PLAY AGAIN (labelled NEXT MISSION on the results) moves on to the first real mission.
+	-- Someone just finished Check-In: PLAY AGAIN (labelled NEXT MISSION on the results) moves on to the first
+	-- real mission - the easiest one, whoever leads.
 	if tutorialCleared and selectedMission == MissionDefs.tutorialId then
-		selectedMission = defaultMissionFor(leader)
+		for _, mission in MissionDefs.list do
+			if not mission.tutorial and missionAllowedFor(leader, mission.id) then
+				selectedMission = mission.id
+				break
+			end
+		end
 	end
 	for player, p in presence do
 		if p.replay or acks[player.UserId] == "replay" then

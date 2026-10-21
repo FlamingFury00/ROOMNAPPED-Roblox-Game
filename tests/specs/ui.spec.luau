@@ -318,6 +318,21 @@ return function(ctx)
 			assertClean(client)
 		end)
 
+		it("shows automatic Low Effects as on, never saves it, and lets the player switch it off", function()
+			local client = boot()
+			local SettingsController = client:module("Controllers.SettingsController")
+			expect(SettingsController.setSessionOverride("lowEffects", true)).toBe(true)
+			expect(SettingsController.get().lowEffects).toBe(true)
+			task.wait(1.4)
+			expect(#client:sentNamed("SaveSettings")).toBe(0) -- session-only
+			-- The player switches it off: their choice wins for the rest of the session.
+			SettingsController.set("lowEffects", false)
+			expect(SettingsController.get().lowEffects).toBe(false)
+			expect(SettingsController.setSessionOverride("lowEffects", true)).toBe(false)
+			expect(SettingsController.get().lowEffects).toBe(false)
+			assertClean(client)
+		end)
+
 		it("shows a successful expedition honestly and asks for feedback", function()
 			local client = boot()
 			local UIRoot = client:module("UI.UIRoot")

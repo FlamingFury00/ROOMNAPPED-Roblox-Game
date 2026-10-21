@@ -89,8 +89,9 @@ local function toSquad(run: any, entry: any, marker: { [string]: any })
 	end
 end
 
-function PingService.helpFor(run: any, entry: any, seconds: number)
-	local position = Registry.get("Characters").position(entry.player)
+-- `at` overrides where the marker stands (a player knocked out by a fall is about to be put back on the floor).
+function PingService.helpFor(run: any, entry: any, seconds: number, at: Vector3?)
+	local position = at or Registry.get("Characters").position(entry.player)
 	if not position then
 		return
 	end

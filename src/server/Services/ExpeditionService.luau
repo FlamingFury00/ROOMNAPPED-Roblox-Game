@@ -51,7 +51,7 @@ local current: Run? = nil
 local global = StateServer.global("global")
 local healthConfig = HealthModel.configFrom(GameConfig)
 local resultsAcks: { [number]: string } = {}
-local tutorialCleared = false -- the run that just finished was a successful Check-In
+local tutorialCleared = false -- the run that just finished was someone's first successful Check-In
 local resultsStartedAt = 0
 local stepErrors: { [string]: number } = {}
 
@@ -438,13 +438,28 @@ local function returnToLobby(run: Run)
 	end
 end
 
+-- Whether the lobby moves on to the first real mission once the results are dismissed.
+function ExpeditionService.lobbyMovesOn(): boolean
+	return tutorialCleared
+end
+
 function ExpeditionService.finish(run: Run, outcome: string)
 	if run.ended or current ~= run then
 		return
 	end
 	run.ended = true
 	run.outcome = outcome
-	tutorialCleared = run.tutorial and outcome == "Success"
+	-- Someone just finished Check-In for the first time (a replay is practice): the lobby moves on afterwards.
+	tutorialCleared = false
+	if run.tutorial and outcome == "Success" then
+		local Profiles = Registry.get("Profiles")
+		for _, entry in run.roster do
+			local profile = Profiles.get(entry.player)
+			if profile and ((profile :: any).stats.cleared[run.mission.id] or 0) == 0 then
+				tutorialCleared = true
+			end
+		end
+	end
 	if not machine:transition("Results", os.clock(), outcome :: any) then
 		-- Launching aborted before Explore: Launching -> Results is allowed; anything else is a bug.
 		log:Warn("could not enter Results from", machine.phase)

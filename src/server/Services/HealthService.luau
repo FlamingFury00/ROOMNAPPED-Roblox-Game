@@ -219,8 +219,12 @@ function HealthService.onCharacterSpawned(run: Run, entry: RosterEntry)
 	end
 end
 
-function HealthService.onPlayerLeft(_run: Run, entry: RosterEntry)
+function HealthService.onPlayerLeft(run: Run, entry: RosterEntry)
 	clearAttributes(entry.player)
+	-- A downed player who leaves stops calling for help.
+	if entry.health.status == "Downed" then
+		Registry.get("Pings").clearFor(run, entry)
+	end
 end
 
 function HealthService.endRun(run: Run)

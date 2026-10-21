@@ -75,6 +75,9 @@ local function applyDoor(record: DoorRecord, open: boolean, instant: boolean)
 	local goal = if open then record.closed * CFrame.new(record.offset) else record.closed
 	if instant or Motion.isReduced() then
 		record.part.CFrame = goal
+		if not instant then
+			doorSound(record, open) -- no slide with Reduced Motion, but the sound and the gate news still play
+		end
 		return
 	end
 	local tween = TweenService:Create(

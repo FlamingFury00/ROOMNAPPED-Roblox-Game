@@ -83,6 +83,8 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 		plan = nil,
 		saving = "Idle",
 		tutorial = run.tutorial,
+		-- After someone's first Check-In the lobby moves on (the results button says NEXT MISSION).
+		next = Registry.get("Expedition").lobbyMovesOn(),
 		-- What knocked the squad out, so a wipe names its cause.
 		cause = if summary.success then nil else run.stats.lastKnockout,
 	}

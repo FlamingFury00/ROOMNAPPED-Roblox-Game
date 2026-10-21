@@ -5,7 +5,8 @@
 	Route: elevator -> flooded hall B1 -> left into the burning corridor F1 -> the planter gap G2 -> right past
 	the broken floor G1 -> left to the Laundry Room.
 
-	Obstacles and their solutions (S10/S31 - every one has a starter answer and a slower safe bypass):
+	Obstacles and their solutions (S10/S31 - every one has a slower safe bypass, and all but the planter gap
+	also a starter-room answer):
 	  B1 flood (2 tiles, deep)   Freezer at S1 freezes it | ledge along the left wall
 	  F1 fire                    Laundry at S2 douses it (bonus challenge) | heat-shielded SAFE WAY on the left
 	  G2 planter gap             Greenhouse at S5 grows vine V1 while the doused fire's pool holds water | beam

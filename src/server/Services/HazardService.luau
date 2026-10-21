@@ -324,6 +324,13 @@ local function stepEntry(run: Run, entry: RosterEntry, now: number, sample: bool
 		task.delay(GameConfig.Health.FallRespawnDelaySeconds, function()
 			if not run.ended and entry.connected and not entry.left then
 				Characters.teleport(entry.player, back)
+				-- A fall that downed them: the Help marker moves from the pit to where they now lie.
+				if entry.health.status == "Downed" then
+					local left = entry.health.downedUntil - os.clock()
+					if left > 0 then
+						Registry.get("Pings").helpFor(run, entry, left, back.Position)
+					end
+				end
 			end
 		end)
 		return

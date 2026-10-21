@@ -175,18 +175,48 @@ local function selectedRoom(): string?
 	return if slot ~= 0 then myLoadout()[slot] else nil
 end
 
--- Whether one of my unfolded rooms is `room` (or, with `other`, any room except it).
-local function roomOut(room: string, other: boolean?): boolean
+-- Whether one of my unfolded rooms is `room`.
+local function roomOut(room: string): boolean
 	local entry = RunInfo.myEntry()
 	if entry and type(entry.deployed) == "table" then
 		for key in entry.deployed do
-			local out = myLoadout()[tonumber(key) or 0]
-			if out and (out == room) ~= (other == true) then
+			if myLoadout()[tonumber(key) or 0] == room then
 				return true
 			end
 		end
 	end
 	return false
+end
+
+-- The slot that holds the Freezer (players may have swapped their loadout), if any.
+local function freezerSlot(): number?
+	for slot, room in myLoadout() do
+		if room == "Freezer" then
+			return slot
+		end
+	end
+	return nil
+end
+
+-- The door Check-In teaches: the one whose cold reaches the flooded hall.
+local function tutorialDoor(level: any): string?
+	for id, socket in level.sockets or {} do
+		if type(socket.links) == "table" and type(socket.links.cold) == "table" and #socket.links.cold > 0 then
+			return id
+		end
+	end
+	return nil
+end
+
+-- Another room standing in that door: "mine" (I can fold it back) or "other" (a teammate's), else nil.
+local function doorBlocked(level: any): string?
+	local doorId = tutorialDoor(level)
+	local sockets = ClientState.get("global", "sockets")
+	local info = if doorId and type(sockets) == "table" then sockets[doorId] else nil
+	if type(info) ~= "table" or info.room == "Freezer" then
+		return nil
+	end
+	return if tostring(info.owner) == RunInfo.myKey() then "mine" else "other"
 end
 
 local function tutorialHint(position: Vector3): string?
@@ -212,16 +242,25 @@ local function tutorialHint(position: Vector3): string?
 			advance("cross", "deployed")
 			return nil
 		end
+		local slot = freezerSlot()
+		if not slot then
+			-- A loadout without a Freezer (a veteran's replay): the ledge is the way; just find the room.
+			advance("find", nil)
+			return nil
+		end
+		-- Another room took the door: it has to fold back before the Freezer fits.
+		local blocked = doorBlocked(level)
+		if blocked == "mine" then
+			return deviceKey("hint.stray")
+		elseif blocked == "other" then
+			return "hint.doorTaken"
+		end
 		if selectedRoom() == "Freezer" then
 			advance("deploy", "selected")
 			return nil
 		end
-		-- Another room took the door: it has to fold back before the Freezer fits.
-		if roomOut("Freezer", true) then
-			return deviceKey("hint.stray")
-		end
 		if nearestSocketDistance(position) < 26 then
-			return deviceKey("hint.select")
+			return deviceKey(if slot == 2 then "hint.select2" else "hint.select")
 		end
 		return "placement.selectHint"
 	elseif step == "deploy" then
@@ -229,7 +268,8 @@ local function tutorialHint(position: Vector3): string?
 			advance("cross", "deployed")
 			return nil
 		end
-		if selectedRoom() ~= "Freezer" then
+		-- A blocked door or a different pick: back to the step that explains it.
+		if doorBlocked(level) or selectedRoom() ~= "Freezer" then
 			advance("select", nil)
 			return nil
 		end

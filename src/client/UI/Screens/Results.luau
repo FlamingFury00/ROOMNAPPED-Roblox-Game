@@ -422,7 +422,7 @@ local function render(data: any)
 		subtitle.Text = reason
 	end
 	-- After Check-In the lobby moves on to the first real mission, so the button says where it goes.
-	replayButton.setText(Strings.t(if data.success and data.tutorial then "results.next" else "results.replay"))
+	replayButton.setText(Strings.t(if data.success and data.next == true then "results.next" else "results.replay"))
 	renderRewardCard(data)
 	renderStats(data)
 	renderLines(data)

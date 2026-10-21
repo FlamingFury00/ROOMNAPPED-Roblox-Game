@@ -140,6 +140,7 @@ return function(ctx)
 			expect(sim:state(bot, "me", "profile.rooms.Laundry")).toBe(true)
 			expect(sim:state(bot, "me", "profile.tutorialDone")).toBe(true)
 			expect(sim:state(bot, "me", "results.plan.blueprint")).toBe("Laundry")
+			expect(sim:state(bot, "me", "results.next")).toBe(true) -- a first clear: NEXT MISSION
 			local credits = sim:state(bot, "me", "profile.credits")
 			expect(credits > 0).toBe(true)
 

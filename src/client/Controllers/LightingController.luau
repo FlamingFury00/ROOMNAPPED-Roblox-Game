@@ -6,8 +6,9 @@
 	plus a tint; the escape adds an alarm-red pulse; being downed drains the colour out of the world.
 	All changes are client-side and tweened.
 
-	Low Effects (the setting, or switched on for the session when frames keep running long during a run)
-	turns off depth of field and light shadows, softens bloom and thins particles.
+	Low Effects (the setting, or switched on for the session when frames keep running long during a run - a
+	session-only value the Settings toggle shows and the player can switch back off) turns off depth of field
+	and light shadows, softens bloom and thins particles.
 ]]
 
 local Lighting = game:GetService("Lighting")
@@ -84,7 +85,7 @@ local muted = false
 -- Automatic Low Effects: frames averaging longer than this for this long during a run.
 local AUTO_LOW_FRAME_SECONDS = 1 / 28
 local AUTO_LOW_AFTER_SECONDS = 8
-local autoLow = false
+local autoTried = false -- one attempt per session
 local slowFor = 0
 local averageFrame = 1 / 60
 local lowApplied: boolean? = nil
@@ -92,7 +93,7 @@ local lowApplied: boolean? = nil
 local unshadowed: { [Light]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
 local function lowEffects(): boolean
-	return autoLow or SettingsController.get().lowEffects
+	return SettingsController.get().lowEffects
 end
 
 local function applyShadows(root: Instance?, low: boolean)
@@ -246,15 +247,20 @@ function LightingController.start()
 	end)
 	-- Alarm pulse: a gentle red breathing tint during the escape (static red with Reduced Motion).
 	RunService.Heartbeat:Connect(function(dt: number)
-		-- A device that keeps dropping frames in a run gets Low Effects for the session (not saved).
-		if not autoLow and not SettingsController.get().lowEffects and RunInfo.isActivePhase() then
+		-- A device that keeps dropping frames in a run gets Low Effects for the session (not saved), measured
+		-- only while the player is in an active run.
+		if not autoTried and not lowEffects() and RunInfo.isActivePhase() and RunInfo.isParticipant() then
 			averageFrame += (math.min(dt, 0.5) - averageFrame) * 0.1
 			slowFor = if averageFrame > AUTO_LOW_FRAME_SECONDS then slowFor + dt else 0
-			if slowFor >= AUTO_LOW_AFTER_SECONDS and RunInfo.isParticipant() then
-				autoLow = true
-				applySettings()
-				Toasts.key("info", "toast.autoLowEffects", nil)
+			if slowFor >= AUTO_LOW_AFTER_SECONDS then
+				autoTried = true
+				if SettingsController.setSessionOverride("lowEffects", true) then
+					Toasts.key("info", "toast.autoLowEffects", nil)
+				end
 			end
+		elseif slowFor > 0 then
+			slowFor = 0
+			averageFrame = 1 / 60
 		end
 		if alarm then
 			local settings = SettingsController.get()
