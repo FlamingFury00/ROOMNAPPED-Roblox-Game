@@ -73,6 +73,50 @@ function FlagsService.all(): any
 	return flags
 end
 
+-- Live overrides come from a hand-edited DataStore entry: keep only known flags with values of the right type,
+-- so a typo can never break flag lookups (or the refresh loop). Returns the clean overrides and what was dropped.
+local function cleanOverrides(raw: any): (any, { string })
+	local clean: any = {}
+	local dropped: { string } = {}
+	if type(raw) ~= "table" then
+		return clean, dropped
+	end
+	for key, value in raw do
+		local defaults = (FeatureFlags.Defaults :: any)[key]
+		if (key == "rooms" or key == "missions" or key == "features") and type(value) == "table" then
+			clean[key] = {}
+			for id, enabled in value do
+				if type(enabled) == "boolean" and defaults[id] ~= nil then
+					clean[key][id] = enabled
+				else
+					table.insert(dropped, tostring(key) .. "." .. tostring(id))
+				end
+			end
+		elseif key == "adminUserIds" and type(value) == "table" then
+			clean.adminUserIds = {}
+			for _, id in value do
+				if type(id) == "number" and id > 0 and id == math.floor(id) then
+					table.insert(clean.adminUserIds, id)
+				else
+					table.insert(dropped, "adminUserIds." .. tostring(id))
+				end
+			end
+		elseif
+			key == "adminGroup"
+			and type(value) == "table"
+			and type(value.id) == "number"
+			and type(value.minRank) == "number"
+		then
+			clean.adminGroup = { id = value.id, minRank = value.minRank }
+		else
+			table.insert(dropped, tostring(key))
+		end
+	end
+	return clean, dropped
+end
+
+FlagsService.cleanOverrides = cleanOverrides -- exposed for tests
+
 local function resolve(): any
 	local resolved = Tables.deepCopy(FeatureFlags.Defaults)
 	merge(resolved, FeatureFlags.Environments[environment])
@@ -149,13 +193,25 @@ function FlagsService.Start()
 			end)
 			if ok then
 				-- A missing key means "no overrides" (removing an override takes effect too).
-				local live = if type(result) == "table" then result else nil
-				local encoded = HttpService:JSONEncode(live or {})
+				local live, dropped = cleanOverrides(result)
+				local encoded = HttpService:JSONEncode(live)
 				if encoded ~= applied then
-					applied = encoded
+					if #dropped > 0 then
+						log:Warn("ignored unknown or malformed live flags:", table.concat(dropped, ", "))
+					end
+					local previous = liveOverrides
 					liveOverrides = live
-					apply()
-					log:Info("live flag overrides applied for", environment)
+					local applyOk, problem = pcall(function(): any
+						apply()
+						return nil
+					end)
+					if applyOk then
+						applied = encoded
+						log:Info("live flag overrides applied for", environment)
+					else
+						liveOverrides = previous
+						log:Warn("could not apply live flags:", problem)
+					end
 				end
 			else
 				-- Keep the flags we have; a read failure must never switch content back on or off.

@@ -63,6 +63,9 @@ export type Run = {
 	stats: RunStats,
 	ended: boolean,
 	outcome: string?,
+	-- Rooms switched off when the run launched: a run finishes with the rooms it started with, whatever the
+	-- live flags do meanwhile.
+	disabledRooms: { [string]: boolean },
 	scratch: { [string]: any }, -- per-service run state
 }
 

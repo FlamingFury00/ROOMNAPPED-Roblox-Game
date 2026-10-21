@@ -211,18 +211,12 @@ local function deployState(run: Run): DeployRules.DeployState
 	for socketId in run.runtime.sockets do
 		valid[socketId] = true
 	end
-	local disabled = {}
-	local Flags = Registry.get("Flags")
-	for id in RoomDefs.byId do
-		if not Flags.isRoomEnabled(id) then
-			disabled[id] = true
-		end
-	end
 	return {
 		phase = Registry.get("Expedition").phase(),
 		sockets = claims,
 		validSockets = valid,
-		disabledRooms = disabled,
+		-- As of launch: switching a room off live never strands a run that is already under way.
+		disabledRooms = run.disabledRooms,
 		perPlayerCap = GameConfig.Deploy.ActivePerPlayer,
 		teamCap = GameConfig.Deploy.ActivePerTeam,
 	}

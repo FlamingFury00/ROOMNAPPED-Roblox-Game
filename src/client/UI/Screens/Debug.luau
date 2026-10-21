@@ -153,7 +153,7 @@ local function build()
 			Parent = left,
 		})
 		local layout = Instance.new("UIGridLayout")
-		layout.CellSize = UDim2.fromOffset(196, 72)
+		layout.CellSize = UDim2.fromOffset(192, 72) -- three per row beside the scroll bar
 		layout.CellPadding = UDim2.fromOffset(8, 8)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Parent = grid
@@ -161,7 +161,7 @@ local function build()
 			local handle = Components.button({
 				text = item.label,
 				variant = item.variant or "secondary",
-				size = UDim2.fromOffset(196, 72),
+				size = UDim2.fromOffset(192, 72),
 				textSize = Theme.Text.small,
 				layoutOrder = index,
 				onClick = function()

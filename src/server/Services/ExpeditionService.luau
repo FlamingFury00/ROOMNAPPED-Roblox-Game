@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
 local MissionDefs = require(Shared.Config.MissionDefs)
+local RoomDefs = require(Shared.Config.RoomDefs)
 local SkinDefs = require(Shared.Config.SkinDefs)
 local Layouts = require(Shared.Content.Layouts)
 local EffectModel = require(Shared.Logic.EffectModel)
@@ -243,6 +244,12 @@ function ExpeditionService.launch(players: { Player }, missionId: string): boole
 	built.model.Parent = folder
 
 	local solo = #valid == 1
+	local disabledRooms = {}
+	for id in RoomDefs.byId do
+		if not Registry.get("Flags").isRoomEnabled(id) then
+			disabledRooms[id] = true
+		end
+	end
 	local run: Run = {
 		id = HttpService:GenerateGUID(false),
 		mission = mission,
@@ -272,6 +279,7 @@ function ExpeditionService.launch(players: { Player }, missionId: string): boole
 		},
 		ended = false,
 		outcome = nil,
+		disabledRooms = disabledRooms,
 		scratch = {},
 	}
 	run.trove:Add(built.model)
@@ -294,6 +302,7 @@ function ExpeditionService.launch(players: { Player }, missionId: string): boole
 		solo = solo,
 		tutorial = mission.tutorial,
 		rosterSize = #run.order,
+		disabledRooms = Tables.deepCopy(disabledRooms),
 		escapeEndsAt = nil,
 		outcome = nil,
 	})

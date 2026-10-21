@@ -841,7 +841,6 @@ function Components.slider(
 	}
 end
 
--- Small pill badge with icon + text (status chips, prices, hazards).
 export type BadgeHandle = { frame: Frame, set: (number) -> () }
 
 -- Notification badge on a button's top-right corner: a count (9+ beyond nine) that pops when it rises and
@@ -879,6 +878,7 @@ function Components.badge(parent: GuiObject): BadgeHandle
 	}
 end
 
+-- Small pill badge with icon + text (status chips, prices, hazards).
 function Components.chip(icon: string?, text: string, color: Color3, layoutOrder: number?, textColor: Color3?): Frame
 	local chip = Create.new("Frame", {
 		Name = "Chip",

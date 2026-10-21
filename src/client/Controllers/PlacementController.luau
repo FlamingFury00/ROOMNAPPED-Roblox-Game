@@ -117,8 +117,9 @@ local function deployState(): DeployRules.DeployState
 			valid[socketId] = true
 		end
 	end
-	local flags = ClientState.get("global", "flags")
-	local disabled = if type(flags) == "table" and type(flags.disabledRooms) == "table" then flags.disabledRooms else {}
+	-- The rooms switched off when this run launched (the server judges deploys by the same snapshot).
+	local snapshot = RunInfo.run().disabledRooms
+	local disabled = if type(snapshot) == "table" then snapshot else {}
 	return {
 		phase = RunInfo.phase(),
 		sockets = claims,

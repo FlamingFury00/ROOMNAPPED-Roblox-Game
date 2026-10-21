@@ -113,8 +113,11 @@ republishing, and running servers follow within five minutes (see §6).
    with what they launched with. Players keep everything they own; disabled content is just not offered.
 2. **Revert the place.** In the Creator Dashboard, open the place's version history and restore the
    previous version, then migrate servers.
-3. **Never** rename or wipe `RoomnappedProfiles_v1` to roll back. Profiles carry a schema version; older
-   builds ignore fields they do not know and newer builds migrate forward.
+3. **Never** rename or wipe `RoomnappedProfiles_v1` to roll back. Profiles carry a schema version: older
+   builds keep fields they do not know, newer builds migrate forward, and a build refuses a profile whose
+   schema is newer than it understands (the player is asked to rejoin a newer server). So a release that
+   bumps `GameConfig.SaveSchemaVersion` cannot be rolled back without locking out players who played it;
+   bump it only when an older build would misread the data, never for additive fields.
 
 ## 7. Launch gate (G3)
 

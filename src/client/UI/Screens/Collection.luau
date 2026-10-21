@@ -964,6 +964,9 @@ local function build()
 end
 
 function Collection.start()
+	-- New-item tracking must see a profile change before this screen refreshes on it (observers run in the
+	-- order they registered), or a just-unlocked item would be marked seen before it was ever marked new.
+	NewItems.start()
 	build()
 	UIRoot.register({
 		name = "Collection",

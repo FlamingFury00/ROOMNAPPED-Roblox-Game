@@ -125,20 +125,33 @@ local function challengeDone(challengeId: string): boolean
 	return type(done) == "table" and done[challengeId] == true
 end
 
--- Golden keys placed in a mission's layout.
+-- Golden keys placed in a mission's layout: module keys and keys waiting in Lost & Found alcoves (the same two
+-- sources LevelBuilder places), counted once per id.
 local function keyCount(mission: MissionDef): number
 	local layout = Layouts[mission.layoutId]
-	local count = 0
+	local ids: { [string]: boolean } = {}
 	if layout then
 		for _, mod in layout.modules do
-			if type(mod.keys) == "table" then
-				for _, key in mod.keys do
-					if type(key) == "table" and key.id then
-						count += 1
+			local m = mod :: any
+			if type(m.alcoves) == "table" then
+				for _, alcove in m.alcoves do
+					if type(alcove) == "table" and type(alcove.key) == "string" then
+						ids[alcove.key] = true
+					end
+				end
+			end
+			if type(m.keys) == "table" then
+				for _, key in m.keys do
+					if type(key) == "table" and type(key.id) == "string" then
+						ids[key.id] = true
 					end
 				end
 			end
 		end
+	end
+	local count = 0
+	for _ in ids do
+		count += 1
 	end
 	return count
 end

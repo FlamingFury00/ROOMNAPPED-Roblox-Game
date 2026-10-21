@@ -77,8 +77,8 @@ local NOTICE_HEIGHT = 54
 local RETRY_HEIGHT = 72
 local squadRowHeight = ROW_HEIGHT
 local squadContent = 0 -- height of the rows (and the invite row) with their gaps
--- The invite row is a touch target: never below 72 (about 44 pt on a phone).
-local INVITE_HEIGHT_COMPACT = 72
+-- The invite row is a touch target: 72 everywhere (about 44 pt on a phone at the smallest UI scale).
+local INVITE_HEIGHT = 72
 local noticeHeight = 0
 -- Whether Roblox lets this player send game invites (checked once; false in Studio or when unsupported).
 local canInvite = false
@@ -369,7 +369,7 @@ local function rebuildSquad()
 	squadContent = #list * squadRowHeight + math.max(0, #list - 1) * ROW_GAP
 	-- An open seat: invite friends straight from the squad list.
 	if canInvite and #list < GameConfig.Squad.MaxPlayers then
-		local inviteHeight = if compact then INVITE_HEIGHT_COMPACT else squadRowHeight
+		local inviteHeight = INVITE_HEIGHT
 		local invite = Create.new("TextButton", {
 			Name = "Invite",
 			BackgroundColor3 = C.panel,

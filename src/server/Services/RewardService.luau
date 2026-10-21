@@ -26,7 +26,8 @@ type RosterEntry = RunTypes.RosterEntry
 
 local RewardService = {}
 
--- Background retries after a failed reward save: one every RETRY_SECONDS, for about ten minutes.
+-- Background retries after a failed reward save: one every RETRY_SECONDS (plus the store's own backoff), for
+-- about fifteen minutes.
 local RETRY_SECONDS = 30
 local RETRY_ATTEMPTS = 20
 
@@ -104,8 +105,9 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 	payload.plan = Tables.deepCopy(plan)
 	payload.saving = "Saving"
 	-- Beat this player's own record on the mission (first clears are celebrated by their reward line).
+	-- Best times are stored in whole seconds: compare like with like, so "New best" never repeats the record.
 	local previousBest = (profile :: any).stats.bestTimes[run.mission.id]
-	if type(previousBest) == "number" and summary.durationSeconds < previousBest then
+	if type(previousBest) == "number" and math.floor(summary.durationSeconds + 0.5) < previousBest then
 		payload.newBest = true
 	end
 	publishResults(player, payload)
@@ -148,16 +150,19 @@ local function grantFor(run: Run, entry: RosterEntry, summary: any)
 		return
 	end
 	Net.fire(player, "Toast", "error", "toast.saveFailed", {})
-	-- Keep the panel's promise ("retrying automatically"): retry in the background and confirm once a write
-	-- lands. A newer run's own save carries this reward too (saves write the whole profile).
+	-- Keep the panel's promise ("retrying automatically"): retry in the background until a write lands, then
+	-- confirm. Saves write the whole profile, so any later successful save (autosave, a newer run) carries
+	-- this reward too and ends the retries.
 	for _ = 1, RETRY_ATTEMPTS do
 		task.wait(RETRY_SECONDS)
-		if player.Parent ~= Players or shownRun[player] ~= payload.runId then
+		if player.Parent ~= Players then
 			return
 		end
-		if Profiles.saveNow(player) then
-			payload.saving = "Saved"
-			publishResults(player, payload)
+		if not Profiles.hasUnsavedChanges(player) or Profiles.saveNow(player) then
+			if shownRun[player] == payload.runId then
+				payload.saving = "Saved"
+				publishResults(player, payload)
+			end
 			Net.fire(player, "Toast", "success", "toast.saveRecovered", {})
 			return
 		end

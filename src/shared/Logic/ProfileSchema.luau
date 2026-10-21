@@ -51,7 +51,11 @@ export type Profile = {
 	feedbackCount: number,
 }
 
-local CURRENT = 5
+-- Bump only for changes an older build would misread: older builds refuse newer schemas (the player is told to
+-- rejoin a newer server), so a bump makes rolling back a release lock players out. Additive fields (such as
+-- mission mastery) need no bump: Tables.reconcile adds them from the template, and older builds keep fields
+-- they do not know untouched.
+local CURRENT = 4
 
 local ProfileSchema = {}
 ProfileSchema.CURRENT = CURRENT
@@ -166,17 +170,6 @@ local MIGRATIONS: { [number]: (any) -> any } = {
 			data.flags.onboardingFunnel = nil
 		end
 		data.schema = 4
-		return data
-	end,
-	-- v5 records mission mastery (completed bonus challenges, all-keys extractions) from now on.
-	[4] = function(data: any): any
-		if type(data.stats) == "table" then
-			data.stats.challengesDone = if type(data.stats.challengesDone) == "table"
-				then data.stats.challengesDone
-				else {}
-			data.stats.allKeys = if type(data.stats.allKeys) == "table" then data.stats.allKeys else {}
-		end
-		data.schema = 5
 		return data
 	end,
 }

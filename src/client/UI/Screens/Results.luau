@@ -54,6 +54,7 @@ local compact = false
 
 local shownRunId: string? = nil
 local actedRunId: string? = nil
+local planShownFor: string? = nil -- run whose reward plan is on screen (rendered once, then only the save state)
 local renderedKey = ""
 local spinnerConnection: RBXScriptConnection? = nil
 local raysConnection: RBXScriptConnection? = nil
@@ -242,6 +243,12 @@ local function renderRewardCard(data: any)
 		icon = "clock"
 		color = C.panelLight
 	end
+	-- Rays first so the title and the icon draw over them.
+	local iconSize = if compact then 78 else 116
+	local iconTop = if compact then 48 else 52
+	if data.success and type(plan) == "table" then
+		rays(rewardCard, color:Lerp(C.white, 0.35), iconSize * 2, UDim2.new(0.5, 0, 0, iconTop + iconSize // 2))
+	end
 	Components.label({
 		text = title,
 		font = Theme.Fonts.display,
@@ -253,11 +260,6 @@ local function renderRewardCard(data: any)
 		stroke = true,
 		parent = rewardCard,
 	})
-	local iconSize = if compact then 78 else 116
-	local iconTop = if compact then 48 else 52
-	if data.success and type(plan) == "table" then
-		rays(rewardCard, color:Lerp(C.white, 0.35), iconSize * 2, UDim2.new(0.5, 0, 0, iconTop + iconSize // 2))
-	end
 	bigIcon(rewardCard, icon, color, iconSize, UDim2.new(0.5, 0, 0, iconTop))
 	local nameLabel = Components.label({
 		text = name,
@@ -439,7 +441,9 @@ local function maybeOpen()
 			renderedKey = key
 			if shownRunId == id then
 				renderSaving(data)
-				if data.plan ~= nil then
+				-- The plan arrives once; later updates only move the save state (no second count-up).
+				if data.plan ~= nil and planShownFor ~= id then
+					planShownFor = id
 					renderRewardCard(data)
 					renderLines(data)
 				end
@@ -454,6 +458,7 @@ local function maybeOpen()
 		return
 	end
 	shownRunId = id
+	planShownFor = if data.plan ~= nil then id else nil
 	renderedKey = id .. ":" .. tostring(data.saving) .. ":" .. tostring(data.plan ~= nil)
 	render(data)
 	UIRoot.open("Results")
@@ -556,7 +561,9 @@ local function build()
 		color = C.goldLight,
 		align = Enum.TextXAlignment.Right,
 		size = UDim2.new(1, -24, 0, 40),
-		position = UDim2.new(0, 12, 1, -46),
+		-- Anchored at its right edge (where the right-aligned text sits) so the end-of-count pop stays put.
+		anchor = Vector2.new(1, 1),
+		position = UDim2.new(1, -12, 1, -6),
 		stroke = true,
 		parent = right,
 	})
@@ -651,7 +658,7 @@ local function build()
 		lobbyButton.instance.Size = UDim2.fromOffset(300, buttonsHeight - 8)
 		replayButton.instance.Size = UDim2.fromOffset(340, buttonsHeight - 8)
 		local data = payload()
-		if compact ~= wasCompact and data and shownRunId == data.runId then
+		if compact ~= wasCompact and data and shownRunId == data.runId and UIRoot.isOpen("Results") then
 			renderRewardCard(data)
 		end
 	end)

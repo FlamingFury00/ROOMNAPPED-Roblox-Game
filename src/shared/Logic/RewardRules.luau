@@ -215,8 +215,9 @@ function RewardRules.apply(
 	profile.stats.keys += summary.keysCollected
 	profile.stats.cleared[summary.missionId] = (profile.stats.cleared[summary.missionId] or 0) + 1
 	local best = profile.stats.bestTimes[summary.missionId]
-	if best == nil or summary.durationSeconds < best then
-		profile.stats.bestTimes[summary.missionId] = math.floor(summary.durationSeconds + 0.5)
+	local seconds = math.floor(summary.durationSeconds + 0.5)
+	if best == nil or seconds < best then
+		profile.stats.bestTimes[summary.missionId] = seconds
 	end
 	-- Mastery: challenges stay done once done; every key in one extraction earns the keys star.
 	for id in plan.challenges do

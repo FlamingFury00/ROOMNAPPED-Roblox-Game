@@ -566,6 +566,64 @@ return function(ctx)
 			assertClean(sim)
 		end)
 
+		it("keeps only well-formed live flag overrides (S32)", function()
+			local sim = boot()
+			local Flags = sim:module("ServerScriptService.Server.Services.FlagsService")
+			local clean, dropped = Flags.cleanOverrides({
+				rooms = false,
+				missions = { M3 = false, M99 = false, M2 = "no" },
+				features = { shop = false, teleport = true },
+				adminUserIds = { 5, "x", -1 },
+				adminGroup = { id = 7, minRank = 200 },
+				junk = 1,
+			})
+			expect(clean.rooms).toBe(nil)
+			expect(clean.missions.M3).toBe(false)
+			expect(clean.missions.M99).toBe(nil)
+			expect(clean.missions.M2).toBe(nil)
+			expect(clean.features.shop).toBe(false)
+			expect(clean.features.teleport).toBe(nil)
+			expect(#clean.adminUserIds).toBe(1)
+			expect(clean.adminGroup.minRank).toBe(200)
+			expect(#dropped).toBe(7)
+			-- Garbage as a whole is simply "no overrides".
+			local none = Flags.cleanOverrides("oops")
+			expect(next(none)).toBe(nil)
+		end)
+
+		it("never launches a mission that is switched off, even the tutorial (S32)", function()
+			local sim = boot()
+			local bot = sim:addBot("Pip", 2601)
+			sim:snapshot(bot)
+			sim:run(0.6)
+			sim:send(bot, "Debug", "flag", "M0", "off")
+			sim:run(0.3)
+			sim:send(bot, "SetReady", true)
+			sim:run(20)
+			expect(phase(sim, bot)).toBe("Prep")
+			expect(sim:inboxHas(bot, "Toast", "toast.missionClosed")).toBe(true)
+			expect(sim:state(bot, "global", "players.2601.ready")).toBe(false)
+			assertClean(sim)
+		end)
+
+		it("lets a run keep a room that is switched off after it launched (S32)", function()
+			local sim = boot()
+			local bot = joinAndLaunch(sim, { "Quin" })[1]
+			sim:send(bot, "Debug", "flag", "Freezer", "off")
+			sim:run(0.3)
+			expect(sim:state(bot, "global", "flags.disabledRooms.Freezer")).toBe(true)
+			local level = sim:state(bot, "global", "level")
+			local s1 = level.sockets.S1.interactPoint
+			local path = route(sim, bot, level, tileIndexAt(level, s1))
+			table.insert(path, s1)
+			sim:walk(bot, path)
+			expect(sim:runUntil(near(sim, bot, s1), 15)).toBe(true)
+			sim:send(bot, "RequestDeploy", "S1", 1)
+			sim:run(0.5)
+			expect(sim:state(bot, "global", "sockets.S1.room")).toBe("Freezer")
+			assertClean(sim)
+		end)
+
 		it("cycles ten runs without growing the instance count (S27)", function()
 			local sim = boot()
 			local bot = sim:addBot("Finn", 2001)

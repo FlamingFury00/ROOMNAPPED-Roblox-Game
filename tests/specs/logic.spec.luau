@@ -240,26 +240,32 @@ return function(ctx)
 			expect(migrated.flags.onboardingSteps).toBe(7) -- steps 1, 2 and 3
 			expect(migrated.flags.onboardingFunnel).toBe(nil)
 		end)
-		it("adds empty mission mastery to v4 data and keeps only id = true entries", function()
+		it("adds mission mastery to existing v4 saves without a version bump; keeps only id = true", function()
+			local template = ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
 			local old = ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
-			old.schema = 4
 			old.stats.challengesDone = nil :: any
 			old.stats.allKeys = nil :: any
 			old.stats.cleared.M1 = 3
-			local migrated = ProfileSchema.migrate(old)
-			expect(migrated.schema).toBe(5)
-			expect(next(migrated.stats.challengesDone)).toBe(nil)
-			expect(next(migrated.stats.allKeys)).toBe(nil)
-			expect(migrated.stats.cleared.M1).toBe(3)
-			migrated.stats.challengesDone = { M1_douse = true, junk = 5, [7] = true } :: any
-			local clean = ProfileSchema.sanitize(
-				migrated,
-				ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase),
-				content()
-			)
+			local loaded = ProfileSchema.sanitize(ProfileSchema.migrate(old), template, content())
+			expect(loaded.schema).toBe(4)
+			expect(next(loaded.stats.challengesDone)).toBe(nil)
+			expect(next(loaded.stats.allKeys)).toBe(nil)
+			expect(loaded.stats.cleared.M1).toBe(3)
+			loaded.stats.challengesDone = { M1_douse = true, junk = 5, [7] = true } :: any
+			local clean = ProfileSchema.sanitize(loaded, template, content())
 			expect(clean.stats.challengesDone.M1_douse).toBe(true)
 			expect((clean.stats.challengesDone :: any).junk).toBe(nil)
 			expect((clean.stats.challengesDone :: any)[7]).toBe(nil)
+		end)
+		it("keeps fields it does not know, so an older build never drops newer progress", function()
+			local template = ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
+			local saved: any =
+				ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
+			saved.stats.futureStat = { M1 = 2 }
+			saved.futureFeature = "kept"
+			local loaded: any = ProfileSchema.sanitize(ProfileSchema.migrate(saved), template, content())
+			expect(loaded.stats.futureStat.M1).toBe(2)
+			expect(loaded.futureFeature).toBe("kept")
 		end)
 		it("refuses data written by a newer schema", function()
 			expect(ProfileSchema.migrate({ schema = 99 })).toBe(nil)
@@ -352,6 +358,21 @@ return function(ctx)
 			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, all, cfg) :: any, all, 2, 64)
 			expect(p.stats.allKeys.M1).toBe(true)
 			expect(p.stats.challengesDone.M1_douse).toBe(true) -- not undone by a run that missed it
+		end)
+		it("stores best times in whole seconds and only lowers them", function()
+			local p = profile()
+			local first = summary("b1", true)
+			first.durationSeconds = 60.6
+			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, first, cfg) :: any, first, 1, 64)
+			expect(p.stats.bestTimes.M1).toBe(61)
+			local same = summary("b2", true)
+			same.durationSeconds = 60.7 -- still 61 when rounded: not a new record
+			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, same, cfg) :: any, same, 2, 64)
+			expect(p.stats.bestTimes.M1).toBe(61)
+			local faster = summary("b3", true)
+			faster.durationSeconds = 59.2
+			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, faster, cfg) :: any, faster, 3, 64)
+			expect(p.stats.bestTimes.M1).toBe(59)
 		end)
 		it("previews the reward before starting", function()
 			local p = profile()

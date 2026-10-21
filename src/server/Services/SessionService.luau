@@ -157,6 +157,7 @@ end
 local function defaultMissionFor(player: Player?): string
 	local profile = if player then profiles().get(player) else nil
 	if not profile or not profile.tutorialDone then
+		-- The tutorial, unless it is switched off; launches re-check, so a disabled pick never starts.
 		return MissionDefs.tutorialId
 	end
 	-- First unlocked mission the leader has not cleared yet, else the latest unlocked one.
@@ -330,6 +331,16 @@ local function updateCountdown()
 		countdownEndsAt = nil
 		if not missionAllowedFor(leader, selectedMission) then
 			selectedMission = defaultMissionFor(leader)
+		end
+		if not missionAllowedFor(leader, selectedMission) then
+			-- Nothing this squad may play is open (e.g. the tutorial is switched off for a new leader). Step
+			-- everyone out of the elevator too, or its ready zone would ready them straight back up.
+			for _, player in readyPlayers do
+				SessionService.setReady(player, false, false)
+				Net.fire(player, "Toast", "error", "toast.missionClosed", {})
+			end
+			publishLobby()
+			return
 		end
 		local launched = Expedition.launch(readyPlayers, selectedMission)
 		if not launched then

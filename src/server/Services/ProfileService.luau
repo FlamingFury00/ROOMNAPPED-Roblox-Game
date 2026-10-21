@@ -243,8 +243,14 @@ function ProfileService.usingMemoryStore(): boolean
 	return usingMemory
 end
 
--- QA on test servers: the next `count` store requests fail, as a DataStore outage would. Only possible with the
--- in-memory store, so a live server can never be told to drop saves.
+-- Whether the loaded profile has changes no save has confirmed yet.
+function ProfileService.hasUnsavedChanges(player: Player): boolean
+	local session = sessions[player]
+	return session ~= nil and session.status == "Ready" and (session.dirty or session.saving)
+end
+
+-- QA in Studio: the next `count` store requests fail, as a DataStore outage would. Only possible with the
+-- in-memory store (published places use real DataStores), so a live server can never be told to drop saves.
 function ProfileService.injectStoreFailures(count: number): boolean
 	if not usingMemory or memoryStore == nil then
 		return false

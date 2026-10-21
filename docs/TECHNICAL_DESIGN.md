@@ -132,10 +132,13 @@ client through roster data and player attributes; `SpectateController` follows l
   to a player session (a token), not to a server, so the release of a player's previous session can never
   clobber a quick rejoin on the same server. Load failures never fall back to blank data; data from a newer
   schema is never downgraded.
-* `ProfileSchema` versions the save (`GameConfig.SaveSchemaVersion`, now 5), migrates older shapes and
-  sanitises every field. Disabled or removed content stays in the profile untouched. v5 adds mission
-  mastery: bonus challenges ever completed and missions extracted with every golden key, which drive the
-  three stars on the mission board alongside the clear count and the best time.
+* `ProfileSchema` versions the save (`GameConfig.SaveSchemaVersion`, 4), migrates older shapes and
+  sanitises every field. Disabled or removed content stays in the profile untouched. The version is bumped
+  only for changes an older build would misread, because an older build refuses a newer schema (the player
+  is asked to rejoin a newer server), which would lock players out after a rollback. Additive fields need no
+  bump: `Tables.reconcile` adds them from the template and older builds keep fields they do not know. Mission
+  mastery arrived that way (bonus challenges ever completed and missions extracted with every golden key,
+  which drive the three stars on the mission board alongside the clear count and the best time).
 * `ProfileService` autosaves every 120 s, saves on leave and in `BindToClose`, and exposes `saveNow()` so
   results can show "Saving…" until a confirmed write. Without DataStore access an in-memory store with the
   same contract is used and the player is told progress will not persist.
@@ -177,7 +180,9 @@ client through roster data and player attributes; `SpectateController` follows l
 
 * **Feature flags** (`FeatureFlags`, `FlagsService`): defaults < environment (studio / test / live by place id)
   < live overrides from the `RoomnappedConfig` DataStore (re-read every five minutes, so running servers
-  follow a rollback) < admin test overrides (`flag <id> <on|off>`, one server). Rooms and missions can be
+  follow a rollback; unknown or malformed entries are ignored and logged, and a failed read keeps the
+  current flags) < admin test overrides (`flag <id> <on|off>`, one server). Admin rights are re-checked
+  whenever flags change. Rooms and missions can be
   disabled without touching profiles: a disabled mission leaves the lobby's selection, a disabled room
   leaves loadouts and both show as resting in the menus; features (pings, feedback prompt, analytics, debug
   tools, Caretaker, keys, shop) can be switched off. See [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md).

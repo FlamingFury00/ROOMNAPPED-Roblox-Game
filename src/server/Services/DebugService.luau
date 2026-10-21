@@ -214,7 +214,7 @@ local function onDebug(player: Player, command: string, a: string?, b: string?)
 			reply(player, "usage: flag <room|mission|feature id> <on|off>")
 		end
 	elseif command == "failsaves" then
-		local count = tonumber(a) or 0
+		local count = math.clamp(math.floor(tonumber(a) or 0), 0, 100)
 		if Profiles.injectStoreFailures(count) then
 			reply(player, string.format("the next %d store requests will fail", count))
 		else
@@ -233,8 +233,9 @@ function DebugService.Start()
 	Net.on("Debug", onDebug)
 	local function announce(player: Player)
 		task.spawn(function()
-			if DebugService.isAdmin(player) then
-				StateServer.private(player):Set({ "admin" }, true)
+			local admin = DebugService.isAdmin(player)
+			if player.Parent == Players then
+				StateServer.private(player):Set({ "admin" }, admin)
 			end
 		end)
 	end
@@ -244,6 +245,13 @@ function DebugService.Start()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		adminCache[player] = nil
+	end)
+	-- Admin rights follow live flag changes: a removed admin loses the tools without having to leave.
+	Registry.get("Flags").Changed:Connect(function()
+		table.clear(adminCache)
+		for _, player in Players:GetPlayers() do
+			announce(player)
+		end
 	end)
 end
 
