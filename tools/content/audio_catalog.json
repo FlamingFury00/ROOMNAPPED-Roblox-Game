@@ -216,52 +216,52 @@
     "notes": "Roblox 'CoinTransfer_01' credit-gain sound; Roblox pinball token insert or PSE coin toss as alternates."
   },
   "ui_countdown_tick": {
-    "id": 16480580213,
-    "name": "Audio/Roblox_Pinball_8Bit_Blip_01",
+    "id": 9120917813,
+    "name": "Wood Impacts Soft Impacts On Temple Blocks 6 (SFX)",
     "duration": 1,
-    "source": "roblox",
-    "creator": "Roblox (userId 1)",
+    "source": "partner",
+    "creator": "ProSoundEffects (userId 7462895450)",
     "alternates": [
       {
-        "id": 9113399926,
-        "name": "Beeps Simple Multiple Variations 5 (SFX)",
+        "id": 9120917438,
+        "name": "Wood Impacts Soft Impacts On Temple Blocks 1 (SFX)",
         "duration": 1,
         "source": "partner",
         "creator": "ProSoundEffects"
       },
       {
-        "id": 9118777841,
-        "name": "Scanner Beeps 15 (SFX)",
+        "id": 9120917609,
+        "name": "Wood Impacts Soft Impacts On Temple Blocks 2 (SFX)",
         "duration": 1,
         "source": "partner",
         "creator": "ProSoundEffects"
       }
     ],
-    "notes": "Roblox pinball 8-bit blip (arcade-style countdown beep). PSE 'Beeps Simple' / clean scanner beep if a non-retro tone is preferred."
+    "notes": "PSE soft wooden temple-block tock for countdown ticks (recorded percussion instead of an electronic beep). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "ui_countdown_go": {
-    "id": 16480579685,
-    "name": "Audio/Roblox_Pinball_8Bit_Blip_04",
-    "duration": 2,
-    "source": "roblox",
-    "creator": "Roblox (userId 1)",
+    "id": 9119643158,
+    "name": "Store Entry Bell 3 (SFX)",
+    "duration": 4,
+    "source": "partner",
+    "creator": "ProSoundEffects (userId 7462895450)",
     "alternates": [
       {
-        "id": 9125485591,
-        "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
+        "id": 9119642861,
+        "name": "Store Entry Bell 4 (SFX)",
+        "duration": 3,
+        "source": "partner",
+        "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9119642830,
+        "name": "Store Entry Bell 3 (SFX)",
         "duration": 5,
         "source": "partner",
         "creator": "ProSoundEffects"
-      },
-      {
-        "id": 9113399767,
-        "name": "Beeps Simple Multiple Variations 1 (SFX)",
-        "duration": 2,
-        "source": "partner",
-        "creator": "ProSoundEffects"
       }
     ],
-    "notes": "Longest blip of the same Roblox 8-bit set (2 s) to pair with the tick. Thematic alternative: PSE hotel desk-bell single ding (long decay)."
+    "notes": "PSE shop-door entry bell for the launch 'go' (a real bell, distinct from the elevator's desk bell). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "ui_ready": {
     "id": 17208361335,
@@ -271,21 +271,21 @@
     "creator": "Roblox (userId 1)",
     "alternates": [
       {
-        "id": 12221990,
-        "name": "electronicpingshort.wav",
-        "duration": 0,
-        "source": "roblox",
-        "creator": "Roblox"
-      },
-      {
         "id": 9125485659,
         "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
         "duration": 5,
         "source": "partner",
         "creator": "ProSoundEffects"
+      },
+      {
+        "id": 9114058995,
+        "name": "Desk Bell Rings 8 (SFX)",
+        "duration": 3,
+        "source": "partner",
+        "creator": "ProSoundEffects"
       }
     ],
-    "notes": "Roblox GUI 'Notification High' as a ready ding; classic electronicpingshort.wav or a PSE hotel desk-bell single ding (hotel theme) as alternates."
+    "notes": "Roblox GUI 'Notification High' as a ready ding; PSE hotel desk bells (recorded) as alternates."
   },
   "ui_notify": {
     "id": 99437156604053,
@@ -398,38 +398,38 @@
         "creator": "Roblox"
       },
       {
-        "id": 16480558943,
-        "name": "Audio/Roblox_Pinball_Joystick_Buzz_Release_01",
-        "duration": 0,
+        "id": 17208220181,
+        "name": "Roblox GUI - Call Hang Up",
+        "duration": 1,
         "source": "roblox",
         "creator": "Roblox"
       }
     ],
-    "notes": "Roblox GUI 'Call Decline' (descending negative) so it differs from ui_error; alts: GUI 'Negative', Roblox pinball short buzz-release."
+    "notes": "Roblox GUI 'Call Decline' (descending negative) so it differs from ui_error; alts: GUI 'Negative', GUI 'Call Hang Up'."
   },
   "capture_charge_loop": {
-    "id": 9125805094,
-    "name": "Rising Synth Tone Ascending In Pitch Waverin (SFX)",
+    "id": 9126236071,
+    "name": "Wind Suck Slow Backwards Swooshing Build Up  (SFX)",
     "duration": 4,
     "source": "partner",
     "creator": "ProSoundEffects (userId 7462895450)",
     "alternates": [
       {
-        "id": 9126236071,
-        "name": "Wind Suck Slow Backwards Swooshing Build Up  (SFX)",
-        "duration": 4,
+        "id": 9120767390,
+        "name": "Wind Suck Backwards Swooshing Build Up 2 (SFX)",
+        "duration": 3,
         "source": "partner",
         "creator": "ProSoundEffects"
       },
       {
-        "id": 16480578036,
-        "name": "Audio/Roblox_Pinball_8Bit_Riser_02",
-        "duration": 3,
-        "source": "roblox",
-        "creator": "Roblox"
+        "id": 9120769043,
+        "name": "Wind Suck Backwards Swooshing Build Up 3 (SFX)",
+        "duration": 4,
+        "source": "partner",
+        "creator": "ProSoundEffects"
       }
     ],
-    "notes": "PSE rising synth tone ascending in pitch, wavering (4 s riser). Alt 1: wind 'suck' build-up (great for a room being sucked into a suitcase); alt 2: Roblox 8-bit riser (retro style). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+    "notes": "PSE wind-suck build-up (4 s): the room being sucked into the suitcase during the 3 s capture hold. Recorded air, no synthesis. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "capture_success": {
     "id": 9116384485,
@@ -528,28 +528,28 @@
     "notes": "Roblox GUI 'Purchase' success sound for banking cargo. PSE cash register (drawer open/close, no bell) as a literal register alt."
   },
   "elevator_ding": {
-    "id": 9114302017,
-    "name": "Elevator Bell Synth Chimes 2 (SFX)",
-    "duration": 3,
+    "id": 9125485591,
+    "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
+    "duration": 5,
     "source": "partner",
     "creator": "ProSoundEffects (userId 7462895450)",
     "alternates": [
       {
-        "id": 9114302926,
-        "name": "Elevator Bell Synth Chimes 5 (SFX)",
-        "duration": 3,
+        "id": 9125485659,
+        "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
+        "duration": 5,
         "source": "partner",
         "creator": "ProSoundEffects"
       },
       {
-        "id": 9114301685,
-        "name": "Elevator Bell Synth Chimes 4 (SFX)",
-        "duration": 3,
+        "id": 9125485871,
+        "name": "Desk Bell Counter Service Single Ringing Din (SFX)",
+        "duration": 5,
         "source": "partner",
         "creator": "ProSoundEffects"
       }
     ],
-    "notes": "PSE 'Elevator Bell, Synth Chimes, group of tones up and down' - real elevator arrival chime. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+    "notes": "PSE hotel reception desk bell, single ring: the elevator arrival 'ding' of a hotel heist (recorded bell). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "elevator_doors": {
     "id": 365551881,
@@ -583,9 +583,9 @@
     "creator": "ProSoundEffects (userId 7462895450)",
     "alternates": [
       {
-        "id": 9112777512,
-        "name": "Energy Presence 2 (SFX)",
-        "duration": 47,
+        "id": 9114533164,
+        "name": "Freight Elevator 3 (SFX)",
+        "duration": 20,
         "source": "partner",
         "creator": "ProSoundEffects"
       },
@@ -597,7 +597,7 @@
         "creator": "ProSoundEffects"
       }
     ],
-    "notes": "PSE deep resonant air-conditioning/machine hum room tone (35 s) as cabin hum. Alt 1: 'Energy Presence, Constant Rumble, Loop'; alt 2: real NYC elevator ride (contains bell+doors, loop only the interior-run section via PlaybackRegion). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+    "notes": "PSE deep resonant air-conditioning/machine hum room tone (35 s) as cabin hum. Alt 1: a real freight elevator ride; alt 2: real NYC elevator ride (contains bell+doors). [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "door_open": {
     "id": 9114135682,
@@ -1104,28 +1104,28 @@
     "notes": "PSE 'Beanstalk Growth: crackling vegetation sprouting, foliage movement, magical plant, Loop' (56 s) - play a slice or loop while growing. Short leaf rustle / tree creak as one-shot alts. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "magnet_hum": {
-    "id": 9125636146,
-    "name": "Magic Force Field Constant Deep Electrical H (SFX)",
-    "duration": 42,
+    "id": 9112889303,
+    "name": "Transformer Hum 2 (SFX)",
+    "duration": 36,
     "source": "partner",
     "creator": "ProSoundEffects (userId 7462895450)",
     "alternates": [
       {
-        "id": 9125784811,
-        "name": "Power Throb Tonal Hum Slow Pulse Electrical  (SFX)",
-        "duration": 4,
+        "id": 9112889082,
+        "name": "Transformer Hum 1 (SFX)",
+        "duration": 36,
         "source": "partner",
         "creator": "ProSoundEffects"
       },
       {
-        "id": 9112889303,
-        "name": "Transformer Hum 2 (SFX)",
-        "duration": 36,
+        "id": 9112889325,
+        "name": "Transformer Hum 3 (SFX)",
+        "duration": 52,
         "source": "partner",
         "creator": "ProSoundEffects"
       }
     ],
-    "notes": "PSE 'Magic Force Field, constant, deep electrical hum, slow whomping pulses' (42 s; asset is typed Music but is an SFX). Alts: 4 s tonal power-throb hum, steady transformer hum loop. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
+    "notes": "PSE transformer hum recordings (36 s loopable): the electromagnet's mains hum. [Source note: Roblox licensed SFX partner library (Pro Sound Effects), verified account; free to use in experiences.]"
   },
   "metal_clank": {
     "id": 9116541944,

@@ -268,7 +268,7 @@ desktop and phone sizes.
 | U17 | Mission select | `MissionBoard` | ui |
 | U18 | Results & replay | `Results` | ui, play |
 | U19 | Settings & help | `Settings` (controls help per device) | ui |
-| U20 | Loading & reconnect | `ReplicatedFirst/Loading`, interrupted-run toast | manual |
+| U20 | Loading & reconnect | `ReplicatedFirst/Loading`, interrupted-run toast | sim (rejoin), manual (loading screen) |
 | U21 | Cosmetic shop | P2. The credit shop lives in `Collection` (preview, owned state, price, confirmation) | ui |
 | U22 | Showroom editor | Deferred with S33 | — |
 | R01–R05 | Freezer, Fan, Laundry, Greenhouse, Magnet | `RoomDefs`, `RoomPrefabs`, `EffectModel`, `HazardService`, `RoomVisuals` | effectmodel, layout_sims |
@@ -282,7 +282,7 @@ desktop and phone sizes.
 | A03 | Caretaker rig | `CaretakerView` | play |
 | A04 | Player/cargo animation | `RoomVisuals`, `Attach`, `CargoService` | play |
 | A05 | Gameplay effects | `ZoneVisuals`, `Vfx`, `EffectsController`, low effects mode | play, renders |
-| A06 | Audio pack | `AudioController`, `AudioIds` (licensed Creator Store audio) | — |
+| A06 | Audio pack | `AudioController`, `AudioIds` (licensed Creator Store audio, recorded sounds only) | audio |
 | A07 | UI art kit | `Icons`, `Components` | ui, renders |
 | A08 | Public-test content | six layouts, lobby, mission board, 23 skins | layouts, world |
 | A09 | Store-page media | [STORE_MEDIA.md](STORE_MEDIA.md) | manual |
