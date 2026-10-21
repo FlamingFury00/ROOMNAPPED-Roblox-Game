@@ -254,7 +254,7 @@ desktop and phone sizes.
 | S33 | Home display | Deferred to P2 by the brief (§1, §2: showroom waits for G3 evidence) | — |
 | S34 | Cosmetic monetization | P2. This release sells cosmetics for earned credits only; no Robux products | — |
 | S35 | Live content pipeline | P2. Groundwork in place: rooms/missions are config with per-item disable flags | — |
-| U01 | UI foundation | `UIRoot`, `Responsive`, `Components`, `Theme` | ui, renders |
+| U01 | UI foundation | `UIRoot`, `Responsive`, `Components`, `Theme`; the core health bar, backpack and player list are off (hearts, slots and the squad / team panels replace them) | ui, renders |
 | U02 | Objective & phase | `Objective` | play |
 | U03 | Hearts & damage | `Vitals`, `Overlays` | play |
 | U04 | Room quickbar | `Quickbar` | play |

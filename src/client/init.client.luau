@@ -51,7 +51,9 @@ safeStart("Input", InputController.start)
 UIRoot.setBlockHook(InputController.setBlocked)
 safeStart("Toasts", Toasts.start)
 
--- Core GUI: hearts replace the health bar; there are no tools; reset means "unstuck me".
+-- Core GUI: hearts replace the health bar; there are no tools; the squad panel and team cards replace the
+-- player list (which would open over the menu bar in the top-right corner); reset means "unstuck me".
+-- Reporting and blocking stay in the Roblox menu.
 task.spawn(function()
 	local resetEvent = Instance.new("BindableEvent")
 	resetEvent.Event:Connect(function()
@@ -61,6 +63,7 @@ task.spawn(function()
 		local ok = pcall(function()
 			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
 			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 			StarterGui:SetCore("ResetButtonCallback", resetEvent)
 		end)
 		if ok then
