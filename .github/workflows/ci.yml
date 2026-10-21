@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch supersedes the run still in progress (saves runner minutes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Formatting, lint, type analysis, the place build and every headless test except the authored
   # mission playthroughs and the chaos soak (those run in parallel below).

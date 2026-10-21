@@ -118,6 +118,7 @@ local catalog: { [string]: string } = {
 	["mission.lockedExtractions"] = "Extract {count} rooms to unlock",
 	["mission.cleared"] = "Cleared x{count}",
 	["mission.best"] = "Best {time}",
+	["mission.mastery"] = "{count}/3 stars",
 	["mission.select"] = "Choose mission",
 	["mission.leaderOnly"] = "Only the squad leader can change the mission",
 	["mission.hazards"] = "Hazards",

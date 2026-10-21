@@ -141,6 +141,8 @@ local function view(session: Session): any
 			combos = data.stats.combos,
 			cleared = Tables.deepCopy(data.stats.cleared),
 			bestTimes = Tables.deepCopy(data.stats.bestTimes),
+			challengesDone = Tables.deepCopy(data.stats.challengesDone),
+			allKeys = Tables.deepCopy(data.stats.allKeys),
 		},
 		tutorialDone = data.tutorialDone,
 		rewardChoice = Tables.deepCopy(data.rewardChoice),

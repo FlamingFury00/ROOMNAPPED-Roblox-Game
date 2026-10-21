@@ -14,6 +14,7 @@ local Players = game:GetService("Players")
 local Shared = ReplicatedStorage.Shared
 local MissionDefs = require(Shared.Config.MissionDefs)
 local RoomDefs = require(Shared.Config.RoomDefs)
+local Layouts = require(Shared.Content.Layouts)
 local SkinDefs = require(Shared.Config.SkinDefs)
 local Strings = require(Shared.Config.Strings)
 local Net = require(Shared.Net.Net)
@@ -114,6 +115,50 @@ local function bestTime(missionId: string): number?
 	return profile.stats.bestTimes[missionId]
 end
 
+local function profileStats(): { [string]: any }
+	local profile = Common.profile()
+	return if profile and type(profile.stats) == "table" then profile.stats else {}
+end
+
+local function challengeDone(challengeId: string): boolean
+	local done = profileStats().challengesDone
+	return type(done) == "table" and done[challengeId] == true
+end
+
+-- Golden keys placed in a mission's layout.
+local function keyCount(mission: MissionDef): number
+	local layout = Layouts[mission.layoutId]
+	local count = 0
+	if layout then
+		for _, mod in layout.modules do
+			if type(mod.keys) == "table" then
+				for _, key in mod.keys do
+					if type(key) == "table" and key.id then
+						count += 1
+					end
+				end
+			end
+		end
+	end
+	return count
+end
+
+-- Mission mastery stars: cleared, every golden key in one extraction, every bonus challenge done.
+local function masteryStars(mission: MissionDef): { boolean }
+	local stats = profileStats()
+	local cleared = type(stats.cleared) == "table" and (stats.cleared[mission.id] or 0) > 0
+	local keys = if keyCount(mission) == 0
+		then cleared
+		else type(stats.allKeys) == "table" and stats.allKeys[mission.id] == true
+	local challenges = #mission.challenges > 0
+	for _, challenge in mission.challenges do
+		if not challengeDone(challenge.id) then
+			challenges = false
+		end
+	end
+	return { cleared, keys, challenges }
+end
+
 local function clear(frame: Instance)
 	for _, child in frame:GetChildren() do
 		if child:IsA("GuiObject") then
@@ -210,7 +255,18 @@ local function buildCard(mission: MissionDef, order: number): Card
 	else
 		local cleared = clearedCount(mission.id)
 		if cleared > 0 then
-			Components.chip("check", "x" .. tostring(cleared), C.greenDark, 1).Parent = status
+			for index, earned in masteryStars(mission) do
+				local holder = Create.new("Frame", {
+					Name = if earned then "StarEarned" else "Star",
+					BackgroundTransparency = 1,
+					Size = UDim2.fromOffset(26, 26),
+					LayoutOrder = index,
+					Parent = status,
+				})
+				-- Unearned stars stay readable (muted, not dark) so the goal is visible.
+				Icons.make("star", if earned then C.gold else C.textMuted, if earned then C.goldDark else C.panelDark).Parent =
+					holder
+			end
 		else
 			Components.chip("sparkle", Strings.t("mission.new"), C.purple, 1).Parent = status
 		end
@@ -392,6 +448,15 @@ local function refreshDetails()
 		Components.chip("clock", Strings.t("mission.best", { time = Common.formatTime(best) }), C.blue, 5).Parent =
 			chipRow
 	end
+	if cleared > 0 then
+		local earned = 0
+		for _, star in masteryStars(m) do
+			if star then
+				earned += 1
+			end
+		end
+		Components.chip("star", Strings.t("mission.mastery", { count = earned }), C.goldDark, 6).Parent = chipRow
+	end
 
 	clear(hazardRow)
 	for index, hazard in m.hazards do
@@ -415,7 +480,8 @@ local function refreshDetails()
 			Position = UDim2.fromOffset(8, 7),
 			Parent = row,
 		})
-		Icons.make("star", C.gold, C.panelDark).Parent = star
+		local done = challengeDone(challenge.id)
+		Icons.make(if done then "check" else "star", if done then C.green else C.gold, C.panelDark).Parent = star
 		local text = Components.label({
 			text = Common.challengeText(challenge),
 			font = Theme.Fonts.bodyBold,
@@ -425,7 +491,9 @@ local function refreshDetails()
 			parent = row,
 		})
 		text.TextTruncate = Enum.TextTruncate.AtEnd
-		local credits = Components.chip("coin", "+" .. tostring(challenge.credits), C.goldDark, 1)
+		-- Challenges pay every time; a done one keeps its tick.
+		local credits =
+			Components.chip("coin", "+" .. tostring(challenge.credits), if done then C.greenDark else C.goldDark, 1)
 		credits.AnchorPoint = Vector2.new(1, 0.5)
 		credits.Position = UDim2.new(1, -6, 0.5, 0)
 		credits.Parent = row

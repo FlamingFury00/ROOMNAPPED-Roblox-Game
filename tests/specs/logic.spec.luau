@@ -236,9 +236,30 @@ return function(ctx)
 			old.flags.onboardingSteps = nil
 			(old.flags :: any).onboardingFunnel = 3
 			local migrated = ProfileSchema.migrate(old)
-			expect(migrated.schema).toBe(4)
+			expect(migrated.schema).toBe(ProfileSchema.CURRENT)
 			expect(migrated.flags.onboardingSteps).toBe(7) -- steps 1, 2 and 3
 			expect(migrated.flags.onboardingFunnel).toBe(nil)
+		end)
+		it("adds empty mission mastery to v4 data and keeps only id = true entries", function()
+			local old = ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase)
+			old.schema = 4
+			old.stats.challengesDone = nil :: any
+			old.stats.allKeys = nil :: any
+			old.stats.cleared.M1 = 3
+			local migrated = ProfileSchema.migrate(old)
+			expect(migrated.schema).toBe(5)
+			expect(next(migrated.stats.challengesDone)).toBe(nil)
+			expect(next(migrated.stats.allKeys)).toBe(nil)
+			expect(migrated.stats.cleared.M1).toBe(3)
+			migrated.stats.challengesDone = { M1_douse = true, junk = 5, [7] = true } :: any
+			local clean = ProfileSchema.sanitize(
+				migrated,
+				ProfileSchema.default(0, { "Freezer", "Fan" }, Skins.defaultForRoom, Skins.defaultSuitcase),
+				content()
+			)
+			expect(clean.stats.challengesDone.M1_douse).toBe(true)
+			expect((clean.stats.challengesDone :: any).junk).toBe(nil)
+			expect((clean.stats.challengesDone :: any)[7]).toBe(nil)
 		end)
 		it("refuses data written by a newer schema", function()
 			expect(ProfileSchema.migrate({ schema = 99 })).toBe(nil)
@@ -318,6 +339,19 @@ return function(ctx)
 			expect(plan.challenges.M1_keys).toBe(nil)
 			expect(plan.firstClear).toBe(true)
 			expect(plan.credits).toBe(cfg.ExtractionCredits + 2 * cfg.KeyCredits + cfg.FirstClearBonusCredits + 25)
+		end)
+		it("records mission mastery: challenges stay done, all keys in one run", function()
+			local p = profile()
+			local s = summary("m1", true)
+			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, s, cfg) :: any, s, 1, 64)
+			expect(p.stats.challengesDone.M1_douse).toBe(true)
+			expect(p.stats.allKeys.M1).toBe(nil) -- two keys of three
+			local all = summary("m2", true)
+			all.keysCollected = 3
+			all.combos = {}
+			RewardRules.apply(p, RewardRules.compute(p, Missions.byId.M1, all, cfg) :: any, all, 2, 64)
+			expect(p.stats.allKeys.M1).toBe(true)
+			expect(p.stats.challengesDone.M1_douse).toBe(true) -- not undone by a run that missed it
 		end)
 		it("previews the reward before starting", function()
 			local p = profile()

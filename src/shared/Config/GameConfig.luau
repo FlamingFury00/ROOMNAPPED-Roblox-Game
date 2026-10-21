@@ -10,7 +10,7 @@ local Tables = require(script.Parent.Parent.Util.Tables)
 
 local GameConfig = {
 	Version = "1.0.0",
-	SaveSchemaVersion = 4,
+	SaveSchemaVersion = 5,
 
 	Loadout = {
 		Slots = 2, -- brief: equipped room slots per player

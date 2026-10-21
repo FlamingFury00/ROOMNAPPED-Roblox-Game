@@ -382,6 +382,33 @@ def layout_children(box):
         box.content = (cross, total) if vertical else (total, cross)
         h_align = list_layout.get("hAlign", "Left")
         v_align = list_layout.get("vAlign", "Top")
+        if not vertical and list_layout.get("wraps"):
+            # Wraps: break into lines that fit the width; lines stack with the same padding.
+            lines, line, line_w, line_h = [], [], 0.0, 0.0
+            for i, (w0, h0) in enumerate(sizes):
+                add = w0 if not line else gap + w0
+                if line and line_w + add > cw + 0.5:
+                    lines.append((line, line_w, line_h))
+                    line, line_w, line_h, add = [], 0.0, 0.0, w0
+                line.append(i)
+                line_w += add
+                line_h = max(line_h, h0)
+            if line:
+                lines.append((line, line_w, line_h))
+            total_h = sum(entry[2] for entry in lines) + gap * max(0, len(lines) - 1)
+            box.content = (max([entry[1] for entry in lines] or [0]), total_h)
+            y = cy + (0 if v_align == "Top" else (ch - total_h) / 2 if v_align == "Center" else ch - total_h)
+            for indices, lw, lh in lines:
+                x = cx + (0 if h_align == "Left" else (cw - lw) / 2 if h_align == "Center" else cw - lw)
+                for i in indices:
+                    def slot(w, h, x=x, y=y, lh=lh):
+                        return x, y + (0 if v_align == "Top" else (lh - h) / 2 if v_align == "Center" else lh - h)
+
+                    child = layout(flow[i], cx, cy, cw, ch, box.k, list_slot=slot)
+                    box.children.append(child)
+                    x += child.w + gap
+                y += lh + gap
+            flow = []
         if vertical:
             start = cy + (0 if v_align == "Top" else (ch - total) / 2 if v_align == "Center" else ch - total)
         else:

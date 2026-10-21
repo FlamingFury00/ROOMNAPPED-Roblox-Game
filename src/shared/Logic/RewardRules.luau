@@ -48,6 +48,8 @@ type ProfileLike = {
 		captures: number,
 		keys: number,
 		bestTimes: { [string]: number },
+		challengesDone: { [string]: boolean },
+		allKeys: { [string]: boolean },
 	},
 	grants: { list: { { id: string, at: number } } },
 	rewardChoice: { [string]: string },
@@ -215,6 +217,13 @@ function RewardRules.apply(
 	local best = profile.stats.bestTimes[summary.missionId]
 	if best == nil or summary.durationSeconds < best then
 		profile.stats.bestTimes[summary.missionId] = math.floor(summary.durationSeconds + 0.5)
+	end
+	-- Mastery: challenges stay done once done; every key in one extraction earns the keys star.
+	for id in plan.challenges do
+		profile.stats.challengesDone[id] = true
+	end
+	if summary.keysTotal > 0 and summary.keysCollected >= summary.keysTotal then
+		profile.stats.allKeys[summary.missionId] = true
 	end
 	local list = profile.grants.list
 	table.insert(list, { id = summary.runId, at = now })

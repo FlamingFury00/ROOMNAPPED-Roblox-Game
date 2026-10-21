@@ -39,6 +39,9 @@ export type Profile = {
 		keys: number,
 		cleared: { [string]: number },
 		bestTimes: { [string]: number },
+		-- Mission mastery: bonus challenges ever completed, missions extracted with every golden key.
+		challengesDone: { [string]: boolean },
+		allKeys: { [string]: boolean },
 	},
 	grants: { list: { { id: string, at: number } } },
 	rewardChoice: { [string]: string },
@@ -48,7 +51,7 @@ export type Profile = {
 	feedbackCount: number,
 }
 
-local CURRENT = 4
+local CURRENT = 5
 
 local ProfileSchema = {}
 ProfileSchema.CURRENT = CURRENT
@@ -103,6 +106,8 @@ function ProfileSchema.default(
 			keys = 0,
 			cleared = {},
 			bestTimes = {},
+			challengesDone = {},
+			allKeys = {},
 		},
 		grants = { list = {} },
 		rewardChoice = {},
@@ -161,6 +166,17 @@ local MIGRATIONS: { [number]: (any) -> any } = {
 			data.flags.onboardingFunnel = nil
 		end
 		data.schema = 4
+		return data
+	end,
+	-- v5 records mission mastery (completed bonus challenges, all-keys extractions) from now on.
+	[4] = function(data: any): any
+		if type(data.stats) == "table" then
+			data.stats.challengesDone = if type(data.stats.challengesDone) == "table"
+				then data.stats.challengesDone
+				else {}
+			data.stats.allKeys = if type(data.stats.allKeys) == "table" then data.stats.allKeys else {}
+		end
+		data.schema = 5
 		return data
 	end,
 }
@@ -224,6 +240,16 @@ function ProfileSchema.sanitize(data: Profile, template: Profile, content: Conte
 		data.skins.equipped.suitcase = content.defaultSuitcase
 	end
 	data.credits = math.max(0, math.floor(clampNumber(data.credits, 0, 1e9, 0)))
+	-- Mastery maps hold only `id = true` entries.
+	for _, field in { "challengesDone", "allKeys" } do
+		local clean = {}
+		for id, value in (data.stats :: any)[field] do
+			if type(id) == "string" and value == true then
+				clean[id] = true
+			end
+		end
+		(data.stats :: any)[field] = clean
+	end
 	data.flags.onboardingSteps = math.floor(clampNumber(data.flags.onboardingSteps, 0, 0xFFFF, 0))
 	local s = data.settings
 	s.music = clampNumber(s.music, 0, 1, 0.55)

@@ -132,8 +132,10 @@ client through roster data and player attributes; `SpectateController` follows l
   to a player session (a token), not to a server, so the release of a player's previous session can never
   clobber a quick rejoin on the same server. Load failures never fall back to blank data; data from a newer
   schema is never downgraded.
-* `ProfileSchema` versions the save (`GameConfig.SaveSchemaVersion`), migrates older shapes and sanitises
-  every field. Disabled or removed content stays in the profile untouched.
+* `ProfileSchema` versions the save (`GameConfig.SaveSchemaVersion`, now 5), migrates older shapes and
+  sanitises every field. Disabled or removed content stays in the profile untouched. v5 adds mission
+  mastery: bonus challenges ever completed and missions extracted with every golden key, which drive the
+  three stars on the mission board alongside the clear count and the best time.
 * `ProfileService` autosaves every 120 s, saves on leave and in `BindToClose`, and exposes `saveNow()` so
   results can show "Saving…" until a confirmed write. Without DataStore access an in-memory store with the
   same contract is used and the player is told progress will not persist.
