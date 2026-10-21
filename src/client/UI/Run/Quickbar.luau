@@ -6,14 +6,15 @@
 	Unfolded / Resting). Selecting a slot lifts it and outlines it in gold; an unfolded room's slot offers
 	the recall. Tapping a slot selects it on touch screens.
 
-	Bottom right (touch screens): the context action button (icon + words + hold ring) sits above the
-	Roblox jump button, with Turn / Cancel / Drop / Ping buttons that appear only when they apply.
+	Touch screens: nothing goes near the thumbstick. Everything gathers around Roblox's jump button like an
+	ability cluster - the context action button (icon + words + hold ring) left of Jump, the two room slots
+	above them, Ping beside the slots and Turn / Cancel / Drop beside the action button only when they apply
+	(TouchZones keeps the thumbstick zone, the jump button and the top HUD band clear).
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
@@ -30,15 +31,21 @@ local Create = require(script.Parent.Parent.Create)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local Components = require(script.Parent.Parent.Components)
-local Responsive = require(script.Parent.Parent.Responsive)
+local TouchZones = require(script.Parent.Parent.TouchZones)
 
 local Quickbar = {}
 
 local C = Theme.Colors
 local localPlayer = Players.LocalPlayer
 
-local ACTION_SIZE = 136
+local ACTION_SIZE = 128
+local SMALL_SIZE = 76
 local TOUCH_GAP = 12
+-- Room slots are 112 x 122 on the bottom bar; around the jump button they shrink a little.
+local TOUCH_SLOT_SCALE = 0.86
+local SLOT_W, SLOT_H = 112, 122
+-- Canvas rows kept for the top HUD on touch screens (hearts, objective, menu and suitcase status).
+Quickbar.TOP_RESERVE = 146
 local PING_HOLD_SECONDS = 0.35
 local DROP_HOLD_SECONDS = 0.4 -- Drop sits beside Jump: a stray tap must never throw the suitcase down
 
@@ -51,6 +58,7 @@ export type Handle = {
 
 type Slot = {
 	button: TextButton,
+	scale: UIScale,
 	face: Frame,
 	stroke: UIStroke,
 	iconHolder: Frame,
@@ -65,13 +73,14 @@ type Slot = {
 local function makeSlot(parent: Instance, index: number): Slot
 	local button = Create.new("TextButton", {
 		Name = "Slot" .. index,
-		Size = UDim2.fromOffset(112, 122),
+		Size = UDim2.fromOffset(SLOT_W, SLOT_H),
 		BackgroundTransparency = 1,
 		Text = "",
 		AutoButtonColor = false,
 		LayoutOrder = index,
 		Parent = parent,
 	})
+	local scale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = button })
 	local face = Create.new("Frame", {
 		Name = "Face",
 		AnchorPoint = Vector2.new(0.5, 1),
@@ -145,6 +154,7 @@ local function makeSlot(parent: Instance, index: number): Slot
 	}, { Create.corner(Theme.Radius.small), Create.stroke(C.gold, 1.5, 0) })
 	return {
 		button = button,
+		scale = scale,
 		face = face,
 		stroke = stroke,
 		iconHolder = iconHolder,
@@ -271,8 +281,8 @@ function Quickbar.create(parent: Instance): Handle
 	refreshSlots()
 
 	-- Touch action cluster --------------------------------------------------------------------------------------
-	-- Laid out around the Roblox jump button (see layoutTouch): the action button sits right above it, the
-	-- small buttons line up to its left and Ping sits beside the action button.
+	-- Laid out around the Roblox jump button (see layoutTouch): the action button left of it, the room slots
+	-- above both, Ping beside the slots and the contextual small buttons beside the action button.
 	local touch = Create.new("Frame", {
 		Name = "TouchActions",
 		Size = UDim2.fromScale(1, 1),
@@ -282,8 +292,8 @@ function Quickbar.create(parent: Instance): Handle
 	})
 	local actionButton = Create.new("TextButton", {
 		Name = "Action",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(1, -120, 1, -250),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -220, 1, -180),
 		Size = UDim2.fromOffset(ACTION_SIZE, ACTION_SIZE),
 		BackgroundColor3 = C.panelDark,
 		BackgroundTransparency = 0.1,
@@ -347,78 +357,134 @@ function Quickbar.create(parent: Instance): Handle
 		end
 	end)
 
-	local small = Create.new("Frame", {
-		Name = "Small",
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -200, 1, -60),
-		Size = UDim2.fromOffset(240, 96),
-		BackgroundTransparency = 1,
-		Parent = touch,
-	}, {
-		Create.list(Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Bottom),
-	})
-	local rotate, rotateLabel = roundButton(small, "Rotate", 72, "refresh", C.cyan)
+	local rotate, rotateLabel = roundButton(touch, "Rotate", SMALL_SIZE, "refresh", C.cyan)
 	rotateLabel.Text = Strings.t("hud.rotate")
-	rotate.LayoutOrder = 3
-	local cancel, cancelLabel = roundButton(small, "Cancel", 72, "cross", C.red)
+	local cancel, cancelLabel = roundButton(touch, "Cancel", SMALL_SIZE, "cross", C.red)
 	cancelLabel.Text = Strings.t("hud.cancel")
-	cancel.LayoutOrder = 2
-	local drop, dropLabel = roundButton(small, "Drop", 72, "suitcase", C.orange)
+	local drop, dropLabel = roundButton(touch, "Drop", SMALL_SIZE, "suitcase", C.orange)
 	dropLabel.Text = Strings.t("hud.drop")
-	drop.LayoutOrder = 1
-	local ping, pingLabel = roundButton(touch, "Ping", 72, "pin", C.blue)
+	local ping, pingLabel = roundButton(touch, "Ping", SMALL_SIZE, "pin", C.blue)
 	pingLabel.Text = Strings.t("hud.ping")
-	ping.AnchorPoint = Vector2.new(1, 1)
-
-	-- The jump button lives in screen pixels (Roblox's TouchGui), so its place on our scaled canvas changes with
-	-- the screen: find it, or fall back to the layout the default touch controls use (70px on small screens).
-	local function jumpButton(gui: ScreenGui): GuiObject?
-		-- Roblox's TouchGui sits next to our ScreenGuis in the PlayerGui.
-		local playerGui = gui.Parent
-		local touchGui = playerGui and playerGui:FindFirstChild("TouchGui")
-		local frame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
-		local jump = frame and frame:FindFirstChild("JumpButton")
-		return if jump and jump:IsA("GuiObject") then jump else nil
+	for _, button in { rotate, cancel, drop, ping } do
+		button.AnchorPoint = Vector2.new(0.5, 0.5)
+		button.Visible = false
 	end
+
+	-- Room slots live on the bottom bar for keyboards and controllers and join the cluster on touch screens.
+	local slotsOnTouch = false
+	local function placeSlots(onTouch: boolean)
+		if onTouch == slotsOnTouch then
+			return
+		end
+		slotsOnTouch = onTouch
+		for _, slot in slots do
+			slot.button.Parent = if onTouch then touch else bar
+			slot.button.AnchorPoint = if onTouch then Vector2.new(0.5, 0.5) else Vector2.zero
+			slot.button.Position = UDim2.new()
+			slot.scale.Scale = if onTouch then TOUCH_SLOT_SCALE else 1
+		end
+	end
+
+	-- Cluster layout (canvas units, centres). Each piece takes its designed spot next to the jump button; a
+	-- spot that would leave the screen or touch the thumbstick zone, the top band or another button falls back
+	-- to the nearest free place on rings around the jump button.
+	local visible = false
+	local spectating = false -- out of the run: only Ping stays, so spectators can still point things out
 	local lastLayout = ""
 	local function layoutTouch()
 		local gui = parent:FindFirstAncestorOfClass("ScreenGui")
-		if not gui then
+		if not gui or not touch.Visible then
 			return
 		end
-		local scale = math.max(Responsive.scaleOf(gui), 1e-3)
-		local guiCorner = gui.AbsolutePosition + gui.AbsoluteSize
-		-- Distances (screen px) from the HUD's bottom-right corner to the jump button's bottom-right corner.
-		local right, bottom, size
-		local jump = jumpButton(gui)
-		if jump and jump.AbsoluteSize.X > 0 then
-			local corner = jump.AbsolutePosition + jump.AbsoluteSize
-			right, bottom, size = guiCorner.X - corner.X, guiCorner.Y - corner.Y, jump.AbsoluteSize.X
-		else
-			local camera = Workspace.CurrentCamera
-			local viewport = if camera then camera.ViewportSize else gui.AbsoluteSize
-			local smallScreen = math.min(viewport.X, viewport.Y) <= 500
-			size = if smallScreen then 70 else 120
-			right = if smallScreen then 25 else 50
-			bottom = if smallScreen then 20 else 90
+		local zones = TouchZones.get(gui)
+		local canvas = zones.canvas
+		local jump = zones.jump
+		local centre = zones.jumpCenter
+		local signature = string.format(
+			"%d:%d:%d:%d:%d:%d",
+			math.round(canvas.X),
+			math.round(canvas.Y),
+			math.round(jump.x0),
+			math.round(jump.y0),
+			math.round(jump.x1),
+			math.round(jump.y1)
+		)
+		for _, button in { rotate, cancel, drop } do
+			signature ..= if button.Visible then "1" else "0"
 		end
-		-- Canvas units, rounded (offsets are whole pixels).
-		local r = math.round(math.max(right, 0) / scale)
-		local b = math.round(math.max(bottom, 0) / scale)
-		local s = math.round(size / scale)
-		local signature = r .. ":" .. b .. ":" .. s
+		signature ..= if spectating then "s" else "p"
 		if signature == lastLayout then
 			return
 		end
 		lastLayout = signature
-		local centerFromRight = r + s // 2
-		local aboveJump = b + s + TOUCH_GAP
-		actionButton.Position = UDim2.new(1, -centerFromRight, 1, -aboveJump)
-		small.Position = UDim2.new(1, -(r + s + TOUCH_GAP), 1, -b)
-		ping.Position = UDim2.new(1, -(centerFromRight + ACTION_SIZE // 2 + TOUCH_GAP), 1, -aboveJump)
+
+		local taken: { TouchZones.Rect } = { zones.stick, jump, TouchZones.rect(0, 0, canvas.X, Quickbar.TOP_RESERVE) }
+		local edge = 8
+		local function fits(r: TouchZones.Rect): boolean
+			if r.x0 < edge or r.y0 < edge or r.x1 > canvas.X - edge or r.y1 > canvas.Y - edge then
+				return false
+			end
+			for _, other in taken do
+				if TouchZones.intersects(r, other) then
+					return false
+				end
+			end
+			return true
+		end
+		local function put(button: GuiObject, w: number, h: number, x: number, y: number): TouchZones.Rect
+			local r = TouchZones.centred(x, y, w, h)
+			if not fits(r) then
+				-- Rings around the jump button, preferring left and up (away from the screen edges).
+				local found = false
+				local radius = zones.jumpSize / 2 + TOUCH_GAP + math.max(w, h) / 2
+				while not found and radius < canvas.X do
+					for _, degrees in { 180, 150, 120, 90, 165, 135, 105, 195, 210 } do
+						local a = math.rad(degrees)
+						local c = centre + Vector2.new(math.cos(a), -math.sin(a)) * radius
+						local candidate = TouchZones.centred(c.X, c.Y, w, h)
+						if fits(candidate) then
+							r = candidate
+							found = true
+							break
+						end
+					end
+					radius += 16
+				end
+			end
+			table.insert(taken, r)
+			button.Position = UDim2.fromOffset(math.round((r.x0 + r.x1) / 2), math.round((r.y0 + r.y1) / 2))
+			return r
+		end
+
+		-- Row 1, level with Jump: [small buttons] [action] [JUMP].
+		local action = put(actionButton, ACTION_SIZE, ACTION_SIZE, jump.x0 - TOUCH_GAP - ACTION_SIZE / 2, centre.Y)
+		-- Row 2, above: [Ping] [slot 1] [slot 2], slot 2 over Jump and slot 1 over the action button.
+		local slotW, slotH = SLOT_W * TOUCH_SLOT_SCALE, SLOT_H * TOUCH_SLOT_SCALE
+		local rowY = jump.y0 - TOUCH_GAP - slotH / 2
+		local leftOfRow = (action.x0 + action.x1) / 2 - slotW / 2
+		if not spectating then
+			local second = put(slots[2].button, slotW, slotH, centre.X, rowY)
+			local first = put(slots[1].button, slotW, slotH, (action.x0 + action.x1) / 2, (second.y0 + second.y1) / 2)
+			leftOfRow = first.x0
+		end
+		put(ping, SMALL_SIZE, SMALL_SIZE, leftOfRow - TOUCH_GAP - SMALL_SIZE / 2, rowY)
+		-- Contextual buttons, right to left beside the action button.
+		local x = action.x0 - TOUCH_GAP - SMALL_SIZE / 2
+		for _, button in { cancel, rotate, drop } do
+			if button.Visible then
+				local r = put(button, SMALL_SIZE, SMALL_SIZE, x, centre.Y)
+				x = r.x0 - TOUCH_GAP - SMALL_SIZE / 2
+			end
+		end
 	end
-	layoutTouch()
-	Responsive.Changed:Connect(layoutTouch)
+	local hudGui = parent:FindFirstAncestorOfClass("ScreenGui")
+	if hudGui then
+		TouchZones.track(hudGui)
+	end
+	TouchZones.Changed:Connect(function()
+		lastLayout = ""
+		layoutTouch()
+	end)
 
 	rotate.Activated:Connect(function()
 		PlacementController.rotate()
@@ -513,15 +579,9 @@ function Quickbar.create(parent: Instance): Handle
 	end)
 	refreshAction(InteractionController.current())
 
-	local relayoutClock = 0
-	RunService.Heartbeat:Connect(function(dt: number)
+	RunService.Heartbeat:Connect(function()
 		if not touch.Visible then
 			return
-		end
-		relayoutClock += dt
-		if relayoutClock >= 0.5 then
-			relayoutClock = 0
-			layoutTouch()
 		end
 		if pingDown and os.clock() - (pingDown :: number) >= PING_HOLD_SECONDS then
 			pingDown = nil
@@ -538,21 +598,27 @@ function Quickbar.create(parent: Instance): Handle
 			end
 		end
 		local candidate = PlacementController.candidate()
-		rotate.Visible = candidate ~= nil and candidate.dir ~= nil
-		cancel.Visible = PlacementController.selectedSlot() ~= 0
-		drop.Visible = localPlayer:GetAttribute("Carrying") == true
+		rotate.Visible = not spectating and candidate ~= nil and candidate.dir ~= nil
+		cancel.Visible = not spectating and PlacementController.selectedSlot() ~= 0
+		drop.Visible = not spectating and localPlayer:GetAttribute("Carrying") == true
+		ping.Visible = true
 		pingLabel.Text = if localPlayer:GetAttribute("Downed") == true
 			then Strings.t("ping.help")
 			else Strings.t("hud.ping")
+		-- Contextual buttons coming and going move their neighbours (cheap: unchanged layouts return early).
+		layoutTouch()
 	end)
 
-	local visible = false
-	local spectating = false -- out of the run: only Ping stays, so spectators can still point things out
 	local function applyVisibility()
-		bar.Visible = visible
-		small.Visible = not spectating
-		touch.Visible = (visible or spectating)
-			and (Device.isTouch() or Device.hasTouch() and not Device.isGamepad() and not Device.isKeyboard())
+		local onTouch = TouchZones.active()
+		placeSlots(onTouch)
+		bar.Visible = visible and not onTouch
+		for _, slot in slots do
+			slot.button.Visible = not spectating
+		end
+		touch.Visible = (visible or spectating) and onTouch
+		lastLayout = ""
+		layoutTouch()
 	end
 	Device.Changed:Connect(applyVisibility)
 

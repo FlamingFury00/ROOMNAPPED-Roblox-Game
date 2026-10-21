@@ -33,6 +33,7 @@ local Icons = require(script.Parent.Parent.UI.Icons)
 local Components = require(script.Parent.Parent.UI.Components)
 local UIRoot = require(script.Parent.Parent.UI.UIRoot)
 local Responsive = require(script.Parent.Parent.UI.Responsive)
+local HudLayout = require(script.Parent.Parent.UI.HudLayout)
 
 local PingController = {}
 PingController.priority = 70
@@ -261,6 +262,16 @@ function PingController.openWheel()
 	wheelOpen = true
 	wheelChoice = nil
 	local frame = wheelFrame :: Frame
+	if HudLayout.touch() then
+		-- Touch: open in the free middle of the screen, right of the thumbstick zone and left of the buttons
+		-- around the jump button.
+		local zones = HudLayout.zones()
+		local x = math.max(zones.canvas.X / 2, zones.stick.x1 + 150 + 6)
+		x = math.min(x, zones.jump.x0 - 150 - 140)
+		frame.Position = UDim2.fromOffset(math.round(x), math.round(zones.canvas.Y / 2 + 40))
+	else
+		frame.Position = UDim2.fromScale(0.5, 0.5)
+	end
 	frame.Visible = true
 	AudioController.ui("ui_open", 0.6)
 	PingController.WheelChanged:Fire(true)
@@ -449,12 +460,20 @@ local function updateMarkers()
 				direction = Vector2.new(0, -1)
 			end
 			direction = direction.Unit
-			local margin = 46
-			local scaleX = (viewport.X / 2 - margin) / math.max(1e-3, math.abs(direction.X))
-			local scaleY = (viewport.Y / 2 - margin) / math.max(1e-3, math.abs(direction.Y))
-			local edge = centre + direction * math.min(scaleX, scaleY)
-			-- Convert viewport pixels to the HUD's virtual canvas.
-			local p = Responsive.toCanvas(UIRoot.Guis.Hud, edge)
+			local p: Vector2
+			if HudLayout.touch() then
+				-- Touch: circle the middle of the screen (the edges belong to the touch controls), a little
+				-- further out than the Caretaker's arrow.
+				local radius = if HudLayout.phone() then 124 else 190
+				p = HudLayout.orbitCentre(radius, 40) + direction * radius
+			else
+				local margin = 46
+				local scaleX = (viewport.X / 2 - margin) / math.max(1e-3, math.abs(direction.X))
+				local scaleY = (viewport.Y / 2 - margin) / math.max(1e-3, math.abs(direction.Y))
+				local edge = centre + direction * math.min(scaleX, scaleY)
+				-- Convert viewport pixels to the HUD's virtual canvas.
+				p = Responsive.toCanvas(UIRoot.Guis.Hud, edge)
+			end
 			if p.X == p.X and p.Y == p.Y and math.abs(p.X) < 1e5 and math.abs(p.Y) < 1e5 then
 				marker.arrow.Position = UDim2.fromOffset(math.round(p.X), math.round(p.Y))
 				marker.arrow.Visible = true

@@ -649,17 +649,146 @@ def draw_self(canvas, box):
 # ---------------------------------------------------------------------------------------------------------
 
 
-def render(data, width, height, inset, background):
+# ---------------------------------------------------------------------------------------------------------
+# Touch controls: Roblox's TouchGui (simulated by the client harness on touch phones) is drawn as the player
+# sees it, and every HUD element that covers the thumbstick zone or the jump button is reported.
+
+TOUCH_MARGIN = 6  # px a HUD element may come to the controls before it counts as covering them
+TOUCH_CHECKED = ("RN_Hud", "RN_Overlay")
+
+
+def find_box(box, name):
+    if box.node.get("name") == name:
+        return box
+    for child in box.children:
+        found = find_box(child, name)
+        if found:
+            return found
+    return None
+
+
+def has_content(node):
+    cls = node["class"]
+    if cls in ("Frame", "TextLabel", "TextButton", "TextBox", "ImageLabel", "ImageButton", "ScrollingFrame"):
+        if node.get("bgt", 1) < 0.98:
+            return True
+    if is_text(node) and (node.get("text") or "") != "" and node.get("textT", 0) < 0.98:
+        return True
+    if cls in ("ImageLabel", "ImageButton") and node.get("image") and node.get("imageT", 0) < 0.98:
+        return True
+    stroke = modifier(node, "UIStroke")
+    if stroke and stroke.get("enabled", True) and stroke.get("transparency", 0) < 0.98:
+        return True
+    return False
+
+
+def content_rects(box, path, clip, out):
+    node = box.node
+    if not node.get("visible", True):
+        return
+    name = node.get("name", node["class"])
+    path = path + "/" + name
+    x0, y0, x1, y1 = box.x, box.y, box.x + box.w, box.y + box.h
+    if clip:
+        cx0, cy0, cx1, cy1 = clip
+        x0, y0, x1, y1 = max(x0, cx0), max(y0, cy0), min(x1, cx1), min(y1, cy1)
+    if x1 - x0 > 0.5 and y1 - y0 > 0.5 and has_content(node):
+        out.append((path, (x0, y0, x1, y1)))
+    child_clip = clip
+    if box.clip:
+        bx, by, bw, bh = box.clip
+        child_clip = (bx, by, bx + bw, by + bh)
+        if clip:
+            child_clip = (max(child_clip[0], clip[0]), max(child_clip[1], clip[1]),
+                          min(child_clip[2], clip[2]), min(child_clip[3], clip[3]))
+    for child in box.children:
+        content_rects(child, path, child_clip, out)
+
+
+def overlaps(a, b):
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
+def touch_zones(roots, width):
+    """(stick, jump) rects from the TouchGui boxes, or None without touch controls."""
+    touch = roots.get("TouchGui")
+    if not touch:
+        return None
+    jump = stick = None
+    for child in touch.children:
+        jump = jump or find_box(child, "JumpButton")
+        stick = stick or find_box(child, "DynamicThumbstickFrame") or find_box(child, "ThumbstickFrame")
+    if not jump or not stick:
+        return None
+    m = TOUCH_MARGIN
+    stick_rect = (max(stick.x, 0) - m, stick.y - m, stick.x + stick.w + m, stick.y + stick.h + m)
+    jump_rect = (jump.x - m, jump.y - m, jump.x + jump.w + m, jump.y + jump.h + m)
+    return {"stick": stick_rect, "jump": jump_rect, "jumpBox": jump, "stickBox": stick}
+
+
+def draw_touch(canvas, zones, height):
+    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    stick = zones["stickBox"]
+    x0, y0 = max(stick.x, 0), stick.y
+    d.rectangle([x0, y0, stick.x + stick.w, min(stick.y + stick.h, height)], fill=(255, 255, 255, 18),
+                outline=(255, 255, 255, 70))
+    # Resting thumbstick ring (DynamicThumbstick startImage: 3.3 / 2.8 ring sizes in from the frame corner).
+    cx, cy, r = stick.x + 100 + 66, min(stick.y + stick.h, height + 100) - 100 - 56, 37
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(255, 255, 255, 170), width=3)
+    d.ellipse([cx - 16, cy - 16, cx + 16, cy + 16], fill=(255, 255, 255, 120))
+    jump = zones["jumpBox"]
+    d.ellipse([jump.x, jump.y, jump.x + jump.w, jump.y + jump.h], fill=(255, 255, 255, 60),
+              outline=(255, 255, 255, 200), width=3)
+    font = font_for("BuilderSans", "Bold", max(10, int(jump.w * 0.2)))
+    d.text((jump.x + jump.w / 2, jump.y + jump.h / 2), "JUMP", font=font, fill=(255, 255, 255, 230), anchor="mm")
+    canvas.alpha_composite(layer)
+
+
+def check_touch(roots, zones):
+    problems = []
+    for gui_name in TOUCH_CHECKED:
+        root = roots.get(gui_name)
+        if not root:
+            continue
+        rects = []
+        for child in root.children:
+            content_rects(child, gui_name, None, rects)
+        for path, rect in rects:
+            for zone in ("stick", "jump"):
+                # Report the outermost covering element only (its children sit inside it).
+                if overlaps(rect, zones[zone]) and not any(
+                    z == zone and path.startswith(p + "/") for z, p, _ in problems
+                ):
+                    problems.append((zone, path, rect))
+    for zone, path, rect in problems:
+        print("WARNING touch overlap (%s): %s [%d,%d - %d,%d]" % (zone, path, rect[0], rect[1], rect[2], rect[3]))
+    print("touch zones: %d overlap(s)" % len(problems))
+    return problems
+
+
+def render(data, width, height, inset, background, touch=False):
     canvas = Image.new("RGBA", (width, height), background)
     guis = [g for g in data["guis"] if g.get("enabled", True)]
     guis.sort(key=lambda g: g.get("order", 0))
+    roots = {}
     for gui in guis:
         top = inset if gui.get("insets") in ("CoreUISafeInsets",) else 0
         root = Box(gui, 0, top, width, height - top, 1)
+        roots[gui.get("name", "")] = root
         for child in gui_children(gui):
             root.children.append(layout(child, 0, top, width, height - top, 1))
+        if gui.get("name") == "TouchGui":
+            continue
         for child in sorted(root.children, key=lambda c: c.node.get("z", 1)):
             draw_box(canvas, child)
+    if touch:
+        zones = touch_zones(roots, width)
+        if zones:
+            draw_touch(canvas, zones, height)
+            check_touch(roots, zones)
+        else:
+            print("WARNING touch: no TouchGui in the export")
     return canvas
 
 
@@ -670,13 +799,14 @@ def main():
     parser.add_argument("--size", default="1280x720")
     parser.add_argument("--inset", type=int, default=None)
     parser.add_argument("--bg", default="38,44,58")
+    parser.add_argument("--touch", action="store_true", help="draw the touch controls and report HUD overlaps")
     args = parser.parse_args()
     width, height = (int(v) for v in args.size.lower().split("x"))
     inset = args.inset if args.inset is not None else (58 if height >= 600 else 44)
     with open(args.json) as f:
         data = json.load(f)
     bg = tuple(int(v) for v in args.bg.split(",")) + (255,)
-    image = render(data, width, height, inset, bg)
+    image = render(data, width, height, inset, bg, args.touch)
     image.convert("RGB").save(args.out)
     print("wrote", args.out)
 

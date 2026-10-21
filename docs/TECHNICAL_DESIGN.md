@@ -198,10 +198,21 @@ with the reason and a tip on the results.
 * **UI** (`src/client/UI`): a modal stack (`UIRoot`) over five ScreenGuis (HUD, dim, menus, overlay, cinema).
   Everything is laid out on a 1280×720 virtual canvas that `Responsive` scales to the core-UI safe area
   (`ScreenInsets.CoreUISafeInsets`), clamped between 0.62 and 1.55 and multiplied by the player's text size
-  setting. Phones (≈ 750×311 safe area) get a shorter canvas; windows refit, long panels scroll, Results
-  switches to a compact layout, the lobby squad list goes compact (and scrolls rather than run under the
-  mission card) and the touch action cluster is anchored to the real jump button. Touch targets are at
-  least 72 virtual px (≈ 44 pt on a phone) unless the whole surrounding card is the target.
+  setting. Phones (≈ 750×311 safe area) get a shorter canvas; windows refit, long panels scroll and Results
+  switches to a compact layout. Touch targets are at least 72 virtual px (≈ 44 pt on a phone) unless the
+  whole surrounding card is the target.
+* **Touch screens never cover the controls.** `TouchZones` reads where Roblox's TouchGui puts the jump
+  button and the thumbstick (falling back to the current and the older default layouts) and keeps two zones
+  empty: the thumbstick zone (left 40 % of the screen below its top third) and the jump button with a margin.
+  `HudLayout` arranges everything else for touch: a top band of three rows (hearts and team chips · objective
+  and threat / timer · menu and suitcase status, then one message line where hints give way to toasts),
+  slightly smaller on phones; the room slots, the context action, Ping and the contextual Turn / Cancel /
+  Drop buttons form a cluster around the jump button (each piece takes its designed spot or the nearest free
+  place on rings around Jump); the lobby squad becomes an avatar strip and the mission card and PLAY sit
+  between the thumbstick zone and Jump; downed and spectator panels shrink onto the message line, banners
+  play in the top band and the Caretaker / ping direction arrows circle the middle of the screen instead of
+  its edges. Keyboards and controllers keep the desktop layout. The phone renders draw the touch controls
+  and report any HUD element that covers them, and the touch play tests assert the same rules.
 * **Progress moments**: Results counts the credit total up behind turning light rays and calls out a new
   personal best; `NewItems` keeps rooms and skins unlocked this session marked NEW (cards, Collection tabs
   and a count on the Rooms button) until they are looked at; the mission board shows three mastery stars

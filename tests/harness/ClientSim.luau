@@ -203,6 +203,45 @@ function ClientSim.attach(sim: any, bot: any, options: { device: string?, viewpo
 		playerGui.Parent = player
 	end
 	self.playerGui = playerGui
+	if kind == "touch" and not playerGui:FindFirstChild("TouchGui") then
+		-- Roblox's touch controls (PlayerModule's TouchGui), laid out like the current default controls inside
+		-- the safe area: the jump button 64 px in from the bottom-right corner (72 px; 120 px on big screens) and
+		-- the dynamic thumbstick frame over the left 40 % below the top third.
+		local touchGui = roblox.Instance.new("ScreenGui")
+		touchGui.Name = "TouchGui"
+		touchGui.AbsoluteSize = guiScreen
+		touchGui.AbsolutePosition = V2.zero
+		local frame = roblox.Instance.new("Frame")
+		frame.Name = "TouchControlFrame"
+		frame.Size = roblox.UDim2.fromScale(1, 1)
+		frame.BackgroundTransparency = 1
+		frame.AbsoluteSize = guiScreen
+		frame.AbsolutePosition = V2.zero
+		frame.Parent = touchGui
+		local small = math.min(guiScreen.X, guiScreen.Y) <= 500
+		local size = if small then 72 else 120
+		local jump = roblox.Instance.new("ImageButton")
+		jump.Name = "JumpButton"
+		jump.BackgroundTransparency = 1
+		jump.Image = "rbxasset://textures/ui/Input/TouchControlsSheetV2.png"
+		jump.ImageTransparency = 0
+		jump.ImageColor3 = roblox.Color3.new(1, 1, 1)
+		jump.Size = roblox.UDim2.fromOffset(size, size)
+		jump.Position = roblox.UDim2.new(1, -size - (if small then 64 else 100), 1, -size - (if small then 64 else 112))
+		jump.AbsoluteSize = V2.new(size, size)
+		jump.AbsolutePosition =
+			V2.new(guiScreen.X - (if small then 64 else 100) - size, guiScreen.Y - (if small then 64 else 112) - size)
+		jump.Parent = frame
+		local stick = roblox.Instance.new("Frame")
+		stick.Name = "DynamicThumbstickFrame"
+		stick.BackgroundTransparency = 1
+		stick.Size = roblox.UDim2.new(0.4, 100, 2 / 3, 100)
+		stick.Position = roblox.UDim2.new(0, -100, 1 / 3, 0)
+		stick.AbsoluteSize = V2.new(guiScreen.X * 0.4 + 100, guiScreen.Y * 2 / 3 + 100)
+		stick.AbsolutePosition = V2.new(-100, guiScreen.Y / 3)
+		stick.Parent = frame
+		touchGui.Parent = playerGui
+	end
 	local workspace = sim.workspace
 	local camera = workspace:FindFirstChildOfClass("Camera")
 	if not camera then

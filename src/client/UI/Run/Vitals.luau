@@ -6,6 +6,9 @@
 	slow pulse on the last heart. Below them, one card per teammate shows their avatar, name, hearts and a
 	status badge with an icon and a word - Downed (with the time left to revive them), Recovering, Out,
 	Offline or Left - plus a suitcase badge on whoever carries the stolen room.
+
+	Touch screens keep the whole column in the top band (HudLayout): teammates become a row of avatar chips
+	with the status icon (and the seconds left while downed) as a badge.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +23,7 @@ local Create = require(script.Parent.Parent.Create)
 local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local Components = require(script.Parent.Parent.Components)
+local HudLayout = require(script.Parent.Parent.HudLayout)
 
 local Vitals = {}
 
@@ -93,6 +97,26 @@ function Vitals.create(parent: Instance): Handle
 		BackgroundTransparency = 1,
 		Parent = parent,
 	}, { Create.list(Enum.FillDirection.Vertical, 10, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top) })
+	local columnScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = column })
+	-- Hearts and the solo extra life share the first line; teammates follow underneath.
+	local topLine = Create.new("Frame", {
+		Name = "TopLine",
+		Size = UDim2.fromOffset(0, 58),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		LayoutOrder = 1,
+		Parent = column,
+	}, { Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center) })
+	local teamLayout =
+		Create.list(Enum.FillDirection.Vertical, 10, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top)
+	local teamList = Create.new("Frame", {
+		Name = "Team",
+		Size = UDim2.fromOffset(0, 0),
+		AutomaticSize = Enum.AutomaticSize.XY,
+		BackgroundTransparency = 1,
+		LayoutOrder = 2,
+		Parent = column,
+	}, { teamLayout })
 
 	-- My hearts -------------------------------------------------------------------------------------------
 	local heartsPanel = Create.new("Frame", {
@@ -102,7 +126,7 @@ function Vitals.create(parent: Instance): Handle
 		BackgroundColor3 = C.panelDark,
 		BackgroundTransparency = 0.15,
 		LayoutOrder = 1,
-		Parent = column,
+		Parent = topLine,
 	}, { Create.corner(Theme.Radius.pill), Create.stroke(C.gold, 2, 0.3), Create.padding(8, 14) })
 	local myHearts = -1
 	local myMax = -1
@@ -114,6 +138,17 @@ function Vitals.create(parent: Instance): Handle
 
 	-- Team cards ---------------------------------------------------------------------------------------------
 	local cards: { [string]: Card } = {}
+	local compactTeam = false
+
+	-- Full card (desktop) or avatar chip (touch): name and hearts give way to badges on the avatar.
+	local function styleCard(card: Card)
+		card.frame.Size = if compactTeam then UDim2.fromOffset(56, 56) else UDim2.fromOffset(250, 56)
+		card.name.Visible = not compactTeam
+		card.hearts.Visible = not compactTeam
+		card.status.AnchorPoint = if compactTeam then Vector2.new(1, 0) else Vector2.new(1, 0.5)
+		card.status.Position = if compactTeam then UDim2.new(1, 8, 0, -8) else UDim2.new(1, -8, 0.5, 0)
+		card.statusText.Visible = not compactTeam or card.lastStatus == "Downed"
+	end
 
 	local function makeCard(key: string): Card
 		local frame = Create.new("Frame", {
@@ -121,7 +156,7 @@ function Vitals.create(parent: Instance): Handle
 			Size = UDim2.fromOffset(250, 56),
 			BackgroundColor3 = C.panelDark,
 			BackgroundTransparency = 0.18,
-			Parent = column,
+			Parent = teamList,
 		}, { Create.corner(Theme.Radius.medium), Create.stroke(C.shadow, 2, 0.4) })
 		local userId = tonumber(key) or 0
 		local avatar = Create.new("ImageLabel", {
@@ -164,6 +199,7 @@ function Vitals.create(parent: Instance): Handle
 			AutomaticSize = Enum.AutomaticSize.X,
 			BackgroundColor3 = C.red,
 			Visible = false,
+			ZIndex = 5,
 			Parent = frame,
 		}, {
 			Create.corner(Theme.Radius.pill),
@@ -259,7 +295,7 @@ function Vitals.create(parent: Instance): Handle
 						2
 					)
 					chip.Name = "ExtraLife"
-					chip.Parent = column
+					chip.Parent = topLine
 					extraLife = chip
 				end
 			end
@@ -271,8 +307,10 @@ function Vitals.create(parent: Instance): Handle
 				seen[key] = true
 				local card = cards[key]
 				if not card then
-					card = makeCard(key)
-					cards[key] = card
+					local made = makeCard(key)
+					cards[key] = made
+					styleCard(made)
+					card = made
 				end
 				local c = card :: Card
 				c.frame.LayoutOrder = 10 + (entry.order or 0)
@@ -302,6 +340,7 @@ function Vitals.create(parent: Instance): Handle
 					local faded = status == "Eliminated" or status == "Left" or status == "Disconnected"
 					c.frame.BackgroundTransparency = if faded then 0.55 else 0.18
 					c.name.TextTransparency = if faded then 0.4 else 0
+					styleCard(c)
 				end
 				c.carry.Visible = entry.carrying == true
 			end
@@ -317,6 +356,20 @@ function Vitals.create(parent: Instance): Handle
 	RunInfo.RosterChanged:Connect(refresh)
 	refresh()
 
+	local function applyLayout()
+		local touch = HudLayout.touch()
+		columnScale.Scale = HudLayout.scale("vitals")
+		column.Position = if HudLayout.phone() then UDim2.fromOffset(10, 6) else UDim2.fromOffset(16, 14)
+		compactTeam = touch
+		teamLayout.FillDirection = if touch then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+		teamLayout.Padding = UDim.new(0, if touch then 12 else 10)
+		for _, card in cards do
+			styleCard(card)
+		end
+	end
+	applyLayout()
+	HudLayout.Changed:Connect(applyLayout)
+
 	-- Per-frame: downed countdown rings and the low-heart pulse.
 	RunService.Heartbeat:Connect(function()
 		local now = RunInfo.serverNow()
@@ -327,7 +380,9 @@ function Vitals.create(parent: Instance): Handle
 				local remaining = math.max(0, entry.downedEndsAt - now)
 				card.ring.frame.Visible = true
 				card.ring.set(remaining / GameConfig.Downed.WindowSeconds)
-				card.statusText.Text = Strings.t("hud.team.downed") .. " " .. tostring(math.ceil(remaining))
+				card.statusText.Text = if compactTeam
+					then tostring(math.ceil(remaining))
+					else Strings.t("hud.team.downed") .. " " .. tostring(math.ceil(remaining))
 			elseif card.ring.frame.Visible then
 				card.ring.frame.Visible = false
 			end

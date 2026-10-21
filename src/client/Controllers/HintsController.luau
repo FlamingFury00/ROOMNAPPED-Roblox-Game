@@ -34,6 +34,8 @@ local Icons = require(script.Parent.Parent.UI.Icons)
 local Motion = require(script.Parent.Parent.UI.Motion)
 local Components = require(script.Parent.Parent.UI.Components)
 local UIRoot = require(script.Parent.Parent.UI.UIRoot)
+local HudLayout = require(script.Parent.Parent.UI.HudLayout)
+local Toasts = require(script.Parent.Parent.UI.Toasts)
 
 local HintsController = {}
 HintsController.priority = 80
@@ -81,9 +83,23 @@ local label = Components.label({
 	parent = pill,
 })
 Create.new("UISizeConstraint", { MaxSize = Vector2.new(760, 60), Parent = label })
+local pillScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = pill })
 
 local currentKey: string? = nil
 local shownAt = 0
+
+-- Keyboards and controllers: above the room slots. Touch screens: the message line under the objective, clear
+-- of the thumbstick and the buttons around the jump button; a toast showing there takes the line for a moment.
+local function placePill()
+	local touch = HudLayout.touch()
+	pillScale.Scale = HudLayout.scale("message")
+	pill.AnchorPoint = if touch then Vector2.new(0.5, 0) else Vector2.new(0.5, 1)
+	pill.Position = if touch then UDim2.new(0.5, 0, 0, HudLayout.messageTop()) else UDim2.new(0.5, 0, 1, -160)
+	pill.Visible = currentKey ~= nil and not (touch and Toasts.count() > 0)
+end
+placePill()
+HudLayout.Changed:Connect(placePill)
+Toasts.Changed:Connect(placePill)
 
 local function show(key: string?)
 	if key == currentKey then
@@ -96,7 +112,7 @@ local function show(key: string?)
 		return
 	end
 	label.Text = Strings.t(key)
-	pill.Visible = true
+	placePill()
 	shownAt = os.clock()
 	Motion.pop(pill, 0.8)
 	Components.sound("ui_notify")

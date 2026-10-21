@@ -6,6 +6,11 @@
 	* Downed card with the revive / recovery countdown, and the spectator bar (Prev / Next) when out.
 	* Big banners for the steal, the escape and the outcome; a combo stamp when rooms are combined.
 	* The suitcase status (top right) and an edge arrow toward the Caretaker while it hunts you.
+
+	Touch screens keep all of it clear of the thumbstick and the buttons around the jump button (HudLayout):
+	the downed and spectator panels shrink onto the message line under the objective, banners play in the top
+	band, the combo stamp below the free middle of the screen, and the Caretaker arrow circles the middle of
+	the screen (where your character is) instead of running along its edges.
 ]]
 
 local Players = game:GetService("Players")
@@ -30,6 +35,7 @@ local Components = require(script.Parent.Parent.Components)
 local UIRoot = require(script.Parent.Parent.UIRoot)
 local Responsive = require(script.Parent.Parent.Responsive)
 local Common = require(script.Parent.Parent.Screens.Common)
+local HudLayout = require(script.Parent.Parent.HudLayout)
 
 local Overlays = {}
 
@@ -110,12 +116,10 @@ function Overlays.create(parent: Instance): Handle
 	local function placeDowned()
 		local gui = parent:FindFirstAncestorOfClass("ScreenGui")
 		local height = if gui then Responsive.canvasSize(gui).Y else 0
-		if height > 0 then
+		if height > 0 and not HudLayout.touch() then
 			downed.Position = UDim2.new(0.5, 0, 0, math.round(math.min(height * 0.62, height - 225)))
 		end
 	end
-	placeDowned()
-	Responsive.Changed:Connect(placeDowned)
 	local downedIcon = Create.new("Frame", {
 		Position = UDim2.fromOffset(20, 22),
 		Size = UDim2.fromOffset(56, 56),
@@ -145,6 +149,7 @@ function Overlays.create(parent: Instance): Handle
 	local downedTimer = Components.bar(UDim2.new(1, -40, 0, 14), C.red, downed)
 	downedTimer.frame.AnchorPoint = Vector2.new(0.5, 1)
 	downedTimer.frame.Position = UDim2.new(0.5, 0, 1, -18)
+	local downedScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = downed })
 	local downedSeconds = Components.label({
 		text = "",
 		font = Theme.Fonts.heading,
@@ -156,7 +161,6 @@ function Overlays.create(parent: Instance): Handle
 		stroke = true,
 		parent = downed,
 	})
-	local _ = downedTitle
 
 	-- Spectator bar -------------------------------------------------------------------------------------------
 	local spectate = Create.new("Frame", {
@@ -214,6 +218,7 @@ function Overlays.create(parent: Instance): Handle
 	})
 	-- Long display names truncate instead of running over Prev / Next.
 	spectateLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	local spectateScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = spectate })
 	SpectateController.Changed:Connect(function(key: string?)
 		spectateLabel.Text = if key then Strings.t("hud.spectate.title", { name = RunInfo.displayName(key) }) else ""
 	end)
@@ -254,6 +259,7 @@ function Overlays.create(parent: Instance): Handle
 		stroke = true,
 		parent = banner,
 	})
+	local bannerScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = banner })
 	local bannerToken = 0
 	local function showBanner(title: string, sub: string, color: Color3, seconds: number)
 		bannerToken += 1
@@ -300,17 +306,38 @@ function Overlays.create(parent: Instance): Handle
 		stroke = true,
 		parent = stamp,
 	})
+	local stampScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = stamp })
+	-- Desktop: screen centre. Touch: low in the free middle of the screen, between the thumbstick zone and
+	-- the buttons around the jump button.
+	local function stampHome(): UDim2
+		if not HudLayout.touch() then
+			return UDim2.fromScale(0.5, 0.5)
+		end
+		local zones = HudLayout.zones()
+		local w, h = 420 * stampScale.Scale, 110 * stampScale.Scale
+		local left = zones.stick.x1 + w / 2 + 8
+		local right = zones.jump.x0 - 140 - w / 2
+		return UDim2.fromOffset(
+			math.round(math.max(left, math.min(right, zones.canvas.X / 2))),
+			math.round(zones.canvas.Y - h / 2 - 16)
+		)
+	end
 	local stampToken = 0
 	EffectsController.Combo:Connect(function(comboId: string)
 		stampToken += 1
 		local token = stampToken
 		stampText.Text = Strings.t("combo." .. comboId)
 		stamp.Visible = true
-		stamp.Position = UDim2.fromScale(0.5, 0.5)
+		local home = stampHome()
+		stamp.Position = home
 		Motion.growIn(stamp)
 		task.delay(1.5, function()
 			if token == stampToken then
-				Motion.tween(stamp, Theme.Tween.medium, { Position = UDim2.fromScale(0.5, 0.42) })
+				Motion.tween(stamp, Theme.Tween.medium, {
+					Position = if HudLayout.touch()
+						then home + UDim2.fromOffset(0, -24)
+						else UDim2.fromScale(0.5, 0.42),
+				})
 				task.delay(0.25, function()
 					if token == stampToken then
 						stamp.Visible = false
@@ -338,6 +365,7 @@ function Overlays.create(parent: Instance): Handle
 	})
 	local cargoStroke = Create.stroke(C.gold, 2.5, 0)
 	cargoStroke.Parent = cargo
+	local cargoScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = cargo })
 	local cargoIconHolder = Create.new(
 		"Frame",
 		{ Size = UDim2.fromOffset(38, 38), BackgroundTransparency = 1, LayoutOrder = 1, Parent = cargo }
@@ -371,7 +399,11 @@ function Overlays.create(parent: Instance): Handle
 		parent = cargoTexts,
 	})
 	local lastCargo = ""
-	local function refreshCargo()
+	local cargoCompact = false -- phones: the title alone (the objective already says what is at stake)
+	local function refreshCargo(force: boolean?)
+		if force then
+			lastCargo = ""
+		end
 		local state = ClientState.get("global", "cargo")
 		local s = if type(state) == "table" then state.state else "None"
 		local visible = RunInfo.isParticipant() and s ~= nil and s ~= "None"
@@ -407,7 +439,7 @@ function Overlays.create(parent: Instance): Handle
 		cargoTitle.Text = Strings.t(key, params)
 		cargoTitle.TextColor3 = if color == C.red then C.red else C.text
 		cargoStroke.Color = color
-		cargoRisk.Visible = s == "Carried" or s == "Dropped"
+		cargoRisk.Visible = not cargoCompact and (s == "Carried" or s == "Dropped")
 		Motion.pop(cargo, 0.9)
 		if s == "Dropped" then
 			Motion.shake(cargo)
@@ -434,6 +466,65 @@ function Overlays.create(parent: Instance): Handle
 		Parent = threatArrow,
 	})
 	Icons.make("arrowUp", C.white, C.red).Parent = arrowHolder
+
+	-- Touch layout ---------------------------------------------------------------------------------------------
+	local function applyLayout()
+		local touch = HudLayout.touch()
+		local phone = HudLayout.phone()
+		-- Suitcase status: right under the menu bar.
+		local status = HudLayout.scale("status")
+		cargoScale.Scale = status
+		cargo.Position = if phone then UDim2.new(1, -10, 0, 96) else UDim2.new(1, -16, 0, if touch then 112 else 122)
+		cargoCompact = phone
+		refreshCargo(true)
+		-- Downed and spectating: compact panels on the message line.
+		local message = HudLayout.scale("message")
+		downedScale.Scale = if touch then message else 1
+		downedTitle.Visible = not touch
+		downedIcon.Size = if touch then UDim2.fromOffset(32, 32) else UDim2.fromOffset(56, 56)
+		downedIcon.Position = if touch then UDim2.fromOffset(14, 6) else UDim2.fromOffset(20, 22)
+		downedBody.Position = if touch then UDim2.fromOffset(56, 5) else UDim2.fromOffset(90, 62)
+		downedBody.Size = if touch then UDim2.new(1, -150, 0, 30) else UDim2.new(1, -110, 0, 26)
+		downedBody.TextSize = if touch then Theme.Text.medium else Theme.Text.body
+		downedBody.TextWrapped = not touch
+		downedBody.TextTruncate = if touch then Enum.TextTruncate.AtEnd else Enum.TextTruncate.None
+		downedSeconds.AnchorPoint = if touch then Vector2.new(1, 0) else Vector2.new(1, 1)
+		downedSeconds.Position = if touch then UDim2.new(1, -14, 0, 8) else UDim2.new(1, -20, 1, -34)
+		downedTimer.frame.Size = if touch then UDim2.new(1, -28, 0, 8) else UDim2.new(1, -40, 0, 14)
+		downedTimer.frame.Position = if touch then UDim2.new(0.5, 0, 1, -7) else UDim2.new(0.5, 0, 1, -18)
+		downed.Size = if touch then UDim2.fromOffset(480, 54) else UDim2.fromOffset(420, 150)
+		spectateScale.Scale = if touch then message else 1
+		if touch then
+			local zones = HudLayout.zones()
+			local top = HudLayout.messageTop()
+			-- Both panels slide right of the thumbstick zone when they would reach below its top.
+			local function lineCentre(width: number, height: number): number
+				local centre = zones.canvas.X / 2
+				if top + height * message > zones.stick.y0 then
+					centre = math.max(centre, zones.stick.x1 + width * message / 2 + 8)
+				end
+				return math.round(centre)
+			end
+			downed.AnchorPoint = Vector2.new(0.5, 0)
+			downed.Position = UDim2.fromOffset(lineCentre(480, 54), top)
+			spectate.AnchorPoint = Vector2.new(0.5, 0)
+			spectate.Position = UDim2.fromOffset(lineCentre(580, 88), top)
+		else
+			downed.AnchorPoint = Vector2.new(0.5, 0.5)
+			placeDowned()
+			spectate.AnchorPoint = Vector2.new(0.5, 1)
+			spectate.Position = UDim2.new(0.5, 0, 1, -24)
+		end
+		-- Banners play in the top band on touch screens.
+		bannerScale.Scale = if phone then 0.7 elseif touch then 0.85 else 1
+		banner.Position = if touch
+			then UDim2.new(0.5, 0, 0, math.round(75 * bannerScale.Scale / 0.7))
+			else UDim2.fromScale(0.5, 0.36)
+		stampScale.Scale = if phone then 0.7 elseif touch then 0.85 else 1
+	end
+	applyLayout()
+	HudLayout.Changed:Connect(applyLayout)
+	Responsive.Changed:Connect(applyLayout)
 
 	-- Outcome / phase banners ----------------------------------------------------------------------------------
 	RunInfo.PhaseChanged:Connect(function(newPhase: string, previous: string)
@@ -519,11 +610,18 @@ function Overlays.create(parent: Instance): Handle
 				end
 				if direction.Magnitude > 1 then
 					direction = direction.Unit
-					local margin = 60
-					local sx = (viewport.X / 2 - margin) / math.max(1e-3, math.abs(direction.X))
-					local sy = (viewport.Y / 2 - margin) / math.max(1e-3, math.abs(direction.Y))
-					local point = centre + direction * math.min(sx, sy)
-					local canvas = Responsive.toCanvas(UIRoot.Guis.Hud, point)
+					local canvas: Vector2
+					if HudLayout.touch() then
+						-- Circle the middle of the screen: the edges belong to the touch controls.
+						local radius = if HudLayout.phone() then 96 else 150
+						canvas = HudLayout.orbitCentre(radius, 54) + direction * radius
+					else
+						local margin = 60
+						local sx = (viewport.X / 2 - margin) / math.max(1e-3, math.abs(direction.X))
+						local sy = (viewport.Y / 2 - margin) / math.max(1e-3, math.abs(direction.Y))
+						local point = centre + direction * math.min(sx, sy)
+						canvas = Responsive.toCanvas(UIRoot.Guis.Hud, point)
+					end
 					-- UDim offsets are integers; never feed a non-finite value to the layout.
 					if
 						canvas.X == canvas.X

@@ -28,6 +28,7 @@ local Icons = require(script.Parent.Parent.Icons)
 local Motion = require(script.Parent.Parent.Motion)
 local Components = require(script.Parent.Parent.Components)
 local Responsive = require(script.Parent.Parent.Responsive)
+local HudLayout = require(script.Parent.Parent.HudLayout)
 
 local Objective = {}
 
@@ -40,6 +41,9 @@ local localPlayer = Players.LocalPlayer
 local SIDE_RESERVE_RUN = 214
 local SIDE_RESERVE_LOBBY = 334
 local ROW_CHROME = 176
+-- Touch screens draw the menu bar and the hearts smaller (HudLayout), so the row may come closer to them.
+local SIDE_RESERVE_TOUCH_RUN = 196
+local SIDE_RESERVE_TOUCH_LOBBY = 344
 
 local THREAT_ICON: { [string]: string } = {
 	Dormant = "zzz",
@@ -82,6 +86,7 @@ function Objective.create(parent: Instance): Handle
 	}, {
 		Create.list(Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
 	})
+	local columnScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = column })
 
 	-- Objective row --------------------------------------------------------------------------------------
 	local topRow = Create.new("Frame", {
@@ -138,11 +143,16 @@ function Objective.create(parent: Instance): Handle
 		end
 		local canvasWidth = Responsive.canvasSize(gui).X
 		if canvasWidth > 0 then
-			local reserve = if RunInfo.isParticipant() then SIDE_RESERVE_RUN else SIDE_RESERVE_LOBBY
-			textLimit.MaxSize = Vector2.new(math.clamp(canvasWidth - 2 * reserve - ROW_CHROME, 260, 560), 40)
+			local touch = HudLayout.touch()
+			local reserve = if RunInfo.isParticipant()
+				then (if touch then SIDE_RESERVE_TOUCH_RUN else SIDE_RESERVE_RUN)
+				else (if touch then SIDE_RESERVE_TOUCH_LOBBY else SIDE_RESERVE_LOBBY)
+			-- The column's own scale shrinks everything in it, so it may hold more of its own units.
+			local scale = columnScale.Scale
+			textLimit.MaxSize = Vector2.new(math.clamp((canvasWidth - 2 * reserve) / scale - ROW_CHROME, 260, 560), 40)
 		end
 	end
-	fitWidth()
+
 	Responsive.Changed:Connect(fitWidth)
 
 	local keysChip = Create.new("Frame", {
@@ -259,6 +269,19 @@ function Objective.create(parent: Instance): Handle
 	local timerBar = Components.bar(UDim2.new(1, -24, 0, 6), C.orange, timer)
 	timerBar.frame.AnchorPoint = Vector2.new(0.5, 1)
 	timerBar.frame.Position = UDim2.new(0.5, 0, 1, -6)
+
+	local function applyLayout()
+		columnScale.Scale = HudLayout.scale("objective")
+		column.Position = UDim2.new(0.5, 0, 0, if HudLayout.phone() then 6 else 10)
+		-- Phones: a shorter escape timer keeps the column inside the top band.
+		local phone = HudLayout.phone()
+		secondRow.Size = UDim2.fromOffset(0, if phone then 52 else 64)
+		timer.Size = UDim2.fromOffset(if phone then 176 else 196, if phone then 52 else 64)
+		timerText.TextSize = if phone then 36 else 44
+		fitWidth()
+	end
+	applyLayout()
+	HudLayout.Changed:Connect(applyLayout)
 
 	-- State ----------------------------------------------------------------------------------------------------
 	local lastObjectiveKey = ""

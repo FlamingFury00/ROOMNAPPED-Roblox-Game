@@ -5,6 +5,8 @@
 	Each toast pairs an icon and a colour with its text (never colour alone), stacks up to three deep, merges
 	exact repeats (shows "x2" instead of spamming) and fades out on its own. Server toasts arrive through
 	the Toast remote as (kind, stringKey, params); params that are themselves string keys are translated.
+	Touch screens show one toast at a time on the message line under the objective (HudLayout), where the
+	tutorial hint gives way to it.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,6 +20,8 @@ local Motion = require(script.Parent.Motion)
 local Icons = require(script.Parent.Icons)
 local Components = require(script.Parent.Components)
 local UIRoot = require(script.Parent.UIRoot)
+local HudLayout = require(script.Parent.HudLayout)
+local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 export type Kind = "info" | "success" | "warn" | "error" | "combo" | "key"
 
@@ -25,7 +29,10 @@ local Toasts = {}
 
 local C = Theme.Colors
 local MAX_VISIBLE = 3
+local MAX_VISIBLE_TOUCH = 1
 local LIFETIME = 3.6
+
+Toasts.Changed = Signal.new() -- (visible count)
 
 local STYLE: { [string]: { color: Color3, icon: string, sound: string } } = {
 	info = { color = C.blue, icon = "info", sound = "ui_notify" },
@@ -49,9 +56,21 @@ local container = Create.new("Frame", {
 }, {
 	Create.list(Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top),
 })
+local containerScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = container })
 
 local entries: { Entry } = {}
 local order = 0
+
+local function applyLayout()
+	containerScale.Scale = HudLayout.scale("message")
+	container.Position = UDim2.new(0.5, 0, 0, if HudLayout.touch() then HudLayout.messageTop() else 150)
+end
+applyLayout()
+HudLayout.Changed:Connect(applyLayout)
+
+function Toasts.count(): number
+	return #entries
+end
 
 local function remove(entry: Entry)
 	local index = table.find(entries, entry)
@@ -73,6 +92,7 @@ local function remove(entry: Entry)
 	task.delay(0.2, function()
 		frame:Destroy()
 	end)
+	Toasts.Changed:Fire(#entries)
 end
 
 -- Translate params whose values are catalogue keys (item names etc.).
@@ -103,7 +123,8 @@ function Toasts.show(kind: Kind, text: string, silent: boolean?)
 			return
 		end
 	end
-	while #entries >= MAX_VISIBLE do
+	local limit = if HudLayout.touch() then MAX_VISIBLE_TOUCH else MAX_VISIBLE
+	while #entries >= limit do
 		remove(entries[1])
 	end
 	order += 1
@@ -153,6 +174,7 @@ function Toasts.show(kind: Kind, text: string, silent: boolean?)
 	label.TextTruncate = Enum.TextTruncate.AtEnd
 	local entry: Entry = { frame = frame, text = text, count = 1, expires = os.clock() + LIFETIME, label = label }
 	table.insert(entries, entry)
+	Toasts.Changed:Fire(#entries)
 	Motion.pop(frame, 0.7)
 	if not silent then
 		Components.sound(style.sound)

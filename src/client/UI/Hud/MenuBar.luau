@@ -4,7 +4,8 @@
 
 	Lobby:  [Missions] [Rooms] [Settings]   with the credits pill underneath.
 	In run: [Help] [Settings]               (no shopping or loadout changes during an expedition).
-	Admins also get a Test tools button. The Menu action (M / gamepad Select) toggles Settings.
+	Admins also get a Test tools button. The Menu action (M / gamepad Select) toggles Settings. Touch screens
+	draw the bar a little smaller so it stays in the top band (HudLayout).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,6 +25,7 @@ local Motion = require(script.Parent.Parent.Motion)
 local UIRoot = require(script.Parent.Parent.UIRoot)
 local NewItems = require(script.Parent.Parent.NewItems)
 local Common = require(script.Parent.Parent.Screens.Common)
+local HudLayout = require(script.Parent.Parent.HudLayout)
 
 type ButtonHandle = Components.ButtonHandle
 
@@ -37,7 +39,9 @@ type Item = { frame: Frame, button: ButtonHandle, lobbyOnly: boolean, adminOnly:
 
 local items: { Item } = {}
 local root: Frame
+local rootScale: UIScale
 local creditsPill: Frame
+local creditsScale: UIScale
 local creditsLabel: TextLabel
 local shownCredits = 0
 local creditsValue: NumberValue? = nil
@@ -177,6 +181,7 @@ function MenuBar.start()
 		item.frame.Parent = root
 		table.insert(items, item)
 	end
+	rootScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = root })
 	-- Rooms and skins unlocked this session that the player has not looked at yet.
 	local newBadge = Components.badge(collection.button.instance)
 	NewItems.start()
@@ -209,6 +214,7 @@ function MenuBar.start()
 		Parent = creditsPill,
 	})
 	Icons.make("coin", C.gold, C.goldDark).Parent = coinHolder
+	creditsScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = creditsPill })
 	creditsLabel = Components.label({
 		name = "Amount",
 		text = "0",
@@ -246,6 +252,18 @@ function MenuBar.start()
 			UIRoot.open("Settings")
 		end
 	end)
+	-- Touch screens: a smaller bar tucked into the corner, the credits right under it.
+	local function applyLayout()
+		local scale = HudLayout.scale("menu")
+		local phone = HudLayout.phone()
+		rootScale.Scale = scale
+		creditsScale.Scale = scale
+		local top = if phone then 6 else 10
+		root.Position = UDim2.new(1, if phone then -8 else -12, 0, top)
+		creditsPill.Position = UDim2.new(1, if phone then -10 else -14, 0, top + math.round((BUTTON + 24) * scale))
+	end
+	applyLayout()
+	HudLayout.Changed:Connect(applyLayout)
 	refreshKeyHints()
 	refreshVisibility()
 end

@@ -9,6 +9,10 @@
 	* The selected mission with this player's own reward preview; tapping it opens the mission board.
 	* Notices for test servers (progress not saved) and failed profile loads (with Retry).
 
+	Touch screens keep the thumbstick zone and the jump button clear (HudLayout): the squad becomes a strip of
+	avatars in the top band, and the mission card and PLAY sit in the free middle of the screen, between the
+	thumbstick zone and the jump button.
+
 	Hidden while the local player is inside an expedition.
 ]]
 
@@ -36,6 +40,7 @@ local Motion = require(script.Parent.Parent.Motion)
 local UIRoot = require(script.Parent.Parent.UIRoot)
 local Responsive = require(script.Parent.Parent.Responsive)
 local Common = require(script.Parent.Parent.Screens.Common)
+local HudLayout = require(script.Parent.Parent.HudLayout)
 
 type ButtonHandle = Components.ButtonHandle
 
@@ -62,7 +67,12 @@ local missionChips: Frame
 local rewardIconHolder: Frame
 local rewardLabel: TextLabel
 local leaderCaption: TextLabel
+local missionCaption: TextLabel
 local changeButton: ButtonHandle
+local squadPanel: Frame
+local strip: Frame
+local stripRow: Frame
+local noticeLayout: UIListLayout
 
 local lastSecond = -1
 local pendingReady = false
@@ -248,6 +258,121 @@ local function fitSquad()
 	squadRows.Selectable = height < content
 end
 
+-- Touch: one line of avatars (ready ring, leader crown / ready tick), the squad count and an invite button.
+local STRIP_AVATAR = 48
+
+local function buildStrip(list: { { key: string, info: any } })
+	local count = Create.new("Frame", {
+		Name = "Count",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(0, STRIP_AVATAR),
+		AutomaticSize = Enum.AutomaticSize.X,
+		LayoutOrder = 0,
+		Parent = stripRow,
+	}, {
+		Create.list(Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center),
+	})
+	local usersIcon = Create.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(30, 30),
+		LayoutOrder = 1,
+		Parent = count,
+	})
+	Icons.make("users", C.gold, C.panelDark).Parent = usersIcon
+	Components.label({
+		text = string.format("%d/%d", #list, GameConfig.Squad.MaxPlayers),
+		font = Theme.Fonts.heading,
+		textSize = Theme.Text.body,
+		color = C.goldLight,
+		size = UDim2.fromOffset(0, 30),
+		autoSize = Enum.AutomaticSize.X,
+		layoutOrder = 2,
+		stroke = true,
+		parent = count,
+	})
+	for index, item in list do
+		local info = item.info
+		local holder = Create.new("Frame", {
+			Name = "Player_" .. item.key,
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(STRIP_AVATAR, STRIP_AVATAR),
+			LayoutOrder = index,
+			Parent = stripRow,
+		})
+		local avatar = Create.new("ImageLabel", {
+			Name = "Avatar",
+			BackgroundColor3 = C.ink,
+			Size = UDim2.fromScale(1, 1),
+			Image = "",
+			Parent = holder,
+		}, {
+			Create.corner(Theme.Radius.pill),
+			Create.stroke(if info.ready then C.green elseif item.key == myKey then C.goldLight else C.gold, 3, 0),
+		})
+		local userId = tonumber(item.key)
+		if userId then
+			Common.headshot(avatar, userId)
+		end
+		local badge: string? = if info.ready
+			then "check"
+			elseif info.leader then "crown"
+			elseif info.profile ~= "Ready" then "clock"
+			elseif info.waiting then "zzz"
+			else nil
+		if badge then
+			local color = if badge == "check"
+				then C.green
+				elseif badge == "crown" then C.gold
+				elseif badge == "zzz" then C.orange
+				else C.textMuted
+			local tagFrame = Create.new("Frame", {
+				Name = "Badge",
+				AnchorPoint = Vector2.new(1, 1),
+				Position = UDim2.new(1, 4, 1, 4),
+				Size = UDim2.fromOffset(22, 22),
+				BackgroundColor3 = color,
+				ZIndex = 3,
+				Parent = holder,
+			}, { Create.corner(Theme.Radius.pill), Create.stroke(C.ink, 2, 0) })
+			local inner = Create.new("Frame", {
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.68, 0.68),
+				ZIndex = 4,
+				Parent = tagFrame,
+			})
+			Icons.make(badge, C.textDark, color).Parent = inner
+		end
+	end
+	if canInvite and #list < GameConfig.Squad.MaxPlayers then
+		local invite = Create.new("TextButton", {
+			Name = "Invite",
+			BackgroundColor3 = C.panelLight,
+			Size = UDim2.fromOffset(STRIP_AVATAR, STRIP_AVATAR),
+			LayoutOrder = #list + 1,
+			Text = "",
+			AutoButtonColor = false,
+			Selectable = true,
+			Parent = stripRow,
+		}, { Create.corner(Theme.Radius.pill), Create.stroke(C.goldDark, 2, 0.2) })
+		local inner = Create.new("Frame", {
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.58, 0.58),
+			Parent = invite,
+		})
+		Icons.make("users", C.goldLight, C.panelLight).Parent = inner
+		invite.Activated:Connect(function()
+			Components.sound("ui_click")
+			pcall(function()
+				SocialService:PromptGameInvite(player)
+			end)
+		end)
+	end
+end
+
 -- The lobby HUD is hidden during an expedition; its lists rebuild once it shows again instead of on every
 -- update meanwhile (a deploy republishes the profile and the mission previews).
 local staleWhileHidden = false
@@ -282,6 +407,15 @@ local function rebuildSquad()
 		return (a.info.order or 0) < (b.info.order or 0)
 	end)
 	squadCount.Text = if #list <= 1 then Strings.t("lobby.solo") else Strings.t("lobby.group", { count = #list })
+	for _, child in stripRow:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	if HudLayout.touch() then
+		buildStrip(list)
+		return
+	end
 	for index, item in list do
 		local info = item.info
 		local isMe = item.key == myKey
@@ -538,7 +672,7 @@ local function refreshMission()
 	local leader = lobbyState().leader
 	if isLeader() then
 		leaderCaption.Text = ""
-		changeButton.instance.Visible = true
+		changeButton.instance.Visible = not HudLayout.touch()
 	else
 		local leaderInfo = if type(leader) == "string" then presence()[leader] else nil
 		local leaderName = if leaderInfo then (leaderInfo.display or leaderInfo.name or "") else ""
@@ -584,6 +718,14 @@ local function refreshNotices()
 	elseif status == "Newer" then
 		Components.notice("alert", Strings.t("lobby.profileNewer"), C.red, 2).Parent = noticeHolder
 		reserve(NOTICE_HEIGHT)
+	end
+	-- Touch: notices line up beside each other under the squad strip, at a fixed width.
+	if HudLayout.touch() then
+		for _, child in noticeHolder:GetChildren() do
+			if child:IsA("Frame") and child.Name == "Notice" then
+				child.Size = UDim2.fromOffset(300, 0)
+			end
+		end
 	end
 	if height ~= noticeHeight then
 		noticeHeight = height
@@ -699,7 +841,7 @@ local function build()
 	})
 
 	-- Squad (top left).
-	local squad = Create.new("Frame", {
+	squadPanel = Create.new("Frame", {
 		Name = "Squad",
 		Position = UDim2.fromOffset(14, 12),
 		Size = UDim2.fromOffset(310, 0),
@@ -713,6 +855,7 @@ local function build()
 		Create.padding(10, 10),
 		Create.list(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top),
 	})
+	local squad = squadPanel
 	local header = Create.new("Frame", {
 		Name = "Header",
 		BackgroundTransparency = 1,
@@ -761,6 +904,7 @@ local function build()
 		LayoutOrder = 1,
 		Parent = squad,
 	}, { Create.list(Enum.FillDirection.Vertical, ROW_GAP) })
+	noticeLayout = Create.list(Enum.FillDirection.Vertical, 6)
 	noticeHolder = Create.new("Frame", {
 		Name = "Notices",
 		BackgroundTransparency = 1,
@@ -768,7 +912,34 @@ local function build()
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = 2,
 		Parent = squad,
-	}, { Create.list(Enum.FillDirection.Vertical, 6) })
+	}, { noticeLayout })
+
+	-- Squad strip (touch screens, top left).
+	strip = Create.new("Frame", {
+		Name = "SquadStrip",
+		Position = UDim2.fromOffset(10, 6),
+		Size = UDim2.fromOffset(0, 0),
+		AutomaticSize = Enum.AutomaticSize.XY,
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = container,
+	}, {
+		Create.list(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top),
+	})
+	stripRow = Create.new("Frame", {
+		Name = "Row",
+		Size = UDim2.fromOffset(0, STRIP_AVATAR + 12),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = C.panelDark,
+		BackgroundTransparency = 0.18,
+		LayoutOrder = 1,
+		Parent = strip,
+	}, {
+		Create.corner(Theme.Radius.pill),
+		Create.stroke(C.goldDark, 2, 0.2),
+		Create.padding(6, 12),
+		Create.list(Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center),
+	})
 
 	-- Mission card (bottom left).
 	local stroke: UIStroke
@@ -786,7 +957,7 @@ local function build()
 		Size = UDim2.new(0, 10, 1, 0),
 		Parent = missionCard,
 	})
-	Components.label({
+	missionCaption = Components.label({
 		text = Strings.t("lobby.missionCaption"),
 		font = Theme.Fonts.bodyHeavy,
 		textSize = Theme.Text.small,
@@ -863,18 +1034,66 @@ local function build()
 		UIRoot.open("MissionBoard")
 	end)
 
-	-- PLAY stays centred, except on narrow canvases (phones) where it slides right to clear the mission card.
-	local function placeCluster()
+	local clusterScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = cluster })
+	local cardScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = missionCard })
+	local stripScale = Create.new("UIScale", { Name = "TouchScale", Scale = 1, Parent = strip })
+	local wasTouch: boolean? = nil
+
+	-- Desktop: PLAY centred at the bottom (sliding right on narrow canvases to clear the mission card at the
+	-- bottom left). Touch: the card and PLAY stack in the free middle of the screen, between the thumbstick
+	-- zone and the jump button, and the squad turns into the avatar strip.
+	local function layout()
 		local canvas = Responsive.canvasSize(UIRoot.Guis.Hud)
 		if canvas.X <= 0 then
 			return
 		end
-		local cardRight = missionCard.Position.X.Offset + missionCard.Size.X.Offset
-		local center = math.max(canvas.X / 2, cardRight + 24 + cluster.Size.X.Offset / 2)
-		cluster.Position = UDim2.new(0, math.round(center), 1, -14)
+		local touch = HudLayout.touch()
+		local scale = HudLayout.scale("lobby")
+		clusterScale.Scale = scale
+		cardScale.Scale = scale
+		stripScale.Scale = scale
+		squadPanel.Visible = not touch
+		strip.Visible = touch
+		missionCaption.Visible = not touch
+		leaderCaption.Visible = not touch
+		changeButton.instance.Visible = not touch and isLeader()
+		missionName.Position = UDim2.fromOffset(24, if touch then 10 else 30)
+		missionChips.Position = UDim2.fromOffset(24, if touch then 52 else 72)
+		rewardIconHolder.Position = UDim2.fromOffset(24, if touch then 94 else 116)
+		rewardLabel.Position = UDim2.fromOffset(60, if touch then 94 else 116)
+		rewardLabel.Size = UDim2.new(1, if touch then -76 else -226, 0, 30)
+		missionCard.Size = UDim2.fromOffset(452, if touch then 134 else 178)
+		noticeHolder.Parent = if touch then strip else squadPanel
+		noticeLayout.FillDirection = if touch then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+		noticeHolder.Size = if touch then UDim2.fromOffset(0, 0) else UDim2.fromScale(1, 0)
+		noticeHolder.AutomaticSize = if touch then Enum.AutomaticSize.XY else Enum.AutomaticSize.Y
+		if touch then
+			local zones = HudLayout.zones()
+			local left = zones.stick.x1 + 8
+			local right = zones.jump.x0 - 8
+			local centre = math.round((left + right) / 2)
+			local bottom = canvas.Y - 8
+			cluster.AnchorPoint = Vector2.new(0.5, 1)
+			cluster.Position = UDim2.fromOffset(centre, math.round(bottom))
+			missionCard.AnchorPoint = Vector2.new(0.5, 1)
+			missionCard.Position = UDim2.fromOffset(centre, math.round(bottom - cluster.Size.Y.Offset * scale - 6))
+		else
+			missionCard.AnchorPoint = Vector2.new(0, 1)
+			missionCard.Position = UDim2.new(0, 14, 1, -14)
+			local cardRight = missionCard.Position.X.Offset + missionCard.Size.X.Offset
+			local center = math.max(canvas.X / 2, cardRight + 24 + cluster.Size.X.Offset / 2)
+			cluster.AnchorPoint = Vector2.new(0.5, 1)
+			cluster.Position = UDim2.new(0, math.round(center), 1, -14)
+		end
+		if touch ~= wasTouch then
+			wasTouch = touch
+			rebuildSquad()
+			refreshNotices()
+		end
 	end
-	placeCluster()
-	Responsive.Changed:Connect(placeCluster)
+	layout()
+	Responsive.Changed:Connect(layout)
+	HudLayout.Changed:Connect(layout)
 	-- Canvas changes can switch the squad between full and compact rows.
 	Responsive.Changed:Connect(rebuildSquad)
 end

@@ -40,6 +40,16 @@ return function(ctx)
 		return sim, bot, client
 	end
 
+	-- Canvas rect of an offset-positioned HUD element, honouring its anchor point and touch scale.
+	local function canvasRect(inst: any): { x0: number, y0: number, x1: number, y1: number }
+		local scaleObject = inst:FindFirstChild("TouchScale")
+		local s = if scaleObject then scaleObject.Scale else 1
+		local w, h = inst.Size.X.Offset * s, inst.Size.Y.Offset * s
+		local x, y = inst.Position.X.Offset, inst.Position.Y.Offset
+		local ax, ay = inst.AnchorPoint.X, inst.AnchorPoint.Y
+		return { x0 = x - ax * w, y0 = y - ay * h, x1 = x + (1 - ax) * w, y1 = y + (1 - ay) * h }
+	end
+
 	local function phase(sim, bot)
 		return sim:state(bot, "global", "run.phase")
 	end
@@ -190,19 +200,23 @@ return function(ctx)
 			local touch = client:find("TouchActions")
 			expect(touch ~= nil and touch.Visible).toBe(true)
 
-			-- The action button sits above the (70px, small-screen) jump button and below the top-right cluster
-			-- (menu bar and cargo card end at y = 184 on the canvas).
-			local scale = client:module("UI.Responsive").scaleOf(client:find("RN_Hud"))
-			expect(scale >= 0.62 - 1e-6).toBe(true)
-			local canvas = safeArea / scale
+			-- The room slots joined the cluster around Roblox's jump button: nothing in it covers the jump button
+			-- or the thumbstick zone, and it stays below the top band and on screen.
+			local TouchZones = client:module("UI.TouchZones")
+			local Quickbar = client:module("UI.Run.Quickbar")
+			local zones = TouchZones.get(client:find("RN_Hud"))
+			expect(zones.active).toBe(true)
+			expect(client:find("Quickbar").Visible).toBe(false)
 			local action = touch:FindFirstChild("Action")
-			local actionBottom = canvas.Y + action.Position.Y.Offset
-			local actionTop = actionBottom - action.Size.Y.Offset
-			local jumpTop = canvas.Y - (20 + 70) / scale
-			expect(actionBottom <= jumpTop).toBe(true)
-			expect(actionTop >= 184).toBe(true)
-			local actionRight = canvas.X + action.Position.X.Offset + action.Size.X.Offset / 2
-			expect(actionRight <= canvas.X).toBe(true)
+			for _, name in { "Action", "Slot1", "Slot2", "Ping" } do
+				local piece = touch:FindFirstChild(name)
+				expect(piece ~= nil).toBe(true)
+				local r = canvasRect(piece)
+				expect(TouchZones.intersects(r, zones.stick)).toBe(false)
+				expect(TouchZones.intersects(r, zones.jump)).toBe(false)
+				expect(r.y0 >= Quickbar.TOP_RESERVE).toBe(true)
+				expect(r.x0 >= 0 and r.x1 <= zones.canvas.X and r.y1 <= zones.canvas.Y).toBe(true)
+			end
 
 			-- Tap the Freezer slot at the door, then press and release the action button.
 			local level = sim:state(bot, "global", "level")
@@ -220,6 +234,37 @@ return function(ctx)
 			sim:run(0.5)
 			assertClean(sim)
 			expect(sim:state(bot, "global", "sockets.S1.room")).toBe("Freezer")
+		end)
+
+		it("lays the lobby out around the touch controls on a phone", function()
+			local sim = Sim.new(ctx.placePath)
+			sim:startServer()
+			sim:run(0.3)
+			local bot = sim:addBot("Alice", 1001)
+			sim:snapshot(bot)
+			local client = ClientSim.attach(
+				sim,
+				bot,
+				{ device = "touch", viewport = V2.new(844, 390), safeArea = V2.new(750, 311) }
+			)
+			client:start()
+			sim:run(1)
+			local TouchZones = client:module("UI.TouchZones")
+			local zones = TouchZones.get(client:find("RN_Hud"))
+			-- The squad turns into the avatar strip at the top; the mission card and PLAY sit between the
+			-- thumbstick zone and the jump button.
+			expect(client:find("Squad").Visible).toBe(false)
+			expect(client:find("SquadStrip").Visible).toBe(true)
+			for _, name in { "MissionCard", "Play" } do
+				local r = canvasRect(client:find(name))
+				expect(TouchZones.intersects(r, zones.stick)).toBe(false)
+				expect(TouchZones.intersects(r, zones.jump)).toBe(false)
+				expect(r.x0 >= 0 and r.y0 >= 0 and r.x1 <= zones.canvas.X and r.y1 <= zones.canvas.Y).toBe(true)
+			end
+			client:click(client:find("PlayButton"))
+			sim:run(0.5)
+			expect(sim:state(bot, "global", "players.1001.ready")).toBe(true)
+			assertClean(sim)
 		end)
 
 		it("revives a downed teammate with the context hold", function()
