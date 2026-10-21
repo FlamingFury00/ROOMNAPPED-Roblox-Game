@@ -362,6 +362,16 @@ function ClientSim.attach(sim: any, bot: any, options: { device: string?, viewpo
 			return nil
 		end,
 	})
+	-- Friend invites: always allowed; prompts are counted.
+	self.invitePrompts = 0
+	services.SocialService = proxyOf(game:GetService("SocialService"), {
+		CanSendGameInviteAsync = function()
+			return true
+		end,
+		PromptGameInvite = function()
+			self.invitePrompts += 1
+		end,
+	})
 	services.Debris = proxyOf(game:GetService("Debris"), {
 		AddItem = function(_, item: any, lifetime: number?)
 			sim.task.delay(lifetime or 10, function()

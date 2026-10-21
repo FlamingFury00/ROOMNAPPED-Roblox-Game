@@ -22,7 +22,7 @@ fonts are the ones bundled with the Roblox client, and nothing is synthesized or
 | Rooms | Freezer, Fan, Laundry, Greenhouse, Magnet — two slots per player, up to two active rooms per player and four per team. |
 | Room combos | Ice bridge, ice launch, doused flames, frozen live water, power cut, crate bridge, weighted switch, vine bridge, pinned or frozen carts, Caretaker blown away. |
 | Threats | The Caretaker (sleeps, patrols, investigates, chases, searches; reacts to cold and wind), floods, fires, live wires, runaway luggage carts, pits and gates. |
-| Team play | Hearts with grace and regeneration, downed state with team revive, solo self-recovery, spectating, contextual pings, shared escape clock. |
+| Team play | Squads of up to four with friend invites from the lobby, hearts with grace and regeneration, downed state with team revive, solo self-recovery, spectating, contextual pings, shared escape clock. |
 | Progression | Room blueprints from missions, credits from extractions and challenges, 23 room skins and suitcases bought with earned credits (no Robux). Three mastery stars per mission (cleared, every golden key in one run, every bonus challenge), personal best times with a "New best!" moment, and NEW badges on anything unlocked until it is looked at. |
 | Platforms | Keyboard and mouse, touch (phones and tablets) and gamepad, with device-aware prompts and a responsive HUD that keeps touch targets above 44 pt on phones. |
 | Comfort | Reduced motion, low effects mode, text and UI size, separate music / effects / ambience / interface volume. |

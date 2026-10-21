@@ -396,6 +396,16 @@ function ClientEnv.new(placePath: string)
 		SetCore = function() end,
 		SetCoreGuiEnabled = function() end,
 	})
+	-- Friend invites: always allowed; prompts are counted.
+	self.invitePrompts = 0
+	services.SocialService = proxyOf(game:GetService("SocialService"), {
+		CanSendGameInviteAsync = function()
+			return true
+		end,
+		PromptGameInvite = function()
+			self.invitePrompts += 1
+		end,
+	})
 	self.services = services
 
 	local gameProxy = setmetatable({

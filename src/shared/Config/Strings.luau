@@ -411,6 +411,7 @@ local catalog: { [string]: string } = {
 	["loading.slowBody"] = "This is taking longer than usual. You can wait or continue to the lobby.",
 	["loading.newerTitle"] = "Please rejoin",
 
+	["lobby.invite"] = "Invite friends",
 	["lobby.squad"] = "Squad",
 	["lobby.readyTag"] = "Ready!",
 	["lobby.notReady"] = "Not ready",

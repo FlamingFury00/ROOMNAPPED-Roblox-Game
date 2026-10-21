@@ -4,7 +4,8 @@
 
 	* PLAY / READY toggle (also Enter on keyboards and Y on gamepads) with the launch countdown, the squad's
 	  ready count and clear reasons when playing is not possible yet (profile loading, run in progress).
-	* Squad list: headshots, leader crown, ready ticks, profile loading and "next run" tags.
+	* Squad list: headshots, leader crown, ready ticks, profile loading and "next run" tags, plus an "Invite
+	  friends" row (Roblox's invite prompt) while the squad has room.
 	* The selected mission with this player's own reward preview; tapping it opens the mission board.
 	* Notices for test servers (progress not saved) and failed profile loads (with Retry).
 
@@ -15,8 +16,10 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SocialService = game:GetService("SocialService")
 
 local Shared = ReplicatedStorage.Shared
+local GameConfig = require(Shared.Config.GameConfig)
 local MissionDefs = require(Shared.Config.MissionDefs)
 local RoomDefs = require(Shared.Config.RoomDefs)
 local Strings = require(Shared.Config.Strings)
@@ -72,9 +75,13 @@ local COMPACT_CANVAS_HEIGHT = 600
 -- Notices are short and wrap to at most two lines in the panel; the Retry button is a fixed 72px.
 local NOTICE_HEIGHT = 54
 local RETRY_HEIGHT = 72
-local squadRowCount = 0
 local squadRowHeight = ROW_HEIGHT
+local squadContent = 0 -- height of the rows (and the invite row) with their gaps
+-- The invite row is a touch target: never below 72 (about 44 pt on a phone).
+local INVITE_HEIGHT_COMPACT = 72
 local noticeHeight = 0
+-- Whether Roblox lets this player send game invites (checked once; false in Studio or when unsupported).
+local canInvite = false
 
 -- State helpers ------------------------------------------------------------------------------------------
 
@@ -225,7 +232,7 @@ end
 
 -- Caps the squad rows to the space above the mission card; a squad that still does not fit scrolls.
 local function fitSquad()
-	local content = squadRowCount * squadRowHeight + math.max(0, squadRowCount - 1) * ROW_GAP
+	local content = squadContent
 	squadRows.CanvasSize = UDim2.fromOffset(0, content)
 	local height = content
 	local gui = UIRoot.Guis.Hud
@@ -242,6 +249,11 @@ local function fitSquad()
 end
 
 local function rebuildSquad()
+	for _, child in squadRows:GetChildren() do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
 	local canvas = Responsive.canvasSize(UIRoot.Guis.Hud)
 	local compact = canvas.Y > 0 and canvas.Y < COMPACT_CANVAS_HEIGHT
 	squadRowHeight = if compact then ROW_HEIGHT_COMPACT else ROW_HEIGHT
@@ -354,7 +366,55 @@ local function rebuildSquad()
 			tag(tags, entry.icon, entry.color, order)
 		end
 	end
-	squadRowCount = #list
+	squadContent = #list * squadRowHeight + math.max(0, #list - 1) * ROW_GAP
+	-- An open seat: invite friends straight from the squad list.
+	if canInvite and #list < GameConfig.Squad.MaxPlayers then
+		local inviteHeight = if compact then INVITE_HEIGHT_COMPACT else squadRowHeight
+		local invite = Create.new("TextButton", {
+			Name = "Invite",
+			BackgroundColor3 = C.panel,
+			BackgroundTransparency = 0.55,
+			Size = UDim2.new(1, 0, 0, inviteHeight),
+			LayoutOrder = #list + 1,
+			Text = "",
+			AutoButtonColor = false,
+			Selectable = true,
+			Parent = squadRows,
+		}, { Create.corner(Theme.Radius.medium), Create.stroke(C.goldDark, 2, 0.35) })
+		local iconSize = if compact then 46 else avatarSize
+		local plus = Create.new("Frame", {
+			BackgroundColor3 = C.panelLight,
+			AnchorPoint = Vector2.new(0, 0.5),
+			Size = UDim2.fromOffset(iconSize, iconSize),
+			Position = UDim2.new(0, 6, 0.5, 0),
+			Parent = invite,
+		}, { Create.corner(Theme.Radius.pill) })
+		local inner = Create.new("Frame", {
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.6, 0.6),
+			Parent = plus,
+		})
+		Icons.make("users", C.goldLight, C.panelLight).Parent = inner
+		Components.label({
+			text = Strings.t("lobby.invite"),
+			font = Theme.Fonts.heading,
+			textSize = Theme.Text.body,
+			color = C.goldLight,
+			size = UDim2.new(1, -(iconSize + 26), 1, 0),
+			position = UDim2.fromOffset(iconSize + 14, 0),
+			stroke = true,
+			parent = invite,
+		})
+		invite.Activated:Connect(function()
+			Components.sound("ui_click")
+			pcall(function()
+				SocialService:PromptGameInvite(player)
+			end)
+		end)
+		squadContent += (if #list > 0 then ROW_GAP else 0) + inviteHeight
+	end
 	fitSquad()
 end
 
@@ -804,6 +864,15 @@ function LobbyHud.start()
 	)
 	RunService.Heartbeat:Connect(updateCountdown)
 	refreshAll()
+	task.spawn(function()
+		local ok, allowed = pcall(function()
+			return SocialService:CanSendGameInviteAsync(player)
+		end)
+		if ok and allowed == true then
+			canInvite = true
+			rebuildSquad()
+		end
+	end)
 end
 
 return LobbyHud

@@ -225,7 +225,7 @@ desktop and phone sizes.
 | S14 | Extraction & rewards | `ExpeditionService`, `RewardService`, `RewardRules` | logic, sim |
 | S15 | Caretaker enemy | `CaretakerService`, `NavGraph`, `CaretakerView` | sim, layout_sims |
 | S16 | Damage & recovery | `HealthModel`, `HealthService`, `Overlays` | logic, play |
-| S17 | Session & friends | `SessionService` (squad of ≤ 4, waiting players) | sim |
+| S17 | Session & friends | `SessionService` (squad of ≤ 4, waiting players), friend invites from the squad list (`SocialService`) | sim, ui |
 | S18 | Solo & group scaling | Caretaker speed by squad size, solo self-recovery | logic, sim |
 | S19 | Anti-grief & disconnect | orphaned rooms, safe cargo drop, no body blocking | sim, chaos |
 | S20 | Network authority | `Net`, `Remotes`, `RateLimiter`, server checks | sim (spoofed requests), chaos |

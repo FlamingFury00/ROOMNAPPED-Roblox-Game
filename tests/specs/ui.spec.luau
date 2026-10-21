@@ -459,6 +459,32 @@ return function(ctx)
 			assertClean(client)
 		end)
 
+		it("invites friends from the open seat in the squad list (S17)", function()
+			local client = boot()
+			task.wait(0.05)
+			local invite = client:find("Invite")
+			expect(invite).toBeTruthy()
+			client:press(invite)
+			expect(client.invitePrompts).toBe(1)
+			-- A full squad has no open seat.
+			local players = {}
+			for i = 1, 4 do
+				players[tostring(1000 + i)] = {
+					name = "P" .. i,
+					display = "P" .. i,
+					order = i,
+					profile = "Ready",
+					ready = false,
+					waiting = false,
+				}
+			end
+			expect(players[ME]).toBeTruthy() -- the local player is one of the four
+			client:patch("global", { "players" }, players)
+			task.wait(0.05)
+			expect(client:find("Invite")).toBe(nil)
+			assertClean(client)
+		end)
+
 		it("marks rooms unlocked this session as NEW until the player looks at them", function()
 			local client = boot()
 			local UIRoot = client:module("UI.UIRoot")
