@@ -5,6 +5,7 @@
 	any error - including inside spawned threads and button handlers - fails the test.
 ]]
 local luau = require("@lune/luau")
+local roblox = require("@lune/roblox")
 local task = require("@lune/task")
 
 local ClientEnv = require("../harness/ClientEnv")
@@ -125,10 +126,14 @@ return function(ctx)
 		}
 	end
 
-	-- Boot the shipped client bootstrap (init.client.luau) inside the harness.
-	local function boot()
+	-- Boot the shipped client bootstrap (init.client.luau) inside the harness. `prepare` runs first, against
+	-- the place the client is about to see.
+	local function boot(prepare: ((any) -> ())?)
 		local client = ClientEnv.new(ctx.placePath)
 		client.snapshot = snapshot()
+		if prepare then
+			prepare(client)
+		end
 		local script = client.clientRoot
 		local env = table.clone(client.loaded.env)
 		env.script = script
@@ -532,6 +537,27 @@ return function(ctx)
 			local UIRoot = client:module("UI.UIRoot")
 			UIRoot.open("Settings")
 			expect(client:find("RunActions").Visible).toBe(true)
+			assertClean(client)
+		end)
+
+		it("keeps the chat window clear of the HUD: right edge with keys or a pad, Roblox's spot on touch", function()
+			local client = boot(function(c)
+				roblox.Instance.new("ChatWindowConfiguration").Parent = c.loaded.game:GetService("TextChatService")
+			end)
+			task.wait(0.05)
+			local window =
+				client.loaded.game:GetService("TextChatService"):FindFirstChildOfClass("ChatWindowConfiguration")
+			expect(window.HorizontalAlignment).toBe(roblox.Enum.HorizontalAlignment.Right)
+			expect(window.VerticalAlignment).toBe(roblox.Enum.VerticalAlignment.Center)
+			-- ClientEnv stubs Device; its Changed signal stands in for the player picking up another input.
+			local Device = client:module("Core.Device")
+			Device.Changed:Fire("touch")
+			task.wait(0.05)
+			expect(window.HorizontalAlignment).toBe(roblox.Enum.HorizontalAlignment.Left)
+			expect(window.VerticalAlignment).toBe(roblox.Enum.VerticalAlignment.Top)
+			Device.Changed:Fire("gamepad")
+			task.wait(0.05)
+			expect(window.HorizontalAlignment).toBe(roblox.Enum.HorizontalAlignment.Right)
 			assertClean(client)
 		end)
 
