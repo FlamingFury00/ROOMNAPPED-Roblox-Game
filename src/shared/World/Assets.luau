@@ -20,6 +20,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Assets = {}
 
@@ -112,6 +113,13 @@ function Assets.place(parent: Instance, key: string, cf: CFrame, fallback: Fallb
 	slot:SetAttribute("SlotCF", cf)
 	slot:SetAttribute("Variant", opts.variant or 1)
 	slot:SetAttribute("Scale", opts.scale or 1)
+	-- Slots a client builds for itself (moving carts, previews) are upgraded by that client only.
+	local okClient, isClient = pcall(function()
+		return RunService:IsClient()
+	end)
+	if okClient and isClient then
+		slot:SetAttribute("Local", true)
+	end
 	if not Assets.fill(slot) then
 		slot:SetAttribute("Asset", false)
 		if fallback then
@@ -123,11 +131,13 @@ function Assets.place(parent: Instance, key: string, cf: CFrame, fallback: Fallb
 	return slot
 end
 
--- Replace the fallbacks of every slot for `key` (or every key) that has a template now. Returns the count.
-function Assets.upgrade(key: string?): number
+-- Replace the fallbacks of every slot for `key` (or every key) that has a template now. The server upgrades
+-- the slots it built (they replicate); a client passes `localOnly` to upgrade only the slots it built itself.
+function Assets.upgrade(key: string?, localOnly: boolean?): number
 	local count = 0
 	for _, slot in CollectionService:GetTagged(Assets.TAG) do
-		if slot:IsA("Model") and slot:GetAttribute("Asset") ~= true then
+		local own = (slot:GetAttribute("Local") == true) == (localOnly == true)
+		if own and slot:IsA("Model") and slot:GetAttribute("Asset") ~= true then
 			local slotKey = slot:GetAttribute("AssetKey")
 			if (key == nil or slotKey == key) and Assets.fill(slot) then
 				count += 1

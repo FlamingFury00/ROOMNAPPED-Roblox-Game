@@ -78,6 +78,10 @@ republishing, and running servers follow within five minutes (see §6).
 **Security**
 - [ ] *Enable Studio Access to API Services*: on for the test place only (Studio saves).
 - [ ] *Allow HTTP Requests*: off (not used). *Allow Third Party Sales / Teleports*: off.
+- [ ] *Allow Loading Third Party Assets*: **on**. The hotel's furniture are free Creator Store models
+      loaded at runtime (`AssetLibraryService`); the place file already sets it
+      (`AssetService.AllowInsertFreeAssets` in `default.project.json`), so only confirm it is still ticked.
+      With it off the hotel falls back to its procedural props and the server log says so.
 
 **Communication**
 - [ ] Text chat uses `TextChatService` (Roblox filtering and age rules apply automatically).
@@ -114,6 +118,10 @@ republishing, and running servers follow within five minutes (see §6).
 - [ ] Analytics: within a day the Creator Dashboard shows the onboarding funnel, the `Expedition` funnel and
       the custom events (DOC04, DOC05). Studio sessions never submit events.
 - [ ] Audio: every music track and loop plays; the logs show no "failed to load" audio warnings.
+- [ ] Furniture: the server log's `[Assets]` line reports every prop key ready ("asset library: N/N props
+      ready"); a key listed under "fallbacks" lost its model, so replace that id in `AssetManifest.luau`.
+      Walk the lobby and one corridor: sofas, desks and clocks face into the room, wall lamps sit flat on the
+      wall. The Caretaker wears the bellhop uniform (no "could not be dressed" warning in the log).
 - [ ] Feature flags: write `{"rooms": {"Magnet": false}}` to `RoomnappedConfig` / `flags/test`. Within five
       minutes the Magnet room shows as *Resting* in the collection, leaves any loadout and cannot be
       equipped, and profiles still own it; remove the override and it comes back. (The admin console command

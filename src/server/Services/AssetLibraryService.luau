@@ -10,9 +10,9 @@
 	    effects; every part anchored, non-colliding, untouchable, invisible to raycasts and locked (collision
 	    stays with the builders' simple proxies); seats disabled; the model's own lights and particles only
 	    when the entry asks for them, never casting shadows;
-	  * turned so its front faces -Z: seats say which way a piece of furniture faces, part names ("Door",
-	    "Handle", "Screen" ...) and a taller back (sofas, beds, chairs) vote too, and Roblox models usually face
-	    +Z (towards Studio's default camera) when nothing else decides;
+	  * turned so its front faces -Z: seats say which way a piece of furniture faces; otherwise the front is the
+	    side the model's Creator Store thumbnail shows, which follows from its pivot (see thumbnailFront), with
+	    per-model corrections from the manifest;
 	  * scaled uniformly into the entry's size and pivoted by its mount (bottom / back / top centre).
 
 	Slots the builders already filled with procedural fallbacks are upgraded as each key arrives
@@ -24,11 +24,13 @@
 
 local AssetService = game:GetService("AssetService")
 local InsertService = game:GetService("InsertService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage.Shared
 local AssetManifest = require(Shared.Content.AssetManifest)
+local CaretakerLook = require(Shared.Content.CaretakerLook)
 local Assets = require(Shared.World.Assets)
 local Log = require(Shared.Util.Log)
 local Signal = require(Shared.Util.Signal)
@@ -168,128 +170,137 @@ end
 
 -- Facing --------------------------------------------------------------------------------------------------------
 
-local FRONT_WORDS = {
-	"door",
-	"handle",
-	"knob",
-	"screen",
-	"display",
-	"front",
-	"glass",
-	"button",
-	"drawer",
-	"dial",
-	"keypad",
-	"window",
-	"cushion",
-	"seat",
-	"face",
-}
-
 local DIRECTIONS: { { dir: Vector3, yaw: number } } = {
 	-- yaw turns that direction onto -Z (the hotel's "front" convention).
-	{ dir = Vector3.new(0, 0, 1), yaw = math.pi },
 	{ dir = Vector3.new(0, 0, -1), yaw = 0 },
+	{ dir = Vector3.new(0, 0, 1), yaw = math.pi },
 	{ dir = Vector3.new(1, 0, 0), yaw = math.pi / 2 },
 	{ dir = Vector3.new(-1, 0, 0), yaw = -math.pi / 2 },
 }
 
-local function frontYaw(model: Model): (number, string)
-	local centre, size = bounds(model)
-	local votes = { 0.5, 0, 0, 0 } -- Roblox models usually face +Z (towards Studio's default camera)
-	local reasons = { "default +Z" }
-	local function vote(direction: Vector3, weight: number)
-		local flat = Vector3.new(direction.X, 0, direction.Z)
-		if flat.Magnitude < 1e-3 then
-			return
-		end
-		flat = flat.Unit
-		for i, d in DIRECTIONS do
-			local dot = flat:Dot(d.dir)
-			if dot > 0.7 then
-				votes[i] += weight * dot
-			end
-		end
+--[[
+	The side of a loaded asset its Creator Store thumbnail shows. The thumbnail camera looks at a model from the
+	Z side its pivot faces (an unrotated pivot looks along -Z, so most thumbnails show the -Z side) and from
+	the model's front left. Every manifest model was picked because its thumbnail shows its front, so that side
+	is the front; `turns` corrects the few whose thumbnail shows a side.
+]]
+local function thumbnailFront(loaded: Instance): Vector3
+	local root: Instance = loaded
+	local children = loaded:GetChildren()
+	if #children == 1 then
+		root = children[1]
 	end
+	local look = Vector3.new(0, 0, -1)
+	if root:IsA("Model") then
+		look = root:GetPivot().LookVector
+	elseif root:IsA("BasePart") then
+		look = root.CFrame.LookVector
+	end
+	return Vector3.new(0, 0, if look.Z > 1e-4 then 1 else -1)
+end
+
+-- Yaw that turns the model's front onto -Z: where its seats face when it has any (players sit facing the
+-- front), else the side its thumbnail shows.
+local function frontYaw(model: Model, thumbnail: Vector3): (number, string)
+	local seats = Vector3.zero
 	for _, part in model:GetDescendants() do
 		if part:IsA("Seat") or part:IsA("VehicleSeat") then
-			vote(part.CFrame.LookVector, 3)
-			table.insert(reasons, "seat")
-		elseif part:IsA("BasePart") then
-			local name = string.lower(part.Name)
-			for _, word in FRONT_WORDS do
-				if string.find(name, word, 1, true) then
-					local offset = part.Position - centre
-					local reach = Vector3.new(math.max(size.X / 2, 1e-3), 1, math.max(size.Z / 2, 1e-3))
-					vote(Vector3.new(offset.X / reach.X, 0, offset.Z / reach.Z), 1)
-					break
-				end
-			end
+			local look = part.CFrame.LookVector
+			seats += Vector3.new(look.X, 0, look.Z)
 		end
 	end
-	-- A taller back (sofa, bed, armchair): the lower half faces forwards.
-	for _, axis in { Vector3.new(1, 0, 0), Vector3.new(0, 0, 1) } do
-		local half = (if axis.X > 0 then size.X else size.Z) / 2
-		if half > 0.5 then
-			local topNeg, topPos = -math.huge, -math.huge
-			for _, part in model:GetDescendants() do
-				if part:IsA("BasePart") then
-					local along = (part.Position - centre):Dot(axis)
-					local top = part.Position.Y + part.Size.Magnitude * 0.3
-					if along < -half * 0.35 then
-						topNeg = math.max(topNeg, top)
-					elseif along > half * 0.35 then
-						topPos = math.max(topPos, top)
-					end
-				end
-			end
-			if topNeg > -math.huge and topPos > -math.huge and math.abs(topNeg - topPos) > size.Y * 0.25 then
-				vote(if topNeg > topPos then axis else -axis, 1.5)
-				table.insert(reasons, "taller back")
-			end
+	local front, why = thumbnail, "thumbnail"
+	if seats.Magnitude > 0.5 then
+		front, why = seats.Unit, "seat"
+	end
+	local best, bestDot = DIRECTIONS[1], -math.huge
+	for _, d in DIRECTIONS do
+		local dot = front:Dot(d.dir)
+		if dot > bestDot then
+			best, bestDot = d, dot
 		end
 	end
-	local best, bestVote = 1, -math.huge
-	for i, v in votes do
-		if v > bestVote then
-			best, bestVote = i, v
-		end
-	end
-	return DIRECTIONS[best].yaw, table.concat(reasons, "+")
+	return best.yaw, why
 end
 
 -- Normalising -----------------------------------------------------------------------------------------------------
 
-local function normalise(model: Model, entry: AssetManifest.Entry, id: number): Model
-	local centre, _ = bounds(model)
+-- How far "stretch" may pull a model's width or depth away from its height scale.
+local STRETCH_LIMIT = 1.35
+
+-- Scale a model about `centre` by `factors` along the world axes. Parts keep their rotation (a part turned
+-- off the axes stretches along the axes nearest its own); file meshes, which ignore their part's size, take
+-- the scale on the mesh instead.
+local function stretch(model: Model, centre: Vector3, factors: Vector3)
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			local cf = part.CFrame
+			local localFactors = Vector3.new(
+				(factors * cf.RightVector).Magnitude,
+				(factors * cf.UpVector).Magnitude,
+				(factors * cf.LookVector).Magnitude
+			)
+			part.Size *= localFactors
+			part.CFrame = cf.Rotation + (centre + (cf.Position - centre) * factors)
+			for _, child in part:GetChildren() do
+				if child:IsA("SpecialMesh") then
+					if child.MeshType == Enum.MeshType.FileMesh then
+						child.Scale *= localFactors
+					end
+					child.Offset *= localFactors
+				elseif child:IsA("Attachment") then
+					child.Position *= localFactors
+				end
+			end
+		end
+	end
+end
+
+local function normalise(model: Model, entry: AssetManifest.Entry, id: number, thumbnail: Vector3): Model
+	local centre, extent = bounds(model)
 	model.WorldPivot = CFrame.new(centre)
 	-- Turn the front onto -Z.
 	local yaw = 0
-	local why = "fixed"
+	local why = "none"
 	if entry.facing == "auto" then
-		yaw, why = frontYaw(model)
-	elseif type(entry.facing) == "number" then
-		yaw = math.rad(entry.facing)
+		yaw, why = frontYaw(model, thumbnail)
+	elseif entry.facing == "wide" and extent.Z > extent.X then
+		yaw, why = math.pi / 2, "wide"
+	end
+	local turn = entry.turns and entry.turns[id]
+	if turn then
+		yaw += math.rad(turn)
+		why ..= string.format("%+d", turn)
 	end
 	model:PivotTo(CFrame.new(centre) * CFrame.Angles(0, yaw, 0))
 	model.WorldPivot = CFrame.new(centre)
-	-- Uniform scale into the target size.
-	local _, size = bounds(model)
+	-- Scale into the target size: uniformly, or per axis for "stretch".
+	local middle, size = bounds(model)
 	local target = entry.size
-	local ratio: number
-	if entry.fit == "height" then
-		ratio = target.Y / math.max(size.Y, 1e-3)
-	elseif entry.fit == "width" then
-		ratio = target.X / math.max(size.X, 1e-3)
-	else
-		ratio = math.min(
-			target.X / math.max(size.X, 1e-3),
-			target.Y / math.max(size.Y, 1e-3),
-			target.Z / math.max(size.Z, 1e-3)
+	local factors = Vector3.new(
+		target.X / math.max(size.X, 1e-3),
+		target.Y / math.max(size.Y, 1e-3),
+		target.Z / math.max(size.Z, 1e-3)
+	)
+	if entry.fit == "stretch" then
+		-- Height exact (things stand on top), width and depth within STRETCH_LIMIT of it.
+		local fy = math.clamp(factors.Y, 0.02, 50)
+		stretch(
+			model,
+			middle,
+			Vector3.new(
+				math.clamp(factors.X, fy / STRETCH_LIMIT, fy * STRETCH_LIMIT),
+				fy,
+				math.clamp(factors.Z, fy / STRETCH_LIMIT, fy * STRETCH_LIMIT)
+			)
 		)
+	else
+		local ratio = if entry.fit == "height"
+			then factors.Y
+			elseif entry.fit == "width" then factors.X
+			else math.min(factors.X, factors.Y, factors.Z)
+		model:ScaleTo(model:GetScale() * math.clamp(ratio, 0.02, 50))
 	end
-	ratio = math.clamp(ratio, 0.02, 50)
-	model:ScaleTo(model:GetScale() * ratio)
 	-- Pivot by mount, at the origin.
 	local c, s = bounds(model)
 	local pivot: CFrame
@@ -358,8 +369,9 @@ local function loadKey(key: string)
 		end
 		if loaded then
 			local ok, result = pcall(function(): Model?
+				local thumbnail = thumbnailFront(loaded :: Instance)
 				local model = clean(loaded :: Instance, entry)
-				return if model then normalise(model, entry, id) else nil
+				return if model then normalise(model, entry, id, thumbnail) else nil
 			end)
 			if ok and result then
 				local model = result :: Model
@@ -386,6 +398,131 @@ local function loadKey(key: string)
 		failures[key] = lastProblem
 		failedCount += 1
 	end
+end
+
+-- The Caretaker ------------------------------------------------------------------------------------------------
+
+local CARETAKER_TEMPLATE = "RN_CaretakerRig"
+
+type Outfit = "full" | "lean" | "plain"
+
+local ACCESSORY_PROPERTY: { [string]: string } = {
+	Hat = "HatAccessory",
+	Hair = "HairAccessory",
+	Face = "FaceAccessory",
+	Neck = "NeckAccessory",
+	Shoulder = "ShouldersAccessory",
+	Front = "FrontAccessory",
+	Back = "BackAccessory",
+	Waist = "WaistAccessory",
+}
+
+--[[
+	A HumanoidDescription for the Caretaker:
+	  full   every catalog piece in CaretakerLook
+	  lean   the uniform with Roblox-made head and hat (when a user-made piece is gone or broken)
+	  plain  no catalog items: a burgundy jacket and black trousers in body colours
+]]
+local function describe(outfit: Outfit): HumanoidDescription
+	local look = CaretakerLook
+	local description = Instance.new("HumanoidDescription")
+	local function set(property: string, value: number?)
+		if value and value > 0 then
+			(description :: any)[property] = value
+		end
+	end
+	local accessories: { [string]: { string } } = {}
+	local function accessory(kind: string, id: number?)
+		if id and id > 0 then
+			accessories[kind] = accessories[kind] or {}
+			table.insert(accessories[kind], tostring(id))
+		end
+	end
+	if outfit == "full" then
+		set("Face", look.face)
+		set("Head", look.head)
+		set("MoodAnimation", look.mood)
+		set("Torso", look.torso)
+		set("LeftArm", look.leftArm)
+		set("RightArm", look.rightArm)
+		set("LeftLeg", look.leftLeg)
+		set("RightLeg", look.rightLeg)
+		for _, item in look.accessories do
+			accessory(item.type, item.id)
+		end
+	elseif outfit == "lean" then
+		set("Head", look.fallback.head)
+		set("MoodAnimation", look.fallback.mood)
+		accessory("Hat", look.fallback.hat)
+	end
+	if outfit ~= "plain" then
+		set("Shirt", look.shirt)
+		set("Pants", look.pants)
+	end
+	for kind, ids in accessories do
+		local property = ACCESSORY_PROPERTY[kind]
+		if property then
+			(description :: any)[property] = table.concat(ids, ",")
+		end
+	end
+	local scales = look.scales
+	description.HeightScale = scales.height
+	description.WidthScale = scales.width
+	description.DepthScale = scales.depth
+	description.HeadScale = scales.head
+	description.BodyTypeScale = scales.bodyType
+	description.ProportionScale = scales.proportion
+	local jacket = Color3.fromRGB(110, 28, 36)
+	local trousers = Color3.fromRGB(20, 20, 22)
+	description.HeadColor = look.skin
+	description.TorsoColor = if outfit == "plain" then jacket else look.skin
+	description.LeftArmColor = if outfit == "plain" then jacket else look.skin
+	description.RightArmColor = if outfit == "plain" then jacket else look.skin
+	description.LeftLegColor = if outfit == "plain" then trousers else look.skin
+	description.RightLegColor = if outfit == "plain" then trousers else look.skin
+	return description
+end
+
+-- Dress an R15 model from CaretakerLook and publish it for the clients' CaretakerView. A catalog piece that
+-- fails takes the whole build down, so each failure retries with fewer user-made pieces.
+local function buildCaretaker()
+	if not CaretakerLook.enabled then
+		return
+	end
+	local model: Model? = nil
+	local problems: { string } = {}
+	for _, outfit: Outfit in { "full", "lean", "plain" } :: { Outfit } do
+		local ok, result = pcall(function()
+			return Players:CreateHumanoidModelFromDescriptionAsync(describe(outfit), Enum.HumanoidRigType.R15)
+		end)
+		if ok and typeof(result) == "Instance" and result:IsA("Model") then
+			model = result
+			result:SetAttribute("Outfit", outfit)
+			break
+		end
+		table.insert(problems, outfit .. ": " .. tostring(result))
+	end
+	if not model then
+		log:Warn(
+			"the Caretaker could not be dressed (" .. table.concat(problems, "; ") .. "); clients use the built-in rig"
+		)
+		return
+	end
+	if #problems > 0 then
+		log:Info("Caretaker outfit fell back (" .. table.concat(problems, "; ") .. ")")
+	end
+	for _, d in model:GetDescendants() do
+		if d:IsA("LuaSourceContainer") or d:IsA("Sound") then
+			d:Destroy()
+		end
+	end
+	model.Name = CARETAKER_TEMPLATE
+	local existing = ReplicatedStorage:FindFirstChild(CARETAKER_TEMPLATE)
+	if existing then
+		existing:Destroy()
+	end
+	model.Parent = ReplicatedStorage
+	log:Debug("Caretaker dressed and published")
 end
 
 -- Keys that failed and why (for the admin notice and the debug screen).
@@ -434,6 +571,9 @@ function AssetLibraryService.Start()
 	local canLoad = pcall(function(): any
 		return (AssetService :: any).LoadAssetAsync
 	end)
+	if canLoad and RunService:IsServer() then
+		task.spawn(buildCaretaker)
+	end
 	if #keys == 0 or not canLoad or not RunService:IsServer() then
 		finished = true
 		AssetLibraryService.Finished:Fire({}, {})

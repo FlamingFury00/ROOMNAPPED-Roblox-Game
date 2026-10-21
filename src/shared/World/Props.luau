@@ -10,6 +10,7 @@
 local Kit = require(script.Parent.Kit)
 local Palette = require(script.Parent.Palette)
 local Assets = require(script.Parent.Assets)
+local Artwork = require(script.Parent.Parent.Content.Artwork)
 
 type Theme = Palette.Theme
 type Rng = () -> number
@@ -28,6 +29,21 @@ end
 
 local function pick<T>(rng: Rng, list: { T }): T
 	return list[math.clamp(math.floor(rng() * #list) + 1, 1, #list)]
+end
+
+-- A private generator for a fallback prop, drawn from `rng` once, so a level's decoration (which walls get
+-- doors, where props stand) is the same whether a slot ends up holding a real model or its fallback.
+local function subRng(rng: Rng): Rng
+	local state = math.floor(rng() * 2147483645) + 1
+	return function(): number
+		state = (state * 16807) % 2147483647
+		return state / 2147483647
+	end
+end
+
+-- Variant index for an asset slot (stable per prop).
+local function variantOf(rng: Rng): number
+	return math.floor(rng() * 64) + 1
 end
 
 -- Lighting --------------------------------------------------------------------------------------------
@@ -123,7 +139,7 @@ function Props.ceilingLamp(parent: Instance, cf: CFrame, theme: Theme, shadows: 
 	return rig
 end
 
-function Props.chandelier(parent: Instance, cf: CFrame, theme: Theme, scale: number?): Part
+local function buildChandelier(parent: Instance, cf: CFrame, theme: Theme, scale: number?): Part
 	local s = scale or 1
 	local model = Kit.model(parent, "Chandelier")
 	decor(model, "Chain", cf * CFrame.new(0, -1.5 * s, 0), Vector3.new(0.2, 3 * s, 0.2), theme.brass, M.Metal)
@@ -141,19 +157,17 @@ function Props.chandelier(parent: Instance, cf: CFrame, theme: Theme, scale: num
 		color = theme.lamp,
 		material = M.Neon,
 	})
-	center:AddTag("RN_Lamp")
 	for i = 0, 7 do
 		local angle = i / 8 * math.pi * 2
 		local p = cf * CFrame.new(math.cos(angle) * 2.4 * s, -2.9 * s, math.sin(angle) * 2.4 * s)
 		decor(model, "Candle", p, Vector3.new(0.3, 0.8, 0.3) * s, Color3.fromRGB(250, 244, 230), M.SmoothPlastic)
-		local flame = Kit.ball(model, {
+		Kit.ball(model, {
 			name = "Flame",
 			cf = p * CFrame.new(0, 0.6 * s, 0),
 			size = Vector3.new(0.32, 0.45, 0.32) * s,
 			color = theme.lamp,
 			material = M.Neon,
 		})
-		flame:AddTag("RN_Lamp")
 		decor(
 			model,
 			"Crystal",
@@ -163,9 +177,21 @@ function Props.chandelier(parent: Instance, cf: CFrame, theme: Theme, scale: num
 			M.Glass
 		)
 	end
-	local light = Kit.pointLight(center, theme.lamp, theme.lampBrightness * 1.4, 34, true)
-	light.Name = "Light"
 	return center
+end
+
+-- A grand chandelier hanging from `cf` (the ceiling mount); its light rig stays outside the asset slot.
+function Props.chandelier(parent: Instance, cf: CFrame, theme: Theme, scale: number?): Part
+	local s = scale or 1
+	Assets.place(parent, "chandelier", cf, function(slot: Model, mount: CFrame)
+		buildChandelier(slot, mount, theme, s)
+	end, { scale = s })
+	local rig = lightRig(parent, "ChandelierLight", cf * CFrame.new(0, -3.4 * s, 0))
+	local light = Kit.pointLight(rig, theme.lamp, theme.lampBrightness * 1.4, 34, true)
+	light.Name = "Light"
+	local fill = Kit.spotLight(rig, theme.lamp, theme.lampBrightness * 0.9, 30, 140, Enum.NormalId.Bottom, false)
+	fill.Name = "Fill"
+	return rig
 end
 
 -- Wall decoration -----------------------------------------------------------------------------------
@@ -178,61 +204,126 @@ local PAINTING_SCENES = {
 	{ Color3.fromRGB(180, 200, 190), Color3.fromRGB(60, 110, 100), Color3.fromRGB(240, 120, 120) }, -- garden
 }
 
+-- A framed painting: a classic artwork (Content/Artwork) in a gilded frame, or a procedural scene when no
+-- artwork fits. `cf` = the frame's centre on the wall, facing out.
 function Props.painting(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, width: number?, height: number?)
 	local w, h = width or 4, height or 3
+	local roll = rng()
+	local sceneRng = subRng(rng)
 	local model = Kit.model(parent, "Painting")
-	decor(model, "Frame", at(cf, 0, 0, 0.12), Vector3.new(w + 0.5, h + 0.5, 0.24), theme.brass, M.Foil)
-	local scene = pick(rng, PAINTING_SCENES)
-	decor(model, "Sky", at(cf, 0, h * 0.18, 0.26), Vector3.new(w, h * 0.64, 0.05), scene[1], M.SmoothPlastic)
-	decor(model, "Ground", at(cf, 0, -h * 0.32, 0.26), Vector3.new(w, h * 0.36, 0.05), scene[2], M.SmoothPlastic)
-	local variant = rng()
+	-- Gilded frame: four mitred-looking bars around a dark backing, with an inner lip.
+	local border = 0.32
+	local gold = theme.brass
+	decor(model, "Backing", at(cf, 0, 0, 0.06), Vector3.new(w + 0.1, h + 0.1, 0.12), Color3.fromRGB(26, 20, 18))
+	for _, side in { -1, 1 } do
+		decor(
+			model,
+			"FrameV",
+			at(cf, side * (w / 2 + border / 2), 0, 0.17),
+			Vector3.new(border, h + border * 2, 0.34),
+			gold,
+			M.Foil
+		)
+		decor(model, "FrameH", at(cf, 0, side * (h / 2 + border / 2), 0.17), Vector3.new(w, border, 0.34), gold, M.Foil)
+		decor(
+			model,
+			"LipV",
+			at(cf, side * (w / 2 - 0.05), 0, 0.15),
+			Vector3.new(0.1, h, 0.08),
+			gold:Lerp(Color3.new(0, 0, 0), 0.25),
+			M.Foil
+		)
+		decor(
+			model,
+			"LipH",
+			at(cf, 0, side * (h / 2 - 0.05), 0.15),
+			Vector3.new(w, 0.1, 0.08),
+			gold:Lerp(Color3.new(0, 0, 0), 0.25),
+			M.Foil
+		)
+	end
+	local art = Artwork.pick(roll, w / h)
+	if art then
+		local canvas =
+			decor(model, "Canvas", at(cf, 0, 0, 0.14), Vector3.new(w - 0.1, h - 0.1, 0.04), Color3.new(1, 1, 1))
+		local decal = Instance.new("Decal")
+		decal.Name = "Art"
+		decal.Face = Enum.NormalId.Front
+		decal.Texture = "rbxassetid://" .. tostring(art.image)
+		decal.Parent = canvas
+		return
+	end
+	local scene = pick(sceneRng, PAINTING_SCENES)
+	decor(
+		model,
+		"Sky",
+		at(cf, 0, h * 0.18, 0.14),
+		Vector3.new(w - 0.1, h * 0.64 - 0.05, 0.04),
+		scene[1],
+		M.SmoothPlastic
+	)
+	decor(
+		model,
+		"Ground",
+		at(cf, 0, -h * 0.32 + 0.03, 0.14),
+		Vector3.new(w - 0.1, h * 0.36 - 0.05, 0.04),
+		scene[2],
+		M.SmoothPlastic
+	)
+	local variant = sceneRng()
 	if variant < 0.33 then
 		-- A glowing moon / sun.
 		Kit.cylinder(model, {
 			name = "Orb",
-			cf = at(cf, w * 0.22, h * 0.2, 0.3) * CFrame.Angles(0, math.pi / 2, 0),
-			size = Vector3.new(0.05, h * 0.3, h * 0.3),
+			cf = at(cf, w * 0.22, h * 0.2, 0.17) * CFrame.Angles(0, math.pi / 2, 0),
+			size = Vector3.new(0.03, h * 0.3, h * 0.3),
 			color = scene[3],
 			material = M.Neon,
 		})
 	elseif variant < 0.66 then
-		-- A tiny hotel silhouette.
+		-- A tiny hotel silhouette with one lit window.
 		decor(
 			model,
 			"Hotel",
-			at(cf, -w * 0.15, -h * 0.05, 0.3),
-			Vector3.new(w * 0.3, h * 0.42, 0.05),
+			at(cf, -w * 0.15, -h * 0.05, 0.17),
+			Vector3.new(w * 0.3, h * 0.42, 0.03),
 			Color3.fromRGB(30, 26, 32)
 		)
 		decor(
 			model,
 			"Window",
-			at(cf, -w * 0.15, h * 0.02, 0.33),
-			Vector3.new(w * 0.06, h * 0.08, 0.05),
+			at(cf, -w * 0.15, h * 0.02, 0.19),
+			Vector3.new(w * 0.06, h * 0.08, 0.02),
 			scene[3],
 			M.Neon
 		)
 	else
-		-- Portrait silhouette: a suspicious bellhop.
-		Kit.ball(model, {
+		-- Portrait silhouette: a suspicious bellhop (a flat disc for the head).
+		Kit.cylinder(model, {
 			name = "Head",
-			cf = at(cf, 0, h * 0.08, 0.3),
-			size = Vector3.new(h * 0.3, h * 0.3, 0.05),
+			cf = at(cf, 0, h * 0.08, 0.17) * CFrame.Angles(0, math.pi / 2, 0),
+			size = Vector3.new(0.03, h * 0.3, h * 0.3),
 			color = Color3.fromRGB(26, 22, 30),
 		})
 		decor(
 			model,
 			"Cap",
-			at(cf, 0, h * 0.26, 0.31),
-			Vector3.new(h * 0.28, h * 0.1, 0.05),
+			at(cf, 0, h * 0.26, 0.18),
+			Vector3.new(h * 0.28, h * 0.1, 0.03),
 			Color3.fromRGB(150, 30, 40)
 		)
-		decor(model, "EyeL", at(cf, -h * 0.05, h * 0.1, 0.34), Vector3.new(h * 0.05, h * 0.03, 0.04), scene[3], M.Neon)
-		decor(model, "EyeR", at(cf, h * 0.05, h * 0.1, 0.34), Vector3.new(h * 0.05, h * 0.03, 0.04), scene[3], M.Neon)
+		decor(model, "EyeL", at(cf, -h * 0.05, h * 0.1, 0.19), Vector3.new(h * 0.05, h * 0.03, 0.02), scene[3], M.Neon)
+		decor(model, "EyeR", at(cf, h * 0.05, h * 0.1, 0.19), Vector3.new(h * 0.05, h * 0.03, 0.02), scene[3], M.Neon)
 	end
 end
 
 function Props.mirror(parent: Instance, cf: CFrame, theme: Theme)
+	Assets.place(parent, "mirror", cf, function(slot: Model, at0: CFrame)
+		Props.mirrorFallback(slot, at0, theme)
+	end)
+end
+
+function Props.mirrorFallback(parent: Instance, cf: CFrame, theme: Theme)
 	local model = Kit.model(parent, "Mirror")
 	decor(model, "Frame", at(cf, 0, 0, 0.1), Vector3.new(3.4, 4.6, 0.2), theme.brass, M.Foil)
 	local glass =
@@ -241,6 +332,12 @@ function Props.mirror(parent: Instance, cf: CFrame, theme: Theme)
 end
 
 function Props.wallClock(parent: Instance, cf: CFrame, theme: Theme)
+	Assets.place(parent, "wallClock", cf, function(slot: Model, at0: CFrame)
+		Props.wallClockFallback(slot, at0, theme)
+	end)
+end
+
+function Props.wallClockFallback(parent: Instance, cf: CFrame, theme: Theme)
 	local model = Kit.model(parent, "Clock")
 	Kit.cylinder(model, {
 		name = "Rim",
@@ -381,6 +478,15 @@ end
 
 function Props.plant(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, scale: number?)
 	local s = scale or 1
+	local variant = variantOf(rng)
+	local leafRng = subRng(rng)
+	Assets.place(parent, if s < 0.9 then "smallPlant" else "bigPlant", cf, function(slot: Model, at0: CFrame)
+		Props.plantFallback(slot, at0, theme, leafRng, s)
+	end, { variant = variant, scale = s })
+end
+
+function Props.plantFallback(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, scale: number?)
+	local s = scale or 1
 	local model = Kit.model(parent, "Plant")
 	Kit.cylinder(model, {
 		name = "Pot",
@@ -427,7 +533,13 @@ function Props.plant(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, scale
 	end
 end
 
-function Props.bench(parent: Instance, cf: CFrame, theme: Theme)
+function Props.bench(parent: Instance, cf: CFrame, theme: Theme, variant: number?)
+	Assets.place(parent, "bench", cf, function(slot: Model, at0: CFrame)
+		Props.benchFallback(slot, at0, theme)
+	end, { variant = variant })
+end
+
+function Props.benchFallback(parent: Instance, cf: CFrame, theme: Theme)
 	local model = Kit.model(parent, "Bench")
 	decor(model, "Seat", cf * CFrame.new(0, 1.5, 0), Vector3.new(4.4, 0.6, 1.8), theme.carpet, M.Fabric).CastShadow =
 		true
@@ -438,53 +550,73 @@ function Props.bench(parent: Instance, cf: CFrame, theme: Theme)
 	end
 end
 
+-- Console table (2.7 studs tall) with a lamp or a vase of flowers on top.
+local TABLE_TOP = 2.7
+
 function Props.sideTable(parent: Instance, cf: CFrame, theme: Theme, rng: Rng)
-	local model = Kit.model(parent, "SideTable")
-	decor(model, "Top", cf * CFrame.new(0, 2.6, 0), Vector3.new(2.4, 0.2, 1.4), theme.wainscot, M.Wood).CastShadow =
-		true
-	for _, x in { -1, 1 } do
-		for _, z in { -0.5, 0.5 } do
-			decor(model, "Leg", cf * CFrame.new(x, 1.25, z), Vector3.new(0.18, 2.5, 0.18), theme.wainscot, M.Wood)
+	local variant = variantOf(rng)
+	Assets.place(parent, "sideTable", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "SideTable")
+		decor(model, "Top", at0 * CFrame.new(0, TABLE_TOP - 0.1, 0), Vector3.new(2.4, 0.2, 1.4), theme.wainscot, M.Wood).CastShadow =
+			true
+		for _, x in { -1, 1 } do
+			for _, z in { -0.5, 0.5 } do
+				decor(model, "Leg", at0 * CFrame.new(x, 1.25, z), Vector3.new(0.18, 2.5, 0.18), theme.wainscot, M.Wood)
+			end
 		end
-	end
+	end, { variant = variant })
+	local top = cf * CFrame.new(0, TABLE_TOP, 0)
 	if rng() < 0.5 then
-		-- Table lamp.
-		decor(model, "LampBase", cf * CFrame.new(0, 3.1, 0), Vector3.new(0.5, 0.8, 0.5), theme.brass, M.Metal)
-		local shade = Kit.cylinder(model, {
-			name = "LampShade",
-			cf = cf * CFrame.new(0, 3.9, 0) * CFrame.Angles(0, 0, math.pi / 2),
-			size = Vector3.new(0.8, 1.3, 1.3),
-			color = Color3.fromRGB(250, 226, 180),
-			material = M.Fabric,
-		})
-		shade:AddTag("RN_Lamp")
-		Kit.pointLight(shade, theme.lamp, 0.6, 8, false)
+		-- Table lamp (its light stays outside the slot).
+		Assets.place(parent, "tableLamp", top, function(slot: Model, at0: CFrame)
+			decor(slot, "LampBase", at0 * CFrame.new(0, 0.4, 0), Vector3.new(0.5, 0.8, 0.5), theme.brass, M.Metal)
+			Kit.cylinder(slot, {
+				name = "LampShade",
+				cf = at0 * CFrame.new(0, 1.2, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				size = Vector3.new(0.8, 1.3, 1.3),
+				color = Color3.fromRGB(250, 226, 180),
+				material = M.Fabric,
+			})
+		end, { variant = variant })
+		local rig = lightRig(parent, "TableLampLight", top * CFrame.new(0, 1.2, 0))
+		Kit.pointLight(rig, theme.lamp, 0.6, 8, false)
 	else
 		-- Vase with flowers.
-		Kit.cylinder(model, {
-			name = "Vase",
-			cf = cf * CFrame.new(0, 3.2, 0) * CFrame.Angles(0, 0, math.pi / 2),
-			size = Vector3.new(1, 0.7, 0.7),
-			color = Color3.fromRGB(70, 110, 170),
-			material = M.Glass,
-		})
-		for i = 1, 3 do
-			local a = i * 2.1
-			Kit.ball(model, {
-				name = "Flower",
-				cf = cf * CFrame.new(math.cos(a) * 0.3, 4.05 + i * 0.08, math.sin(a) * 0.3),
-				size = Vector3.new(0.45, 0.45, 0.45),
-				color = pick(
-					rng,
-					{ Color3.fromRGB(240, 90, 120), Color3.fromRGB(250, 220, 90), Color3.fromRGB(240, 240, 255) }
-				),
-				material = M.SmoothPlastic,
+		local flowerRng = subRng(rng)
+		Assets.place(parent, "flowerVase", top, function(slot: Model, at0: CFrame)
+			Kit.cylinder(slot, {
+				name = "Vase",
+				cf = at0 * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				size = Vector3.new(1, 0.7, 0.7),
+				color = Color3.fromRGB(70, 110, 170),
+				material = M.Glass,
 			})
-		end
+			for i = 1, 3 do
+				local a = i * 2.1
+				Kit.ball(slot, {
+					name = "Flower",
+					cf = at0 * CFrame.new(math.cos(a) * 0.3, 1.35 + i * 0.08, math.sin(a) * 0.3),
+					size = Vector3.new(0.45, 0.45, 0.45),
+					color = pick(
+						flowerRng,
+						{ Color3.fromRGB(240, 90, 120), Color3.fromRGB(250, 220, 90), Color3.fromRGB(240, 240, 255) }
+					),
+					material = M.SmoothPlastic,
+				})
+			end
+		end, { variant = variant })
 	end
 end
 
-function Props.luggageCart(parent: Instance, cf: CFrame, theme: Theme, rng: Rng)
+function Props.luggageCart(parent: Instance, cf: CFrame, theme: Theme, rng: Rng): Model
+	local variant = variantOf(rng)
+	local bagRng = subRng(rng)
+	return Assets.place(parent, "luggageCart", cf, function(slot: Model, at0: CFrame)
+		Props.luggageCartFallback(slot, at0, theme, bagRng)
+	end, { variant = variant })
+end
+
+function Props.luggageCartFallback(parent: Instance, cf: CFrame, theme: Theme, rng: Rng)
 	local model = Kit.model(parent, "LuggageCart")
 	decor(model, "Deck", cf * CFrame.new(0, 0.9, 0), Vector3.new(4.6, 0.3, 2.4), Color3.fromRGB(150, 30, 40), M.Carpet).CastShadow =
 		true
@@ -526,6 +658,12 @@ function Props.luggageCart(parent: Instance, cf: CFrame, theme: Theme, rng: Rng)
 end
 
 function Props.wetFloorSign(parent: Instance, cf: CFrame)
+	Assets.place(parent, "wetFloorSign", cf, function(slot: Model, at0: CFrame)
+		Props.wetFloorSignFallback(slot, at0)
+	end)
+end
+
+function Props.wetFloorSignFallback(parent: Instance, cf: CFrame)
 	local model = Kit.model(parent, "WetFloor")
 	local yellow = Color3.fromRGB(250, 210, 40)
 	local front = decor(
@@ -545,6 +683,12 @@ function Props.wetFloorSign(parent: Instance, cf: CFrame)
 end
 
 function Props.fireExtinguisher(parent: Instance, cf: CFrame)
+	Assets.place(parent, "fireExtinguisher", cf, function(slot: Model, at0: CFrame)
+		Props.fireExtinguisherFallback(slot, at0)
+	end)
+end
+
+function Props.fireExtinguisherFallback(parent: Instance, cf: CFrame)
 	local model = Kit.model(parent, "Extinguisher")
 	Kit.cylinder(model, {
 		name = "Body",
@@ -618,6 +762,12 @@ function Props.rug(parent: Instance, cf: CFrame, size: Vector2, base: Color3, bo
 end
 
 function Props.umbrellaStand(parent: Instance, cf: CFrame, theme: Theme)
+	Assets.place(parent, "umbrellaStand", cf, function(slot: Model, at0: CFrame)
+		Props.umbrellaStandFallback(slot, at0, theme)
+	end)
+end
+
+function Props.umbrellaStandFallback(parent: Instance, cf: CFrame, theme: Theme)
 	local model = Kit.model(parent, "UmbrellaStand")
 	Kit.cylinder(model, {
 		name = "Stand",

@@ -768,39 +768,46 @@ local function buildCart(s: Session, id: string, info: any, theme: Palette.Theme
 	model.WorldPivot = tileCF
 	model.Parent = s.folder
 	holder:Destroy()
+	-- One shadow from the biggest piece (the cart moves every frame; small parts would only cost).
+	local biggest: BasePart? = nil
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.CanCollide = false
 			d.CanQuery = false
 			d.CanTouch = false
-			-- The deck carries the shadow; the cart's small parts move every frame and would not add to it.
-			d.CastShadow = d.Name == "Deck"
+			d.CastShadow = false
+			if not biggest or d.Size.Magnitude > (biggest :: BasePart).Size.Magnitude then
+				biggest = d
+			end
 		end
 	end
-	local deck = model:FindFirstChild("Deck")
-	local frost: ParticleEmitter? = nil
-	if deck and deck:IsA("BasePart") then
-		local a = Instance.new("Attachment")
-		a.Parent = deck
-		local e = Vfx.emitter(a, "frost", { Rate = 14 })
-		e.Enabled = false
-		frost = e
-		-- A warning light so carts read as hazards even in the dark.
-		local beacon = visualPart(
-			model,
-			"Beacon",
-			Vector3.new(0.5, 0.5, 0.5),
-			deck.CFrame * CFrame.new(0, 5.4, 0),
-			Color3.fromRGB(255, 120, 40),
-			Enum.Material.Neon
-		)
-		beacon.Shape = Enum.PartType.Ball
-		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 140, 60)
-		light.Range = 10
-		light.Brightness = 1
-		light.Shadows = false
-		light.Parent = beacon
+	if biggest then
+		(biggest :: BasePart).CastShadow = true
+	end
+	-- A warning light on top (whatever model the cart is), so carts read as hazards even in the dark; frost
+	-- drifts from it while the cart is chilled.
+	local boxCF, boxSize = model:GetBoundingBox()
+	local beacon = visualPart(
+		model,
+		"Beacon",
+		Vector3.new(0.5, 0.5, 0.5),
+		CFrame.new(boxCF.Position + Vector3.new(0, boxSize.Y / 2 + 0.35, 0)),
+		Color3.fromRGB(255, 120, 40),
+		Enum.Material.Neon
+	)
+	beacon.Shape = Enum.PartType.Ball
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 140, 60)
+	light.Range = 10
+	light.Brightness = 1
+	light.Shadows = false
+	light.Parent = beacon
+	local a = Instance.new("Attachment")
+	a.Position = Vector3.new(0, -boxSize.Y / 2, 0)
+	a.Parent = beacon
+	local frost: ParticleEmitter? = Vfx.emitter(a, "frost", { Rate = 14 })
+	if frost then
+		(frost :: ParticleEmitter).Enabled = false
 	end
 	s.carts[id] = { id = id, model = model, tileCF = tileCF, range = info.range, speed = info.speed, frost = frost }
 end

@@ -268,7 +268,36 @@ local function track(tag: string, add: (Instance) -> (), remove: (Instance) -> (
 	CollectionService:GetInstanceRemovedSignal(tag):Connect(remove)
 end
 
+-- Models that finish loading on the server after this client built its own slots (moving carts) replace
+-- those slots' fallbacks here too.
+local function watchAssets()
+	local Assets = require(Shared.World.Assets)
+	local function onKey(child: Instance)
+		task.defer(function()
+			Assets.upgrade(child.Name, true)
+		end)
+	end
+	local function attach(folder: Instance)
+		folder.ChildAdded:Connect(onKey)
+	end
+	local existing = ReplicatedStorage:FindFirstChild(Assets.FOLDER)
+	if existing then
+		attach(existing)
+	else
+		local connection: RBXScriptConnection? = nil
+		connection = ReplicatedStorage.ChildAdded:Connect(function(child: Instance)
+			if child.Name == Assets.FOLDER then
+				attach(child)
+				if connection then
+					connection:Disconnect()
+				end
+			end
+		end)
+	end
+end
+
 function WorldController.start()
+	watchAssets()
 	track("RN_Door", addDoor, removeDoor)
 	track("RN_Lamp", addLamp, removeLamp)
 	track("RN_SocketMarker", addMarker, removeMarker)

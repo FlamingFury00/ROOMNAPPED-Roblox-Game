@@ -1,9 +1,15 @@
 # Content ownership record (A10)
 
 This record lists where every asset in the ROOMNAPPED release comes from and why we are allowed to use it.
-Release rule: **nothing ships unless it is original, Roblox-owned, bundled with the Roblox client, or from
-a Roblox licensed partner library.** No marketplace models, no third-party scripts and no community
-uploads are used.
+Release rules:
+
+* **Code, audio and animations** are original, Roblox-owned, bundled with the Roblox client or from a
+  Roblox licensed partner library. No third-party scripts ever run, and no community audio is used.
+* **Furniture models, images and avatar items** may also come from the public Roblox Creator Store and
+  catalog when they are free, carry no audio, and are not modelled on a brand, a film or another game.
+  Models are loaded at runtime with `AssetService:LoadAssetAsync` (which returns them sandboxed) and the
+  loader deletes every script, sound, GUI, prompt and constraint before anything is shown
+  (`src/server/Services/AssetLibraryService.luau`). Every pick is listed below with its creator.
 
 Last reviewed: 2026-10-21, against Roblox client `version-9ac8595712b447a7` (0.744).
 
@@ -12,7 +18,9 @@ Last reviewed: 2026-10-21, against Roblox client `version-9ac8595712b447a7` (0.7
 | Asset type | Source | Permission |
 | --- | --- | --- |
 | Code | Written for this project (`src/`, `tests/`, `tools/`) | Original |
-| 3D geometry (hotel kit, rooms, props, Caretaker, lobby, elevator) | Built procedurally from Roblox `Part`s, `WedgePart`s and `CornerWedgePart`s by `src/shared/World/*` and `src/client/Controllers/CaretakerView.luau` | Original; no meshes, models or packages are inserted |
+| 3D architecture (hotel kit, rooms, lobby, elevator) | Built procedurally from Roblox `Part`s, `WedgePart`s and `CornerWedgePart`s by `src/shared/World/*` | Original |
+| Furniture and props | Free Creator Store models, loaded at runtime (table below); every one has a procedural fallback built the same way as the architecture | Free Creator Store assets; scripts and audio stripped |
+| The Caretaker | An R15 character dressed from catalog items (table below), animated with Roblox-made animation packs; the part-built bellhop in `CaretakerView.luau` is the fallback | Catalog items in an NPC's `HumanoidDescription`; Roblox animations |
 | Materials | Roblox built-in `Enum.Material` values | Engine feature |
 | UI icons | Composed from `Frame`s, `UICorner`s and `UIStroke`s in `src/client/UI/Icons.luau` | Original |
 | Images and particles | Textures bundled with the Roblox client (`rbxasset://textures/...`, list below) | Shipped with every Roblox client; referenced in place, never re-uploaded |
@@ -20,6 +28,66 @@ Last reviewed: 2026-10-21, against Roblox client `version-9ac8595712b447a7` (0.7
 | Audio | 67 cues from the Roblox Creator Store: Roblox-owned audio and Roblox's licensed partner libraries ProSoundEffects and APM Music (table below) | Free to use in Roblox experiences; no synthesized or self-uploaded audio |
 | Player avatars | `rbxthumb://` headshots and the players' own characters | Roblox platform feature |
 | Lighting and sky | Engine `Lighting`, `Atmosphere`, post effects and the default sky | Engine feature |
+
+## Creator Store models
+
+Loaded by `AssetLibraryService` from `src/shared/Content/AssetManifest.luau`. Each was picked from contact
+sheets of public, free Creator Store results (`tools/assets/scout.py`) on 2026-10-21 and checked for: free,
+no audio, no brand or game likeness, a triangle budget (6,000 for small props, 20,000 for the hero sofa and
+chandeliers) and a thumbnail showing the front. Loading needs the experience setting **Security > Allow
+Loading Third Party Assets**, which the place file already carries (`AssetService.AllowInsertFreeAssets`
+in `default.project.json`).
+
+| Prop key | Asset ids | Name (creator) |
+| --- | --- | --- |
+| armchair | 1253590181, 138623098643136 | cozy leather chair (rysida); Green Chair (pipepedro9 / Parkour Games Fans) |
+| sofa | 80597511587533, 11290198233 | Luxury Sofa (FouDDy); Couch (Old Sofa) (BlkMatt) |
+| bench | 83282298311815, 16017612847 | Kiester Bench (MACKIEJ56); Bench_White (DEV_MohamedTarek) |
+| sideTable | 11930694315, 8544032055 | #antique #furniture (BRA1122555); small_table_wood (DerRuecken) |
+| coffeeTable | 9589128284 | Coffee Table (turohabaneero) |
+| grandfatherClock | 13534278784, 18985183180 | Old Clock (zzz_1551); Grandfather Clock (Solvyra) |
+| wallClock | 125444652358924, 72312535411205 | Mantle Antique Wall Clock, Pendulum Wall Clock (chatillo201017) |
+| mirror | 16017770957 | Ornate Mirror (DEV_MohamedTarek) |
+| keyRack | 4826812656 | Keybox (LIAS FAN GROUP) |
+| wallSconce | 2416484976, 8803156531 | Old Wall Lamp (Festivereinhard2); Wall lantern (Cholin178) |
+| ceilingLamp | 475636989 | Ceiling Light (wakydawg119) |
+| chandelier | 17370166704, 10627959279 | ChandelierPBR (GT_oli); Chandelier (OffByByte) |
+| floorLamp | 16276432775 | Lamp (MissMariaAntoinette) |
+| tableLamp | 8763605702, 15020876796 | Table Lamp (Cholin178); A Banker's Favorite Lamp (Thetijdmjd) |
+| bigPlant | 8704290264, 10758068779, 8569543269 | Potted Plant (d_ytme); Potted Plant (PuggleyCake); Indoor Tree (BN895) |
+| smallPlant | 87801222295603, 8259072716, 14924964084 | Plant Tree (CancelGrav); Plant Decoration (noe_bsc); SolariumPottedPlant_E (Milliankah) |
+| flowerVase | 2060720336, 14924836767, 13558787444 | Flower Vase (UnixeI); Vase_w_Flowers_LG (Milliankah); hydrangea urn (exoopss) |
+| receptionDesk | 2653577393 | Bar Counter (Gypherviz) |
+| deskBell | 4948213579 | Little tiny bell (ACRG22) |
+| luggageCart | 11498050741, 15040967563 | Luggage_Cart (Straysnack); gold luggage cart (taleshka666) |
+| umbrellaStand | 140669320531443 | Umbrella Holder (Blaye1100) |
+| statue | 15603344661, 85011138302601 | realistic angel statue (dbbooq); Asklepios_LG (OB3Y_Y) |
+| rug | 11829259774 | Realistic Rug (caductis) |
+| fireExtinguisher | 14003556037, 5307188544 | Extinguisher (zzz_1551); Fire extinguisher (acxirv) |
+| wetFloorSign | 95220285653886, 16945975184 | Free Wet Floor Sign - Procedural Floors (At0_mik); Wet Floor Sign (skrigliets) |
+
+Rejected on likeness grounds although they looked right: re-uploads of props from DOORS, FNaF, Hello
+Neighbor, Piggy and SCP, branded vending machines and the Shining-pattern carpet.
+
+## The Caretaker
+
+Built by `Players:CreateHumanoidModelFromDescriptionAsync` from `src/shared/Content/CaretakerLook.luau`
+(catalog items work in an NPC's description whether or not anyone owns them). If a piece fails the server
+retries with the Roblox-made fallbacks, then with plain body colours.
+
+| Piece | Asset id | Name (creator) |
+| --- | --- | --- |
+| Shirt | 10126112559 | Bellhop [+] (Eclipse's Trashbin) |
+| Pants | 10126117868 | Bellhop [-] (Eclipse's Trashbin) |
+| Dynamic head and mood | 74871478197941, 85699644348712 | The Friendly Eviscerator - Head (Roblox) |
+| Hat | 84923485112253 | Bellhop Hat (Farington Industries) |
+| Hair | 7611015444 | Gray Grandpa Balding Old Man Hair (DawsonDelRey) |
+| Neck | 4602807964 | Black Bow Tie (WhoToTrus) |
+| Waist | 8466492470 | Keyring (Reverse_Polarity) |
+| Fallback head, mood, hat | 13692947484, 13692949813, 116778751 | Stare - Head, Marching Band Cap (Roblox) |
+
+Animations are Roblox's own R15 packs (Elder, Werewolf, SitV2, R15 emotes; ids in
+`src/client/Visual/CaretakerHuman.luau`), which play in every experience.
 
 ## Bundled client textures
 
@@ -140,5 +208,7 @@ Owners: APMOfficial (9), ProSoundEffects (38), Roblox (21).
 2. Play each music and loop cue once in a published test place; replace any id that fails to load (the
    runtime falls back to the alternates and logs a warning, so check the server and client logs).
 3. Search `src/` for `rbxassetid://` and `rbxasset://` and confirm every hit is listed above.
-4. Confirm no `Model`, `MeshPart`, `Decal`, `Texture` or package has been inserted into the place by hand
+4. Start a published test server and read the `[Assets]` line in the server log: it says how many props
+   loaded and which keys kept their procedural fallback. Replace any id that no longer loads.
+5. Confirm no `Model`, `MeshPart`, `Decal`, `Texture` or package has been inserted into the place by hand
    (the place is built entirely by Rojo from this repository).

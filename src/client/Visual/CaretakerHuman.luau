@@ -171,18 +171,37 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 	lanternLight.Brightness = 1.6
 	lanternLight.Shadows = false -- a moving shadowed light redraws its shadow map every frame
 	lanternLight.Parent = lantern
-	local ring = prop(model, "KeyRing", Vector3.new(0.1, 0.7, 0.7), Color3.fromRGB(232, 184, 74), Enum.Material.Foil)
-	ring.Shape = Enum.PartType.Cylinder
-	weldTo(ring, leftHand, CFrame.new(0, -0.55, 0))
-	for i = 0, 2 do
-		local key = prop(model, "Key", Vector3.new(0.1, 0.5, 0.2), Color3.fromRGB(232, 184, 74), Enum.Material.Foil)
-		weldTo(key, ring, CFrame.new(0, -0.45 - (i % 2) * 0.08, -0.12 + i * 0.12) * CFrame.Angles(0.3 * i, 0, 0.2))
+	-- Keys in the left hand, unless the outfit already hangs a key ring at the belt.
+	local wearsKeys = false
+	for _, d in model:GetChildren() do
+		if d:IsA("Accessory") and d.AccessoryType == Enum.AccessoryType.Waist then
+			wearsKeys = true
+		end
+	end
+	local extras: { BasePart } = { lanternFrame, lantern }
+	if not wearsKeys then
+		local ring =
+			prop(model, "KeyRing", Vector3.new(0.1, 0.7, 0.7), Color3.fromRGB(232, 184, 74), Enum.Material.Foil)
+		ring.Shape = Enum.PartType.Cylinder
+		weldTo(ring, leftHand, CFrame.new(0, -0.55, 0))
+		table.insert(extras, ring)
+		for i = 0, 2 do
+			local key = prop(model, "Key", Vector3.new(0.1, 0.5, 0.2), Color3.fromRGB(232, 184, 74), Enum.Material.Foil)
+			weldTo(key, ring, CFrame.new(0, -0.45 - (i % 2) * 0.08, -0.12 + i * 0.12) * CFrame.Angles(0.3 * i, 0, 0.2))
+			table.insert(extras, key)
+		end
 	end
 	local headSize = head.Size
+	-- Glowing pupils at eye level: the face-front attachment marks it on every head shape (glasses hang
+	-- there); the classic head's eyes sit a little above its centre.
+	local faceFront = head:FindFirstChild("FaceFrontAttachment")
+	local eyeLine = if faceFront and faceFront:IsA("Attachment")
+		then faceFront.CFrame * CFrame.new(0, headSize.Y * 0.03, -0.02)
+		else CFrame.new(0, headSize.Y * 0.08, -headSize.Z * 0.5 - 0.01)
 	local eyes: { BasePart } = {}
 	for _, side in { -1, 1 } do
-		local eye = prop(model, "Eye", Vector3.new(0.18, 0.12, 0.06), Color3.fromRGB(255, 240, 180), Enum.Material.Neon)
-		weldTo(eye, head, CFrame.new(side * headSize.X * 0.18, headSize.Y * 0.08, -headSize.Z * 0.5 - 0.01))
+		local eye = prop(model, "Eye", Vector3.new(0.16, 0.12, 0.08), Color3.fromRGB(255, 240, 180), Enum.Material.Neon)
+		weldTo(eye, head, eyeLine * CFrame.new(side * headSize.X * 0.17, 0, 0))
 		table.insert(eyes, eye)
 	end
 	local eyeLight = Instance.new("PointLight")
@@ -191,7 +210,7 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 	eyeLight.Brightness = 0.8
 	eyeLight.Shadows = false
 	eyeLight.Parent = head
-	for _, p in { lanternFrame, lantern, ring } do
+	for _, p in extras do
 		table.insert(parts, p)
 	end
 	for _, p in eyes do
