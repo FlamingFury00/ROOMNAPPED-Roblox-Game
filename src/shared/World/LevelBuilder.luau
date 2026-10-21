@@ -578,26 +578,47 @@ local function floorProp(ctx: Ctx, tile: TileInfo, side: string, a: number)
 	end
 	local proxySize: Vector3
 	local cf: CFrame
-	if roll < 0.3 then
-		cf = standing(1.8)
-		Props.bench(ctx.decor, cf, ctx.theme)
-		proxySize = Vector3.new(4.4, 3.6, 1.9)
-	elseif roll < 0.55 then
+	local variant = math.floor(roll * 997) + 1
+	if roll < 0.22 then
+		cf = standing(1.9)
+		Props.bench(ctx.decor, cf, ctx.theme, variant)
+		proxySize = Vector3.new(4.6, 2.4, 1.9)
+	elseif roll < 0.4 then
 		cf = standing(1.4)
 		Props.sideTable(ctx.decor, cf, ctx.theme, ctx.rng)
 		proxySize = Vector3.new(2.4, 2.7, 1.4)
-	elseif roll < 0.75 then
+	elseif roll < 0.56 then
 		cf = standing(2)
 		Props.plant(ctx.decor, cf, ctx.theme, ctx.rng)
 		proxySize = Vector3.new(1.8, 2, 1.8)
-	elseif roll < 0.9 then
+	elseif roll < 0.66 then
 		cf = standing(2.4)
 		Props.luggageCart(ctx.decor, cf, ctx.theme, ctx.rng)
 		proxySize = Vector3.new(4.6, 6, 2.4)
-	else
-		cf = standing(1)
+	elseif roll < 0.72 then
+		cf = standing(1.2)
 		Props.umbrellaStand(ctx.decor, cf, ctx.theme)
-		proxySize = Vector3.new(1, 2.4, 1)
+		proxySize = Vector3.new(1.8, 2.4, 1.2)
+	elseif roll < 0.79 then
+		cf = standing(2.8)
+		Props.vendingMachine(ctx.decor, cf, ctx.theme, variant)
+		proxySize = Vector3.new(3.4, 7, 2.8)
+	elseif roll < 0.85 then
+		cf = standing(1.6)
+		Props.waterCooler(ctx.decor, cf)
+		proxySize = Vector3.new(1.6, 5, 1.6)
+	elseif roll < 0.9 then
+		cf = standing(1.6)
+		Props.trashBin(ctx.decor, cf, ctx.theme)
+		proxySize = Vector3.new(1.6, 2.4, 1.6)
+	elseif roll < 0.96 then
+		cf = standing(2.2)
+		Props.roomServiceCart(ctx.decor, cf, ctx.theme, variant)
+		proxySize = Vector3.new(3.4, 3.2, 2.2)
+	else
+		cf = standing(2.2)
+		Props.suitcaseStack(ctx.decor, cf, variant)
+		proxySize = Vector3.new(2.6, 4.2, 2.2)
 	end
 	-- One invisible collision proxy per floor prop keeps physics cheap (S27).
 	Kit.part(ctx.structure, {

@@ -804,6 +804,189 @@ function Props.umbrellaStandFallback(parent: Instance, cf: CFrame, theme: Theme)
 	end
 end
 
+-- Corridor extras -----------------------------------------------------------------------------------
+-- `cf` = bottom centre on the floor, LookVector facing the corridor (the fallback's front is +z in `at`).
+
+function Props.vendingMachine(parent: Instance, cf: CFrame, theme: Theme, variant: number?)
+	Assets.place(parent, "vendingMachine", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "VendingMachine")
+		decor(
+			model,
+			"Cabinet",
+			at0 * CFrame.new(0, 3.4, 0),
+			Vector3.new(3.2, 6.8, 2.6),
+			Color3.fromRGB(110, 70, 44),
+			M.Wood
+		).CastShadow =
+			true
+		local window = decor(
+			model,
+			"Window",
+			at(at0, -0.35, 4, 1.32),
+			Vector3.new(2.1, 3.8, 0.08),
+			Color3.fromRGB(180, 220, 230),
+			M.Glass
+		)
+		window.Transparency = 0.35
+		for row = 0, 3 do
+			decor(
+				model,
+				"Shelf",
+				at(at0, -0.35, 2.4 + row * 0.95, 1.05),
+				Vector3.new(2, 0.08, 0.6),
+				Color3.fromRGB(60, 60, 64),
+				M.Metal
+			)
+			for i = 0, 2 do
+				decor(
+					model,
+					"Snack",
+					at(at0, -1 + i * 0.65, 2.68 + row * 0.95, 1.05),
+					Vector3.new(0.45, 0.45, 0.3),
+					Color3.fromHSV(((row * 3 + i) * 0.13) % 1, 0.65, 0.95),
+					M.SmoothPlastic
+				)
+			end
+		end
+		decor(
+			model,
+			"Keypad",
+			at(at0, 1.15, 4.2, 1.32),
+			Vector3.new(0.6, 1.4, 0.08),
+			Color3.fromRGB(40, 40, 44),
+			M.Metal
+		)
+		decor(model, "Tray", at(at0, -0.35, 1.2, 1.32), Vector3.new(2, 0.6, 0.08), Color3.fromRGB(20, 20, 22), M.Metal)
+		decor(model, "Marquee", at(at0, 0, 6.3, 1.32), Vector3.new(2.8, 0.5, 0.06), theme.lamp, M.Neon).CastShadow =
+			false
+	end, { variant = variant })
+end
+
+function Props.waterCooler(parent: Instance, cf: CFrame)
+	Assets.place(parent, "waterCooler", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "WaterCooler")
+		decor(
+			model,
+			"Body",
+			at0 * CFrame.new(0, 1.7, 0),
+			Vector3.new(1.3, 3.4, 1.3),
+			Color3.fromRGB(236, 238, 240),
+			M.SmoothPlastic
+		).CastShadow =
+			true
+		decor(
+			model,
+			"Taps",
+			at(at0, 0, 2.6, 0.7),
+			Vector3.new(0.7, 0.3, 0.12),
+			Color3.fromRGB(60, 120, 220),
+			M.SmoothPlastic
+		)
+		local bottle = Kit.cylinder(model, {
+			name = "Bottle",
+			cf = at0 * CFrame.new(0, 4.05, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(1.3, 1.1, 1.1),
+			color = Color3.fromRGB(120, 180, 240),
+			material = M.Glass,
+		})
+		bottle.Transparency = 0.35
+	end)
+end
+
+function Props.trashBin(parent: Instance, cf: CFrame, theme: Theme)
+	Assets.place(parent, "trashBin", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "TrashBin")
+		Kit.cylinder(model, {
+			name = "Bin",
+			cf = at0 * CFrame.new(0, 1.1, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(2.2, 1.4, 1.4),
+			color = Color3.fromRGB(40, 70, 50),
+			material = M.Metal,
+			shadow = true,
+		})
+		Kit.cylinder(model, {
+			name = "Rim",
+			cf = at0 * CFrame.new(0, 2.22, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(0.12, 1.5, 1.5),
+			color = theme.brass,
+			material = M.Foil,
+		})
+	end)
+end
+
+function Props.roomServiceCart(parent: Instance, cf: CFrame, theme: Theme, variant: number?)
+	Assets.place(parent, "roomServiceCart", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "ServiceCart")
+		for _, y in { 1.1, 2.9 } do
+			decor(model, "Tier", at0 * CFrame.new(0, y, 0), Vector3.new(3.2, 0.14, 1.9), theme.wainscot, M.Wood).CastShadow =
+				true
+		end
+		for _, x in { -1.45, 1.45 } do
+			for _, z in { -0.8, 0.8 } do
+				decor(model, "Post", at0 * CFrame.new(x, 1.5, z), Vector3.new(0.12, 3, 0.12), theme.brass, M.Foil)
+			end
+		end
+		decor(
+			model,
+			"Cloth",
+			at0 * CFrame.new(0, 2.6, 0),
+			Vector3.new(3.3, 0.6, 2),
+			Color3.fromRGB(246, 242, 232),
+			M.Fabric
+		)
+		Kit.ellipsoid(model, {
+			name = "Cloche",
+			cf = at0 * CFrame.new(0.4, 3.25, 0),
+			size = Vector3.new(1.4, 0.9, 1.4),
+			color = Color3.fromRGB(214, 218, 224),
+			material = M.Foil,
+		})
+	end, { variant = variant })
+end
+
+function Props.suitcaseStack(parent: Instance, cf: CFrame, variant: number?)
+	Assets.place(parent, "suitcaseStack", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "SuitcaseStack")
+		local y = 0
+		local leather = { Color3.fromRGB(120, 72, 44), Color3.fromRGB(80, 50, 36), Color3.fromRGB(150, 100, 60) }
+		for i, spec in { Vector3.new(2.4, 1.2, 1.8), Vector3.new(2, 1, 1.6), Vector3.new(1.6, 0.9, 1.3) } do
+			local case = decor(
+				model,
+				"Case",
+				at0 * CFrame.new(0, y + spec.Y / 2, 0) * CFrame.Angles(0, (i - 2) * 0.15, 0),
+				spec,
+				leather[i],
+				M.Leather
+			)
+			case.CastShadow = true
+			y += spec.Y
+		end
+	end, { variant = variant })
+end
+
+function Props.trafficCone(parent: Instance, cf: CFrame)
+	Assets.place(parent, "trafficCone", cf, function(slot: Model, at0: CFrame)
+		local model = Kit.model(slot, "Cone")
+		decor(
+			model,
+			"Base",
+			at0 * CFrame.new(0, 0.08, 0),
+			Vector3.new(1.2, 0.16, 1.2),
+			Color3.fromRGB(30, 30, 30),
+			M.Rubber
+		)
+		for i, spec in { { 0.45, 1.0, 0.9 }, { 1.0, 0.75, 0.6 }, { 1.5, 0.5, 0.45 } } do
+			Kit.cylinder(model, {
+				name = "Cone" .. i,
+				cf = at0 * CFrame.new(0, spec[1], 0) * CFrame.Angles(0, 0, math.pi / 2),
+				size = Vector3.new(spec[3], spec[2], spec[2]),
+				color = if i == 2 then Color3.fromRGB(245, 245, 245) else Color3.fromRGB(255, 110, 30),
+				material = M.SmoothPlastic,
+			})
+		end
+	end)
+end
+
 function Props.signBoard(parent: Instance, cf: CFrame, theme: Theme, text: string, width: number, height: number)
 	local board = decor(parent, "SignBoard", at(cf, 0, 0, 0.1), Vector3.new(width, height, 0.2), theme.wainscot, M.Wood)
 	decor(parent, "SignTrim", at(cf, 0, 0, 0.05), Vector3.new(width + 0.3, height + 0.3, 0.1), theme.brass, M.Foil)

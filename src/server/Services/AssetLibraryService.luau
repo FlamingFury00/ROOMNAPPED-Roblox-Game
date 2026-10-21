@@ -306,6 +306,8 @@ local function normalise(model: Model, entry: AssetManifest.Entry, id: number, t
 	local pivot: CFrame
 	if entry.mount == "wall" then
 		pivot = CFrame.new(c.X, c.Y, c.Z + s.Z / 2)
+	elseif entry.mount == "centre" then
+		pivot = CFrame.new(c)
 	elseif entry.mount == "ceiling" then
 		pivot = CFrame.new(c.X, c.Y + s.Y / 2, c.Z)
 	else

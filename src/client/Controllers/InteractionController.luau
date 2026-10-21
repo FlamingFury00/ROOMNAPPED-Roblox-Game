@@ -221,6 +221,7 @@ end
 -- Teammate hold rings -----------------------------------------------------------------------------------------
 
 type RemoteHold = {
+	kind: string,
 	gui: BillboardGui,
 	anchor: Attachment,
 	ring: Components.HoldHandle,
@@ -279,12 +280,22 @@ local function startRemoteHold(userKey: string, kind: string, target: string)
 	})
 	Icons.make(if kind == "capture" then "suitcase" else "heart", C.white, C.ink).Parent = holder
 	remoteHolds[userKey] = {
+		kind = kind,
 		gui = gui,
 		anchor = anchor,
 		ring = ring,
 		started = os.clock(),
 		duration = if kind == "capture" then GameConfig.Capture.HoldSeconds else GameConfig.Revive.HoldSeconds,
 	}
+end
+
+-- The hold a player is doing right now ("revive", "capture" ...), or nil: what their body should look like.
+function InteractionController.holdKind(player: Player): string?
+	if player == localPlayer then
+		return if hold then (hold :: Hold).kind else nil
+	end
+	local remote = remoteHolds[tostring(player.UserId)]
+	return if remote then remote.kind else nil
 end
 
 -- Resolution ------------------------------------------------------------------------------------------------

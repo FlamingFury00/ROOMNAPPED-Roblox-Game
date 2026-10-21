@@ -29,6 +29,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local Geometry = require(Shared.World.Geometry)
 local Palette = require(Shared.World.Palette)
 local Props = require(Shared.World.Props)
+local Assets = require(Shared.World.Assets)
 local EffectModel = require(Shared.Logic.EffectModel)
 local CartTimeline = require(Shared.Logic.CartTimeline)
 local MathUtil = require(Shared.Util.MathUtil)
@@ -99,7 +100,7 @@ type VineVis = {
 
 type CartVis = { id: string, model: Model, tileCF: CFrame, range: number, speed: number, frost: ParticleEmitter? }
 type CrateVis = { real: BasePart, visual: BasePart, loop: LoopHandle? }
-type KeyVis = { id: string, model: Model, base: Vector3, taken: boolean, seed: number }
+type KeyVis = { id: string, model: Model, glow: BasePart, base: Vector3, taken: boolean, seed: number }
 type LeverVis = { part: BasePart, base: CFrame, lamp: Part, id: string }
 
 type Session = {
@@ -691,20 +692,19 @@ end
 
 -- Keys ------------------------------------------------------------------------------------------------------
 
-local function buildKey(s: Session, anchor: BasePart)
-	local id = anchor:GetAttribute("KeyId") :: string
-	local model = Instance.new("Model")
-	model.Name = "Key_" .. id
-	local gold = Color3.fromRGB(255, 206, 70)
-	local function piece(name: string, size: Vector3, cf: CFrame, shape: Enum.PartType?): Part
-		local p = visualPart(model, name, size, cf, gold, Enum.Material.Foil)
+local KEY_GOLD = Color3.fromRGB(255, 206, 70)
+
+-- The procedural key (until, or unless, the curated golden key model loads), built around `cf`.
+local function keyFallback(slot: Model, cf: CFrame)
+	local function piece(name: string, size: Vector3, offset: CFrame, shape: Enum.PartType?): Part
+		local p = visualPart(slot, name, size, cf * offset, KEY_GOLD, Enum.Material.Foil)
 		p.Reflectance = 0.25
 		if shape then
 			p.Shape = shape
 		end
 		return p
 	end
-	local bow = piece(
+	piece(
 		"Bow",
 		Vector3.new(0.25, 1.1, 1.1),
 		CFrame.new(0, 0.55, 0) * CFrame.Angles(0, math.pi / 2, 0),
@@ -713,20 +713,40 @@ local function buildKey(s: Session, anchor: BasePart)
 	piece("Shaft", Vector3.new(0.22, 1.5, 0.22), CFrame.new(0, -0.6, 0))
 	piece("Tooth1", Vector3.new(0.45, 0.2, 0.18), CFrame.new(0.3, -1.2, 0))
 	piece("Tooth2", Vector3.new(0.35, 0.2, 0.18), CFrame.new(0.25, -0.85, 0))
+end
+
+local function buildKey(s: Session, anchor: BasePart)
+	local id = anchor:GetAttribute("KeyId") :: string
+	local base = anchor.CFrame.Position
+	local slot = Assets.place(s.folder, "goldenKey", CFrame.new(base), keyFallback)
+	slot.Name = "Key_" .. id
+	for _, d in slot:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+		end
+	end
+	-- Glow and sparkles ride on their own part, so swapping the model in never removes them.
+	local glowPart = visualPart(
+		s.folder,
+		"KeyGlow_" .. id,
+		Vector3.new(0.2, 0.2, 0.2),
+		CFrame.new(base),
+		KEY_GOLD,
+		Enum.Material.SmoothPlastic
+	)
+	glowPart.Transparency = 1
 	local glow = Instance.new("PointLight")
-	glow.Color = gold
+	glow.Color = KEY_GOLD
 	glow.Range = 9
 	glow.Brightness = 1.2
 	glow.Shadows = false
-	glow.Parent = bow
+	glow.Parent = glowPart
 	local a = Instance.new("Attachment")
-	a.Parent = bow
+	a.Parent = glowPart
 	Vfx.emitter(a, "magic", { Rate = 3, Speed = NumberRange.new(0.5, 1.5), Lifetime = NumberRange.new(0.8, 1.4) })
-	model.PrimaryPart = bow
-	model.WorldPivot = CFrame.new()
-	model.Parent = s.folder
-	s.keys[id] =
-		{ id = id, model = model, base = anchor.CFrame.Position, taken = false, seed = MathUtil.hash(id) % 100 }
+	s.keys[id] = { id = id, model = slot, glow = glowPart, base = base, taken = false, seed = MathUtil.hash(id) % 100 }
 end
 
 local function renderKey(key: KeyVis, now: number)
@@ -734,7 +754,9 @@ local function renderKey(key: KeyVis, now: number)
 		return
 	end
 	local bob = math.sin(now * 2.2 + key.seed) * 0.25
-	key.model:PivotTo(CFrame.new(key.base + Vector3.new(0, bob, 0)) * CFrame.Angles(0, now * 1.8 + key.seed, 0.25))
+	local cf = CFrame.new(key.base + Vector3.new(0, bob, 0)) * CFrame.Angles(0, now * 1.8 + key.seed, 0.25)
+	key.model:PivotTo(cf)
+	key.glow.CFrame = cf
 end
 
 local function updateKeys(s: Session, taken: any, silent: boolean)
@@ -744,6 +766,7 @@ local function updateKeys(s: Session, taken: any, silent: boolean)
 			key.taken = true
 			local p = key.model:GetPivot().Position
 			key.model:Destroy()
+			key.glow:Destroy()
 			if not silent then
 				Vfx.burst(p, "magic", 30)
 				Vfx.ring(p - Vector3.new(0, 2, 0), Color3.fromRGB(255, 210, 90), 5, 0.5)

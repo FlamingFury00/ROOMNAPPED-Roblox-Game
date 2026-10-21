@@ -15,6 +15,8 @@
 
 local Kit = require(script.Parent.Kit)
 local Geometry = require(script.Parent.Geometry)
+local Assets = require(script.Parent.Assets)
+local Surfaces = require(script.Parent.Palette)
 local SkinDefs = require(script.Parent.Parent.Config.SkinDefs)
 local RoomDefs = require(script.Parent.Parent.Config.RoomDefs)
 local MathUtil = require(script.Parent.Parent.Util.MathUtil)
@@ -42,12 +44,41 @@ local function lighter(c: Color3, t: number): Color3
 	return c:Lerp(Color3.new(1, 1, 1), t)
 end
 
+-- A private generator drawn once from `rng`, so a room's other random details are the same whether a slot
+-- ends up holding its real model or its fallback.
+local function subRng(rng: () -> number): () -> number
+	local state = math.floor(rng() * 2147483645) + 1
+	return function(): number
+		state = (state * 16807) % 2147483647
+		return state / 2147483647
+	end
+end
+
+-- Room-space frames for asset slots: standing on the floor facing the doorway, or flat on a wall facing in.
+local function facingDoor(roomCF: CFrame, x: number, y: number, d: number): CFrame
+	return rp(roomCF, x, y, d) * CFrame.Angles(0, math.pi, 0)
+end
+
+local function onSideWall(roomCF: CFrame, side: number, y: number, d: number): CFrame
+	-- Inner wall faces are at x = +-7; side -1 = left wall (facing +x), 1 = right wall (facing -x).
+	return rp(roomCF, side * 7, y, d) * CFrame.Angles(0, side * math.pi / 2, 0)
+end
+
+-- An invisible collision box (real models never collide; their proxies do).
+local function collider(parent: Instance, cf: CFrame, size: Vector3)
+	Kit.part(parent, { name = "Collider", cf = cf, size = size, transparency = 1, solid = true, shadow = false })
+end
+
 -- Shared shell ---------------------------------------------------------------------------------------
 
 local function buildShell(model: Model, roomCF: CFrame, palette: Palette, accentColor: Color3)
 	local shell = Kit.folder(model, "Shell")
 	local w, d, h = R.Width, R.Depth, R.Height
-	solid(shell, "Floor", rp(roomCF, 0, -0.5, d / 2), Vector3.new(w, 1, d), palette.floor, palette.floorMaterial)
+	local floor =
+		solid(shell, "Floor", rp(roomCF, 0, -0.5, d / 2), Vector3.new(w, 1, d), palette.floor, palette.floorMaterial)
+	if palette.floorSurface then
+		Surfaces.apply(floor, palette.floorSurface, palette.floorTint)
+	end
 	solid(
 		shell,
 		"Ceiling",
@@ -73,6 +104,14 @@ local function buildShell(model: Model, roomCF: CFrame, palette: Palette, accent
 		palette.wallMaterial
 	)
 	solid(shell, "WallBack", rp(roomCF, 0, h / 2, d - 0.5), Vector3.new(w, h, 1), palette.wall, palette.wallMaterial)
+	if palette.wallSurface then
+		for _, name in { "WallL", "WallR", "WallBack" } do
+			local wall = shell:FindFirstChild(name)
+			if wall and wall:IsA("BasePart") then
+				Surfaces.apply(wall, palette.wallSurface, palette.wallTint)
+			end
+		end
+	end
 	-- Trim lines that read as "this is a room" even when the props are culled on low graphics.
 	local props = model:FindFirstChild("Props") or Kit.folder(model, "Props")
 	decor(
@@ -151,19 +190,19 @@ local function buildFreezer(_model: Model, roomCF: CFrame, palette: Palette, pro
 	local label =
 		decor(props, "ChestLabel", rp(roomCF, 0, 1.6, 9.98), Vector3.new(3, 1, 0.05), palette.trim, M.SmoothPlastic)
 	Kit.surfaceText(label, { face = Enum.NormalId.Back, text = "ICE", color = Color3.new(1, 1, 1), font = FONT_SIGN })
-	-- Steel shelves with ice blocks on both sides.
+	-- Steel shelves with ice blocks on both sides, and an old upright freezer in each back corner.
 	for _, side in { -1, 1 } do
 		local x = side * 6.3
 		for level = 0, 2 do
 			local y = 2.4 + level * 3.2
-			decor(props, "Shelf", rp(roomCF, x, y, 6.5), Vector3.new(2.2, 0.25, 9), palette.trim, M.Metal)
+			decor(props, "Shelf", rp(roomCF, x, y, 5.8), Vector3.new(2.2, 0.25, 7.6), palette.trim, M.Metal)
 			for i = 0, 2 do
 				if rng() < 0.75 then
 					local size = 1 + rng() * 0.7
 					decor(
 						props,
 						"IceBlock",
-						rp(roomCF, x + (rng() - 0.5) * 0.6, y + 0.15 + size / 2, 3.5 + i * 3),
+						rp(roomCF, x + (rng() - 0.5) * 0.6, y + 0.15 + size / 2, 3.4 + i * 2.6),
 						Vector3.new(size, size, size),
 						palette.accent,
 						palette.accentMaterial
@@ -172,7 +211,30 @@ local function buildFreezer(_model: Model, roomCF: CFrame, palette: Palette, pro
 				end
 			end
 		end
-		for _, depth in { 2.1, 10.9 } do
+		local fridge = facingDoor(roomCF, side * 5.7, 0, 11.75)
+		Assets.place(props, "uprightFreezer", fridge, function(slot: Model, cf: CFrame)
+			decor(slot, "Cabinet", cf * CFrame.new(0, 3, 0), Vector3.new(2.6, 6, 2.4), palette.prop, M.SmoothPlastic).CastShadow =
+				true
+			decor(
+				slot,
+				"DoorLine",
+				cf * CFrame.new(0, 4.3, -1.21),
+				Vector3.new(2.5, 0.08, 0.04),
+				darker(palette.prop, 0.3),
+				M.Metal
+			)
+			decor(slot, "Handle", cf * CFrame.new(0.95, 3.2, -1.3), Vector3.new(0.14, 1.4, 0.14), palette.trim, M.Metal)
+			decor(
+				slot,
+				"Grille",
+				cf * CFrame.new(0, 0.35, -1.21),
+				Vector3.new(2.2, 0.4, 0.04),
+				darker(palette.prop, 0.45),
+				M.Metal
+			)
+		end, { variant = if side < 0 then 1 else 2 })
+		collider(props, fridge * CFrame.new(0, 3, 0), Vector3.new(2.6, 6, 2.4))
+		for _, depth in { 2.1, 9.5 } do
 			solid(
 				props,
 				"ShelfPost",
@@ -344,6 +406,77 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 			)
 		end
 	end
+	-- Stacked boxes by the side walls (a desk fan on the left stack) and air ducts along the ceiling.
+	for _, side in { -1, 1 } do
+		local boxes = facingDoor(roomCF, side * 5.8, 0, 9)
+		local boxRng = subRng(rng)
+		Assets.place(props, "cardboardBoxes", boxes, function(slot: Model, cf: CFrame)
+			local y = 0
+			for i = 1, 2 + math.floor(boxRng() * 2) do
+				local size = Vector3.new(2.6 - i * 0.3, 1.1, 2.2 - i * 0.2)
+				decor(
+					slot,
+					"Box",
+					cf
+						* CFrame.new((boxRng() - 0.5) * 0.4, y + size.Y / 2, 0)
+						* CFrame.Angles(0, (boxRng() - 0.5) * 0.5, 0),
+					size,
+					Color3.fromRGB(186, 146, 98),
+					M.Cardboard
+				).CastShadow =
+					true
+				y += size.Y
+			end
+		end, { variant = if side < 0 then 1 else 2 })
+		collider(props, boxes * CFrame.new(0, 1.5, 0), Vector3.new(3, 3, 2.8))
+		Assets.place(
+			props,
+			"ventDuct",
+			rp(roomCF, side * 5.8, R.Height, 5.5) * CFrame.Angles(0, math.pi / 2, 0),
+			function(slot: Model, cf: CFrame)
+				decor(
+					slot,
+					"Duct",
+					cf * CFrame.new(0, -0.75, 0),
+					Vector3.new(6, 1.4, 1.6),
+					darker(palette.prop, 0.1),
+					M.Metal
+				)
+				for _, x in { -2.9, 0, 2.9 } do
+					decor(
+						slot,
+						"Flange",
+						cf * CFrame.new(x, -0.75, 0),
+						Vector3.new(0.2, 1.6, 1.8),
+						darker(palette.prop, 0.3),
+						M.Metal
+					)
+				end
+			end
+		)
+	end
+	Assets.place(
+		props,
+		"deskFan",
+		facingDoor(roomCF, -5.8, 3.2, 9) * CFrame.Angles(0, 0.5, 0),
+		function(slot: Model, cf: CFrame)
+			Kit.cylinder(slot, {
+				name = "FanBase",
+				cf = cf * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				size = Vector3.new(0.2, 1, 1),
+				color = palette.trim,
+				material = M.Metal,
+			})
+			decor(slot, "FanNeck", cf * CFrame.new(0, 0.7, 0), Vector3.new(0.15, 1.1, 0.15), palette.trim, M.Metal)
+			Kit.cylinder(slot, {
+				name = "FanCage",
+				cf = cf * CFrame.new(0, 1.4, -0.1) * CFrame.Angles(0, math.pi / 2, 0),
+				size = Vector3.new(0.4, 1.3, 1.3),
+				color = lighter(palette.trim, 0.3),
+				material = M.Metal,
+			})
+		end
+	)
 	for _ = 1, 10 do
 		decor(
 			props,
@@ -462,25 +595,75 @@ local function buildLaundry(_model: Model, roomCF: CFrame, palette: Palette, pro
 		)
 		decor(props, "Sleeves", rp(roomCF, x, 10.1, 6.5), Vector3.new(2.1, 0.6, 0.07), color, M.Fabric)
 	end
-	-- Laundry basket and detergent bottles.
-	solid(props, "Basket", rp(roomCF, 5, 1, 5), Vector3.new(2.6, 2, 2), Color3.fromRGB(200, 170, 120), M.Fabric)
-	Kit.ball(props, {
-		name = "BasketPile",
-		cf = rp(roomCF, 5, 2.1, 5),
-		size = Vector3.new(2.4, 1, 1.8),
-		color = Color3.fromRGB(250, 250, 255),
-		material = M.Fabric,
-	})
-	for i = 0, 2 do
-		decor(
-			props,
-			"Detergent",
-			rp(roomCF, 6.6, 1 + 0, 9 + i * 0.9),
-			Vector3.new(0.7, 2, 0.7),
-			Color3.fromHSV(0.55 + i * 0.12, 0.7, 0.9),
-			M.SmoothPlastic
-		)
-	end
+	-- Laundry basket, a shelf of detergents on the right wall, an ironing board and towels on the dryers.
+	local basket = facingDoor(roomCF, 4.4, 0, 3.6)
+	Assets.place(props, "laundryBasket", basket, function(slot: Model, cf: CFrame)
+		decor(slot, "Basket", cf * CFrame.new(0, 1, 0), Vector3.new(2.6, 2, 2), Color3.fromRGB(200, 170, 120), M.Fabric).CastShadow =
+			true
+		Kit.ellipsoid(slot, {
+			name = "BasketPile",
+			cf = cf * CFrame.new(0, 2.1, 0),
+			size = Vector3.new(2.4, 1, 1.8),
+			color = Color3.fromRGB(250, 250, 255),
+			material = M.Fabric,
+		})
+	end)
+	collider(props, basket * CFrame.new(0, 1.1, 0), Vector3.new(2.6, 2.2, 2.2))
+	local shelf = onSideWall(roomCF, 1, 0, 8.6)
+	Assets.place(props, "detergentShelf", shelf * CFrame.new(0, 0, -0.8), function(slot: Model, cf: CFrame)
+		decor(slot, "ShelfBack", cf * CFrame.new(0, 3, 0.7), Vector3.new(4, 6, 0.2), darker(palette.trim, 0.2), M.Metal)
+		for level = 0, 2 do
+			local y = 0.6 + level * 2
+			decor(slot, "ShelfBoard", cf * CFrame.new(0, y, 0), Vector3.new(4, 0.15, 1.5), palette.trim, M.Metal)
+			for i = 0, 3 do
+				decor(
+					slot,
+					"Detergent",
+					cf * CFrame.new(-1.4 + i * 0.95, y + 0.75, 0),
+					Vector3.new(0.6, 1.4, 0.6),
+					Color3.fromHSV((0.55 + i * 0.12 + level * 0.3) % 1, 0.7, 0.9),
+					M.SmoothPlastic
+				)
+			end
+		end
+	end)
+	collider(props, shelf * CFrame.new(0, 3, -0.8), Vector3.new(4, 6, 1.6))
+	Assets.place(props, "ironingBoard", facingDoor(roomCF, -4.6, 0, 2.4), function(slot: Model, cf: CFrame)
+		Kit.ellipsoid(slot, {
+			name = "Board",
+			cf = cf * CFrame.new(0, 3, 0),
+			size = Vector3.new(4.6, 0.2, 1.4),
+			color = palette.accent,
+			material = M.Fabric,
+		})
+		for _, tilt in { -0.45, 0.45 } do
+			decor(
+				slot,
+				"Leg",
+				cf * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, tilt),
+				Vector3.new(0.12, 3.2, 0.12),
+				palette.trim,
+				M.Metal
+			)
+		end
+	end)
+	Assets.place(
+		props,
+		"towelStack",
+		rp(roomCF, -5.9, 7.1, 6) * CFrame.Angles(0, -math.pi / 2, 0),
+		function(slot: Model, cf: CFrame)
+			for i = 0, 2 do
+				decor(
+					slot,
+					"Towel",
+					cf * CFrame.new(0, 0.2 + i * 0.36, 0),
+					Vector3.new(1.6, 0.34, 1.2),
+					if i % 2 == 0 then Color3.fromRGB(250, 250, 250) else palette.accent,
+					M.Fabric
+				)
+			end
+		end
+	)
 	-- Suds on the floor.
 	for _ = 1, 8 do
 		local size = 0.6 + rng() * 1.2
@@ -550,40 +733,89 @@ local function buildGreenhouse(_model: Model, roomCF: CFrame, palette: Palette, 
 		)
 		for i = 0, 3 do
 			local base = rp(roomCF, side * 5.6, 2.1, 3.5 + i * 2.6)
-			local height = 1.5 + rng() * 2.5
-			decor(
+			local plantRng = subRng(rng)
+			local kinds = { "pottedFern", "flowerPots", "smallTree", "cactus" }
+			local kind = kinds[((i + (if side < 0 then 0 else 2)) % #kinds) + 1]
+			Assets.place(
 				props,
-				"Stem",
-				base * CFrame.new(0, height / 2, 0),
-				Vector3.new(0.2, height, 0.2),
-				darker(palette.accent, 0.3),
-				M.Grass
+				kind,
+				base * CFrame.Angles(0, plantRng() * math.pi * 2, 0),
+				function(slot: Model, cf: CFrame)
+					local height = 1.5 + plantRng() * 2.5
+					decor(
+						slot,
+						"Stem",
+						cf * CFrame.new(0, height / 2, 0),
+						Vector3.new(0.2, height, 0.2),
+						darker(palette.accent, 0.3),
+						M.Grass
+					)
+					for k = 0, 3 do
+						decor(
+							slot,
+							"Leaf",
+							cf
+								* CFrame.new(0, height * (0.4 + k * 0.18), 0)
+								* CFrame.Angles(0, k * 1.6 + plantRng(), 0.8)
+								* CFrame.new(0, 0.6, 0),
+							Vector3.new(0.8, 1.3, 0.08),
+							palette.accent,
+							M.LeafyGrass
+						)
+					end
+					if plantRng() < 0.4 then
+						Kit.ball(slot, {
+							name = "Bloom",
+							cf = cf * CFrame.new(0, height + 0.3, 0),
+							size = Vector3.new(0.9, 0.9, 0.9),
+							color = if palette.style == "mushroom"
+								then Color3.fromRGB(230, 80, 80)
+								else Color3.fromRGB(255, 210, 60),
+							material = M.SmoothPlastic,
+						})
+					end
+				end,
+				{ variant = i + (if side < 0 then 1 else 3) }
 			)
-			for k = 0, 3 do
+		end
+		-- Ivy climbing the wall above the bed.
+		Assets.place(props, "vines", onSideWall(roomCF, side, 8.4, 7.5), function(slot: Model, cf: CFrame)
+			for k = 0, 7 do
 				decor(
-					props,
-					"Leaf",
-					base
-						* CFrame.new(0, height * (0.4 + k * 0.18), 0)
-						* CFrame.Angles(0, k * 1.6 + rng(), 0.8)
-						* CFrame.new(0, 0.6, 0),
-					Vector3.new(0.8, 1.3, 0.08),
+					slot,
+					"Ivy",
+					cf
+						* CFrame.new(-2 + (k % 4) * 1.3, -1.5 + math.floor(k / 4) * 2.4, -0.06)
+						* CFrame.Angles(0, 0, k * 0.7),
+					Vector3.new(1.1, 1.1, 0.06),
+					darker(palette.accent, 0.15),
+					M.LeafyGrass
+				)
+			end
+		end, { variant = if side < 0 then 1 else 2 })
+	end
+	-- Hanging baskets under the glass roof.
+	for k, spot in { Vector3.new(-2.6, 0, 4.5), Vector3.new(2.6, 0, 8.5) } do
+		Assets.place(props, "hangingPlant", rp(roomCF, spot.X, R.Height, spot.Z), function(slot: Model, cf: CFrame)
+			decor(slot, "Chain", cf * CFrame.new(0, -1, 0), Vector3.new(0.08, 2, 0.08), palette.trim, M.Metal)
+			Kit.cylinder(slot, {
+				name = "Basket",
+				cf = cf * CFrame.new(0, -2.4, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				size = Vector3.new(0.8, 1.4, 1.4),
+				color = Color3.fromRGB(150, 110, 70),
+				material = M.WoodPlanks,
+			})
+			for j = 0, 4 do
+				decor(
+					slot,
+					"Trail",
+					cf * CFrame.Angles(0, j * 1.25, 0) * CFrame.new(0.6, -3.1, 0),
+					Vector3.new(0.3, 1.2, 0.06),
 					palette.accent,
 					M.LeafyGrass
 				)
 			end
-			if rng() < 0.4 then
-				Kit.ball(props, {
-					name = "Bloom",
-					cf = base * CFrame.new(0, height + 0.3, 0),
-					size = Vector3.new(0.9, 0.9, 0.9),
-					color = if palette.style == "mushroom"
-						then Color3.fromRGB(230, 80, 80)
-						else Color3.fromRGB(255, 210, 60),
-					material = M.SmoothPlastic,
-				})
-			end
-		end
+		end, { variant = k })
 	end
 	-- Coiled vine (signature prop) on the back wall.
 	for i = 0, 10 do
@@ -596,13 +828,20 @@ local function buildGreenhouse(_model: Model, roomCF: CFrame, palette: Palette, 
 			material = M.LeafyGrass,
 		})
 	end
-	decor(
+	Assets.place(
 		props,
-		"WateringCan",
-		rp(roomCF, 2, 0.7, 3),
-		Vector3.new(1.4, 1.4, 0.9),
-		Color3.fromRGB(80, 150, 200),
-		M.Metal
+		"wateringCan",
+		facingDoor(roomCF, 3.4, 0, 1.6) * CFrame.Angles(0, 0.6, 0),
+		function(slot: Model, cf: CFrame)
+			decor(
+				slot,
+				"WateringCan",
+				cf * CFrame.new(0, 0.7, 0),
+				Vector3.new(1.4, 1.4, 0.9),
+				Color3.fromRGB(80, 150, 200),
+				M.Metal
+			)
+		end
 	)
 	if palette.style == "mushroom" then
 		for i = 1, 5 do
@@ -672,18 +911,104 @@ local function buildMagnet(_model: Model, roomCF: CFrame, palette: Palette, prop
 			M.SmoothPlastic
 		)
 	end
-	-- Scrap piles and coils.
-	for _ = 1, 10 do
-		local size = Vector3.new(0.5 + rng() * 1.5, 0.3 + rng() * 0.8, 0.5 + rng() * 1.2)
-		decor(
+	-- Scrap heaps, oil drums, a toolbox, gears on the walls and a crane magnet hanging over it all.
+	for k, spot in { Vector3.new(-4.6, 0, 6.2), Vector3.new(4.4, 0, 3.6) } do
+		local scrapRng = subRng(rng)
+		Assets.place(
 			props,
-			"Scrap",
-			rp(roomCF, -6 + rng() * 12, size.Y / 2, 3 + rng() * 6) * CFrame.Angles(0, rng() * 3, 0),
-			size,
-			palette.prop:Lerp(Color3.new(0.3, 0.3, 0.3), rng() * 0.5),
-			M.CorrodedMetal
+			"scrapPile",
+			facingDoor(roomCF, spot.X, 0, spot.Z) * CFrame.Angles(0, k * 1.3, 0),
+			function(slot: Model, cf: CFrame)
+				for _ = 1, 5 do
+					local size = Vector3.new(0.5 + scrapRng() * 1.5, 0.3 + scrapRng() * 0.8, 0.5 + scrapRng() * 1.2)
+					decor(
+						slot,
+						"Scrap",
+						cf
+							* CFrame.new((scrapRng() - 0.5) * 3, size.Y / 2, (scrapRng() - 0.5) * 2.4)
+							* CFrame.Angles(0, scrapRng() * 3, 0),
+						size,
+						palette.prop:Lerp(Color3.new(0.3, 0.3, 0.3), scrapRng() * 0.5),
+						M.CorrodedMetal
+					)
+				end
+			end,
+			{ variant = k }
 		)
 	end
+	for _, side in { -1, 1 } do
+		Assets.place(props, "metalBarrel", facingDoor(roomCF, side * 6, 0, 12.2), function(slot: Model, cf: CFrame)
+			Kit.cylinder(slot, {
+				name = "Drum",
+				cf = cf * CFrame.new(0, 1.4, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				size = Vector3.new(2.8, 1.8, 1.8),
+				color = darker(palette.accent, 0.2),
+				material = M.Metal,
+				shadow = true,
+			})
+			for _, y in { 0.5, 1.4, 2.3 } do
+				Kit.cylinder(slot, {
+					name = "Hoop",
+					cf = cf * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.pi / 2),
+					size = Vector3.new(0.12, 1.86, 1.86),
+					color = darker(palette.accent, 0.45),
+					material = M.Metal,
+				})
+			end
+		end, { variant = if side < 0 then 1 else 2 })
+		collider(props, rp(roomCF, side * 6, 1.4, 12.2), Vector3.new(1.9, 2.8, 1.9))
+		Assets.place(props, "gears", onSideWall(roomCF, side, 8.6, 7.5), function(slot: Model, cf: CFrame)
+			for k, spec in { { -1, 0.4, 2 }, { 0.9, -0.5, 1.5 }, { 0.6, 1.2, 1 } } do
+				Kit.cylinder(slot, {
+					name = "Gear" .. k,
+					cf = cf * CFrame.new(spec[1], spec[2], -0.15 - k * 0.05) * CFrame.Angles(0, math.pi / 2, 0),
+					size = Vector3.new(0.25, spec[3], spec[3]),
+					color = if k == 2 then palette.trim else palette.prop,
+					material = M.Metal,
+				})
+			end
+		end, { variant = if side < 0 then 1 else 2 })
+	end
+	Assets.place(
+		props,
+		"toolbox",
+		facingDoor(roomCF, -1.6, 0, 2.6) * CFrame.Angles(0, -0.4, 0),
+		function(slot: Model, cf: CFrame)
+			decor(
+				slot,
+				"Toolbox",
+				cf * CFrame.new(0, 0.5, 0),
+				Vector3.new(1.8, 1, 0.9),
+				Color3.fromRGB(190, 40, 40),
+				M.Metal
+			)
+			decor(
+				slot,
+				"Grip",
+				cf * CFrame.new(0, 1.15, 0),
+				Vector3.new(1, 0.15, 0.15),
+				Color3.fromRGB(30, 30, 30),
+				M.Metal
+			)
+		end
+	)
+	Assets.place(props, "electromagnet", rp(roomCF, 0, R.Height, 7.5), function(slot: Model, cf: CFrame)
+		decor(
+			slot,
+			"Cable",
+			cf * CFrame.new(0, -1.5, 0),
+			Vector3.new(0.18, 3, 0.18),
+			Color3.fromRGB(40, 40, 44),
+			M.Metal
+		)
+		Kit.cylinder(slot, {
+			name = "Disc",
+			cf = cf * CFrame.new(0, -3.4, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			size = Vector3.new(0.9, 3.2, 3.2),
+			color = palette.trim,
+			material = M.Metal,
+		})
+	end)
 	for _, side in { -1, 1 } do
 		Kit.cylinder(props, {
 			name = "Coil",

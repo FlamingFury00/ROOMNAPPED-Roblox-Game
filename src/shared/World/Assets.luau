@@ -13,6 +13,9 @@
 	  floor   - pivot at the bottom centre
 	  wall    - pivot at the centre of the model's back, flat against the wall
 	  ceiling - pivot at the top centre
+	  centre  - pivot at the middle (floating pickups)
+
+	A slot's pivot is its WorldPivot: a slot the client moves (a spinning key) is refilled where it is now.
 
 	Without the library (offline tests, a server that could not load a model, the `assets` flag off) every
 	slot simply keeps its fallback, so the world is always complete.
@@ -83,10 +86,10 @@ end
 -- Fill a slot with a clone of its template (replacing whatever it held). Returns false without a template.
 function Assets.fill(slot: Model): boolean
 	local key = slot:GetAttribute("AssetKey")
-	local cf = slot:GetAttribute("SlotCF")
-	if type(key) ~= "string" or typeof(cf) ~= "CFrame" then
+	if type(key) ~= "string" or typeof(slot:GetAttribute("SlotCF")) ~= "CFrame" then
 		return false
 	end
+	local cf = slot.WorldPivot
 	local variant = slot:GetAttribute("Variant")
 	local template = pick(key, if type(variant) == "number" then variant else nil)
 	if not template then
@@ -113,6 +116,7 @@ function Assets.place(parent: Instance, key: string, cf: CFrame, fallback: Fallb
 	slot:SetAttribute("SlotCF", cf)
 	slot:SetAttribute("Variant", opts.variant or 1)
 	slot:SetAttribute("Scale", opts.scale or 1)
+	slot.WorldPivot = cf
 	-- Slots a client builds for itself (moving carts, previews) are upgraded by that client only.
 	local okClient, isClient = pcall(function()
 		return RunService:IsClient()

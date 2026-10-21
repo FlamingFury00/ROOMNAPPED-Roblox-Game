@@ -24,6 +24,12 @@ export type Palette = {
 	light: Color3,
 	lightBrightness: number,
 	style: string,
+	-- Patterned shell surfaces: MaterialVariant names from World/Palette (their own base materials) and the
+	-- colour that tints them (white shows them as painted).
+	wallSurface: string?,
+	wallTint: Color3?,
+	floorSurface: string?,
+	floorTint: Color3?,
 }
 
 export type SkinDef = {
@@ -67,6 +73,8 @@ local list: { SkinDef } = {
 			light = rgb(170, 220, 255),
 			lightBrightness = 1.6,
 			style = "classic",
+			wallSurface = "RN_Ice",
+			wallTint = rgb(222, 236, 250),
 		},
 	},
 	{
@@ -90,6 +98,8 @@ local list: { SkinDef } = {
 			light = rgb(255, 214, 230),
 			lightBrightness = 1.5,
 			style = "icecream",
+			wallSurface = "RN_WallStripes",
+			wallTint = rgb(255, 206, 222),
 		},
 	},
 	{
@@ -160,6 +170,8 @@ local list: { SkinDef } = {
 			light = rgb(225, 240, 255),
 			lightBrightness = 1.4,
 			style = "industrial",
+			wallSurface = "RN_Concrete",
+			wallTint = rgb(196, 192, 186),
 		},
 	},
 	{
@@ -206,6 +218,7 @@ local list: { SkinDef } = {
 			light = rgb(255, 245, 230),
 			lightBrightness = 1.5,
 			style = "retro",
+			floorSurface = "RN_FloorChecker",
 		},
 	},
 	{
@@ -253,6 +266,9 @@ local list: { SkinDef } = {
 			light = rgb(235, 245, 255),
 			lightBrightness = 1.5,
 			style = "laundromat",
+			wallSurface = "RN_WallTiles",
+			wallTint = rgb(222, 238, 250),
+			floorSurface = "RN_FloorChecker",
 		},
 	},
 	{
@@ -299,6 +315,8 @@ local list: { SkinDef } = {
 			light = rgb(255, 220, 160),
 			lightBrightness = 1.4,
 			style = "royal",
+			wallSurface = "RN_WallDamaskNavy",
+			wallTint = rgb(226, 178, 255),
 		},
 	},
 	{
@@ -346,6 +364,7 @@ local list: { SkinDef } = {
 			light = rgb(255, 246, 210),
 			lightBrightness = 1.6,
 			style = "botanic",
+			floorSurface = "RN_FloorHerringbone",
 		},
 	},
 	{
@@ -439,6 +458,9 @@ local list: { SkinDef } = {
 			light = rgb(240, 248, 255),
 			lightBrightness = 1.6,
 			style = "lab",
+			wallSurface = "RN_WallTiles",
+			wallTint = rgb(232, 242, 255),
+			floorSurface = "RN_FloorMarbleWhite",
 		},
 	},
 	{

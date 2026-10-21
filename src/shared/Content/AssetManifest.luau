@@ -9,7 +9,7 @@
 	fallback, so the manifest can never break a level.
 
 	  ids      model ids, one template per id that loads (variants are picked deterministically per slot)
-	  mount    "floor" | "wall" | "ceiling" (where the template's pivot sits, see World/Assets)
+	  mount    "floor" | "wall" | "ceiling" | "centre" (where the template's pivot sits, see World/Assets)
 	  size     target bounds in studs: X width, Y height, Z depth (front to back)
 	  fit      "contain" (fit inside size), "height" or "width" (match that dimension; the others follow) or
 	           "stretch" (height exact, width and depth each fitted within a third of it: tops things stand on)
@@ -29,7 +29,7 @@
 
 export type Entry = {
 	ids: { number },
-	mount: "floor" | "wall" | "ceiling",
+	mount: "floor" | "wall" | "ceiling" | "centre",
 	size: Vector3,
 	fit: "contain" | "height" | "width" | "stretch",
 	facing: "auto" | "any" | "wide",
@@ -246,6 +246,227 @@ local entries: { [string]: Entry } = {
 		fit = "contain",
 		facing = "wide",
 		credit = "caductis (Realistic Rug)",
+	},
+
+	-- Corridor extras ----------------------------------------------------------------------------------------
+	vendingMachine = {
+		ids = { 13660630957, 10551751004 }, -- wood-panelled glass-front machine; old snack machine (no logos)
+		mount = "floor",
+		size = V(3.4, 7, 2.8),
+		fit = "contain",
+		facing = "auto",
+		credit = "craploltrevorIII (old vending machine); pizzafriday17 (Broken Vending machine)",
+	},
+	waterCooler = {
+		ids = { 10904549519 }, -- white cooler with a blue bottle
+		mount = "floor",
+		size = V(1.6, 5, 1.6),
+		fit = "contain",
+		facing = "auto",
+		credit = "Ligij (Water Dispenser Mesh PBR)",
+	},
+	trashBin = {
+		ids = { 11426062981, 11508587471 }, -- slatted bins with chrome bands
+		mount = "floor",
+		size = V(1.6, 2.4, 1.6),
+		fit = "contain",
+		facing = "any",
+		credit = "MR_MohamedTarek (Trash Bin); RTopix (Trash Can)",
+	},
+	roomServiceCart = {
+		ids = { 990979342, 3861786118 }, -- two-tier antique tea table; wooden tea trolley
+		mount = "floor",
+		size = V(3.4, 3.2, 2.2),
+		fit = "contain",
+		facing = "auto",
+		credit = "SurfaceGlue (Antique table); lakerguy2016 (wooden tea trolley)",
+	},
+	suitcaseStack = {
+		ids = { 4903900210, 4593529461 }, -- stacked vintage cases with a doctor's bag; worn leather cases
+		mount = "floor",
+		size = V(2.6, 4.2, 2.2),
+		fit = "contain",
+		facing = "auto",
+		credit = "EndlessSwagger (Bellboy's Heavy Suitcases); visionpsyche7 (Luggage)",
+	},
+	trafficCone = {
+		ids = { 8952512774, 8615958435 },
+		mount = "floor",
+		size = V(1.2, 2.2, 1.2),
+		fit = "contain",
+		facing = "any",
+		credit = "TheDiamondjordan (Traffic Cone); Zynkuru (Traffic Cone)",
+	},
+	goldenKey = {
+		-- The key pickup (the client spins it; ZoneVisuals keeps its glow and sparkles).
+		ids = { 4022890583 }, -- giant golden skeleton key
+		mount = "centre",
+		size = V(2.4, 2.4, 2.4),
+		fit = "contain",
+		facing = "any",
+		credit = "EndlessSwagger (Giant Golden Skeleton Key)",
+	},
+
+	-- Rooms ------------------------------------------------------------------------------------------------------
+	uprightFreezer = {
+		ids = { 134950797159239 }, -- mint 1950s fridge
+		mount = "floor",
+		size = V(2.8, 6.2, 2.6),
+		fit = "contain",
+		facing = "auto",
+		credit = "jamesback1949 (Vintage fridge)",
+	},
+	deskFan = {
+		ids = { 2293770895 }, -- white oscillating desk fan
+		mount = "floor",
+		size = V(1.6, 2, 1.4),
+		fit = "contain",
+		facing = "auto",
+		credit = "BonnieGamez101 (Electric Fan)",
+	},
+	cardboardBoxes = {
+		ids = { 5128298696, 110825748556023 },
+		mount = "floor",
+		size = V(3.2, 3.2, 3),
+		fit = "contain",
+		facing = "any",
+		credit = "Xitral (Cardboard Boxes Mesh); nyaalchemi (CardBoard_Boxes)",
+	},
+	ventDuct = {
+		ids = { 8431921736 }, -- air duct section, long side along X
+		mount = "ceiling",
+		size = V(6, 1.6, 1.8),
+		fit = "contain",
+		facing = "wide",
+		credit = "nate2the2great (Air Duct Section)",
+	},
+	laundryBasket = {
+		ids = { 6132018569, 7992808754 }, -- wicker basket; plastic laundry basket
+		mount = "floor",
+		size = V(2.6, 2.2, 2.2),
+		fit = "contain",
+		facing = "any",
+		credit = "Glowziing (basket); cruelescent (Laundry Basket)",
+	},
+	ironingBoard = {
+		ids = { 14650194703 },
+		mount = "floor",
+		size = V(5, 3.2, 1.6),
+		fit = "contain",
+		facing = "wide",
+		credit = "IzzyEpic29 (Ironing Board)",
+	},
+	detergentShelf = {
+		ids = { 12342086399 }, -- shop shelf of coloured bottles and boxes (no brands)
+		mount = "floor",
+		size = V(4, 6, 1.6),
+		fit = "contain",
+		facing = "auto",
+		credit = "lovegirl8560 (ShopInterior_Shelf_01)",
+	},
+	towelStack = {
+		ids = { 433396067 }, -- folded white towels
+		mount = "floor",
+		size = V(1.8, 1.2, 1.4),
+		fit = "contain",
+		facing = "any",
+		credit = "WrathOfTheElvhen (Stack of Towels)",
+	},
+	pottedFern = {
+		ids = { 138705818090140, 84496050289038 },
+		mount = "floor",
+		size = V(2.2, 2.6, 2.2),
+		fit = "height",
+		facing = "any",
+		credit = "WaysonPhD (COGIC Flower (5)); gabrielTST129 (Matero)",
+	},
+	flowerPots = {
+		ids = { 7371169545 },
+		mount = "floor",
+		size = V(2.4, 1.6, 2),
+		fit = "contain",
+		facing = "any",
+		credit = "StoneSymmetry (Flower Pots)",
+	},
+	cactus = {
+		ids = { 4112655360, 5950578308 },
+		mount = "floor",
+		size = V(1.8, 2.2, 1.8),
+		fit = "height",
+		facing = "any",
+		credit = "bearduckmonkey (Cactus Plant); Procybit (Cactus in the pot)",
+	},
+	smallTree = {
+		ids = { 3486483490, 8927567782 }, -- topiary in a white pot; leafy plant
+		mount = "floor",
+		size = V(2.4, 4.2, 2.4),
+		fit = "height",
+		facing = "any",
+		credit = "fred11468 (Potted plant); wesfilms (Plant)",
+	},
+	hangingPlant = {
+		ids = { 8130406239, 13414398302 },
+		mount = "ceiling",
+		size = V(2, 3.6, 2),
+		fit = "contain",
+		facing = "any",
+		credit = "EerieBun (fixed hanging plant); Crimson924 (Potted_Ivy_A)",
+	},
+	wateringCan = {
+		ids = { 14003540414 },
+		mount = "floor",
+		size = V(1.6, 1.4, 1),
+		fit = "contain",
+		facing = "auto",
+		credit = "zzz_1551 (Watering Can)",
+	},
+	vines = {
+		ids = { 16155518562, 16078553656 }, -- ivy spreading over a wall
+		mount = "wall",
+		size = V(5, 6, 1.2),
+		fit = "contain",
+		facing = "auto",
+		credit = "xGalaxinex (Ivy Veins); anolivys (Vines)",
+	},
+	scrapPile = {
+		ids = { 4740013617, 4570032694 },
+		mount = "floor",
+		size = V(4, 2.4, 3.4),
+		fit = "contain",
+		facing = "any",
+		credit = "Be4Vaporeon (Scrap Pile 2); Blabbering_Goat (scrap metal)",
+	},
+	metalBarrel = {
+		ids = { 14452389275, 13304723548 },
+		mount = "floor",
+		size = V(1.9, 2.8, 1.9),
+		fit = "contain",
+		facing = "any",
+		credit = "JSCHRISP (Barrel Metal); 2BeeSupreme (Rusty Barrel)",
+	},
+	gears = {
+		ids = { 188960284 },
+		mount = "wall",
+		size = V(4, 3.4, 1.2),
+		fit = "contain",
+		facing = "auto",
+		credit = "connorhperkins (Gears)",
+	},
+	toolbox = {
+		ids = { 14452594483, 11464827472 },
+		mount = "floor",
+		size = V(2, 1.2, 1),
+		fit = "contain",
+		facing = "auto",
+		credit = "JSCHRISP (Rusty Toolbox); Filpaaaaa (Toolbox)",
+	},
+	electromagnet = {
+		ids = { 8630369951 }, -- crane magnet on chains (kept above head height)
+		mount = "ceiling",
+		size = V(3.2, 4.2, 3.2),
+		fit = "contain",
+		facing = "any",
+		credit = "daon2000 (Crane Magnet)",
 	},
 
 	-- Safety ---------------------------------------------------------------------------------------------------

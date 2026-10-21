@@ -140,6 +140,11 @@ return function(ctx)
 					table.insert(models, LevelBuilder.build(Layouts[id]).model)
 				end
 			end
+			for _, def in RoomDefs.ordered do
+				for _, skin in SkinDefs.byRoom[def.id] do
+					table.insert(models, RoomPrefabs.build(def.id, skin.id, CF.new(), "slots"))
+				end
+			end
 			local seen = 0
 			for _, model in models do
 				for _, d in model:GetDescendants() do

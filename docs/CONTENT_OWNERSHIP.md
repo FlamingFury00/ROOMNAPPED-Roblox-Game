@@ -66,6 +66,33 @@ in `default.project.json`).
 | rug | 11829259774 | Realistic Rug (caductis) |
 | fireExtinguisher | 14003556037, 5307188544 | Extinguisher (zzz_1551); Fire extinguisher (acxirv) |
 | wetFloorSign | 95220285653886, 16945975184 | Free Wet Floor Sign - Procedural Floors (At0_mik); Wet Floor Sign (skrigliets) |
+| vendingMachine | 13660630957, 10551751004 | old vending machine (craploltrevorIII); Broken Vending machine (pizzafriday17) |
+| waterCooler | 10904549519 | Water Dispenser Mesh PBR (Ligij) |
+| trashBin | 11426062981, 11508587471 | Trash Bin (MR_MohamedTarek); Trash Can (RTopix) |
+| roomServiceCart | 990979342, 3861786118 | Antique table (SurfaceGlue); wooden tea trolley (lakerguy2016) |
+| suitcaseStack | 4903900210, 4593529461 | Bellboy's Blinged Heavy Suitcases (EndlessSwagger); Luggage (visionpsyche7) |
+| trafficCone | 8952512774, 8615958435 | Traffic Cone (TheDiamondjordan); Traffic Cone (Zynkuru) |
+| goldenKey | 4022890583 | Giant Golden Skeleton Key (EndlessSwagger) |
+| uprightFreezer | 134950797159239 | Vintage fridge (jamesback1949) |
+| deskFan | 2293770895 | Electric Fan (BonnieGamez101) |
+| cardboardBoxes | 5128298696, 110825748556023 | Cardboard Boxes Mesh (Xitral); CardBoard_Boxes (nyaalchemi) |
+| ventDuct | 8431921736 | Air Duct Section (nate2the2great) |
+| laundryBasket | 6132018569, 7992808754 | basket (Glowziing); Laundry Basket (cruelescent) |
+| ironingBoard | 14650194703 | Ironing Board (IzzyEpic29) |
+| detergentShelf | 12342086399 | ShopInterior_Shelf_01 (lovegirl8560) |
+| towelStack | 433396067 | Stack of Towels (WrathOfTheElvhen) |
+| pottedFern | 138705818090140, 84496050289038 | COGIC Flower (5) (WaysonPhD); Matero (gabrielTST129) |
+| flowerPots | 7371169545 | Flower Pots (StoneSymmetry) |
+| cactus | 4112655360, 5950578308 | Cactus Plant (bearduckmonkey); Cactus in the pot (Procybit) |
+| smallTree | 3486483490, 8927567782 | Potted plant (fred11468); Plant (wesfilms) |
+| hangingPlant | 8130406239, 13414398302 | fixed hanging plant (EerieBun); Potted_Ivy_A (Crimson924) |
+| wateringCan | 14003540414 | Watering Can (zzz_1551) |
+| vines | 16155518562, 16078553656 | Ivy Veins (xGalaxinex); Vines (anolivys) |
+| scrapPile | 4740013617, 4570032694 | Scrap Pile 2 (Be4Vaporeon); scrap metal (Blabbering_Goat) |
+| metalBarrel | 14452389275, 13304723548 | Barrel Metal (JSCHRISP); Rusty Barrel (2BeeSupreme) |
+| gears | 188960284 | Gears (connorhperkins) |
+| toolbox | 14452594483, 11464827472 | Rusty Toolbox (JSCHRISP); Toolbox (Filpaaaaa) |
+| electromagnet | 8630369951 | Crane Magnet (daon2000) |
 
 Rejected on likeness grounds although they looked right: re-uploads of props from DOORS, FNaF, Hello
 Neighbor, Piggy and SCP, branded vending machines and the Shining-pattern carpet.
