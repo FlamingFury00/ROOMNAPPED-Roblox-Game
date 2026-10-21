@@ -26,7 +26,7 @@ fonts are the ones bundled with the Roblox client, and nothing is synthesized or
 | Progression | Room blueprints from missions, credits from extractions and challenges, 23 room skins and suitcases bought with earned credits (no Robux). Three mastery stars per mission (cleared, every golden key in one run, every bonus challenge), personal best times with a "New best!" moment, and NEW badges on anything unlocked until it is looked at. |
 | Platforms | Keyboard and mouse, touch (phones and tablets) and gamepad, with device-aware prompts and a responsive HUD that keeps touch targets above 44 pt on phones. |
 | Comfort | Reduced motion, low effects mode, text and UI size, separate music / effects / ambience / interface volume. |
-| Live operations | Session-locked saves with retries and an honest "Saving… / Saved" state, feature flags that disable a room or mission without touching profiles, server analytics funnel and custom events, admin test tools. |
+| Live operations | Session-locked saves with retries and an honest "Saving… / Saved" state (failed saves keep retrying and confirm when they land), feature flags that disable a room, mission or the shop without touching profiles and reach running servers within five minutes, server analytics funnel and custom events, admin test tools (including rollback and save-outage rehearsals). |
 
 ## Getting started
 
@@ -89,8 +89,9 @@ lune run tools/preview/export.luau build/test.rbxl L3 tools/preview/out/scene.js
 python3 tools/preview/render.py tools/preview/out/scene.json tools/preview/out/L3 --views 4 --size 1280x720
 ```
 
-Scenarios: `lobby`, `explore`, `placement`, `escape`, `downed`, `spectate`, `results`, `menu:<Screen>`
-(MissionBoard, Collection, Settings, Debug, Feedback), each optionally prefixed with `phone:`.
+Scenarios: `lobby`, `squad` (four players), `unlock` (NEW badges), `mastery` (mission stars), `explore`,
+`placement`, `escape`, `downed`, `spectate`, `results`, `menu:<Screen>` (MissionBoard, Collection, Settings,
+Debug, Feedback), each optionally prefixed with `phone:`.
 
 ## Project layout
 

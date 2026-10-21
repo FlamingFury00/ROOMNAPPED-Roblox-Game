@@ -160,6 +160,11 @@ client through roster data and player attributes; `SpectateController` follows l
   switches to a compact layout, the lobby squad list goes compact (and scrolls rather than run under the
   mission card) and the touch action cluster is anchored to the real jump button. Touch targets are at
   least 72 virtual px (≈ 44 pt on a phone) unless the whole surrounding card is the target.
+* **Progress moments**: Results counts the credit total up behind turning light rays and calls out a new
+  personal best; `NewItems` keeps rooms and skins unlocked this session marked NEW (cards, Collection tabs
+  and a count on the Rooms button) until they are looked at; the mission board shows three mastery stars
+  per cleared mission and ticks challenges already done; the lobby squad list offers a friend invite while
+  a seat is open.
 * **Honest controls**: anything the server would refuse is shown as unavailable with the reason before it is
   pressed — missions disabled by a live flag, the shop when it is switched off, *Unstuck* outside an active
   run or during its cooldown.
