@@ -1,0 +1,9 @@
+{
+  "className": "MaterialVariant",
+  "properties": {
+    "BaseMaterial": "Foil",
+    "ColorMap": "rbxassetid://7105226276",
+    "StudsPerTile": 5,
+    "MaterialPattern": "Regular"
+  }
+}

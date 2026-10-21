@@ -229,8 +229,7 @@ local function buildBasin(s: Session, zonePart: BasePart)
 	for _, d in s.model:GetDescendants() do
 		if d:IsA("BasePart") and d:HasTag("RN_IceCollider") and d:GetAttribute("ZoneId") == id then
 			d.Transparency = 1
-			d.Color = ICE
-			d.Material = Enum.Material.Ice
+			Palette.apply(d, "RN_Ice", ICE)
 			d.Reflectance = 0.15
 			table.insert(ice, d)
 		end

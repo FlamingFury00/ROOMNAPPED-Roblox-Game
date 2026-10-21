@@ -33,16 +33,49 @@ export type Theme = {
 	pot: Color3,
 	fog: Color3,
 	ambient: Color3,
-	-- Optional MaterialVariant names (MaterialService) for patterned surfaces: wallpaper, carpet, floor.
-	wallVariant: string?,
-	carpetVariant: string?,
-	floorVariant: string?,
+	-- Patterned surfaces (MaterialVariants in MaterialService, see Palette.dress).
+	surfaces: { [SurfaceKind]: Surface }?,
 }
+
+export type SurfaceKind = "wall" | "carpet" | "floor" | "ceiling"
+
+-- A MaterialVariant from src/MaterialService: its base material (parts must use it for the variant to
+-- show) and the colour the part takes (it multiplies the texture: white shows it as painted).
+export type Surface = { variant: string, material: Enum.Material, tint: Color3 }
 
 local M = Enum.Material
 local function rgb(r: number, g: number, b: number): Color3
 	return Color3.fromRGB(r, g, b)
 end
+
+local function surface(variant: string, material: Enum.Material, tint: Color3?): Surface
+	return { variant = variant, material = material, tint = tint or Color3.new(1, 1, 1) }
+end
+
+-- The MaterialVariants the place file defines (src/MaterialService/<name>.model.json) and their base
+-- materials; tests check the two agree.
+local VARIANTS: { [string]: Enum.Material } = {
+	RN_WallDamaskRed = M.Fabric,
+	RN_WallDamaskGreen = M.Fabric,
+	RN_WallDamaskNavy = M.Fabric,
+	RN_WallDamaskMint = M.Fabric,
+	RN_WallStripes = M.Fabric,
+	RN_WallTiles = M.CeramicTiles,
+	RN_WallBrick = M.Brick,
+	RN_WallMossBrick = M.Brick,
+	RN_CarpetLattice = M.Carpet,
+	RN_CarpetMedallion = M.Carpet,
+	RN_CarpetMoss = M.Carpet,
+	RN_FloorParquet = M.WoodPlanks,
+	RN_FloorHerringbone = M.WoodPlanks,
+	RN_FloorMarbleWhite = M.Marble,
+	RN_FloorMarbleBlack = M.Marble,
+	RN_FloorChecker = M.CeramicTiles,
+	RN_Concrete = M.Concrete,
+	RN_RustMetal = M.Metal,
+	RN_Ice = M.Ice,
+	RN_GoldDeco = M.Foil,
+}
 
 local themes: { [string]: Theme } = {
 	classic = {
@@ -74,6 +107,11 @@ local themes: { [string]: Theme } = {
 		pot = rgb(170, 90, 60),
 		fog = rgb(20, 14, 18),
 		ambient = rgb(26, 20, 26),
+		surfaces = {
+			wall = surface("RN_WallDamaskGreen", M.Fabric, rgb(214, 226, 214)),
+			carpet = surface("RN_CarpetLattice", M.Carpet),
+			floor = surface("RN_FloorParquet", M.WoodPlanks),
+		},
 	},
 	laundry = {
 		id = "laundry",
@@ -104,13 +142,17 @@ local themes: { [string]: Theme } = {
 		pot = rgb(236, 236, 236),
 		fog = rgb(14, 20, 28),
 		ambient = rgb(22, 26, 34),
+		surfaces = {
+			wall = surface("RN_WallTiles", M.CeramicTiles, rgb(206, 230, 246)),
+			floor = surface("RN_FloorChecker", M.CeramicTiles),
+		},
 	},
 	boiler = {
 		id = "boiler",
 		floor = rgb(80, 78, 76),
 		floorMaterial = M.DiamondPlate,
 		carpet = rgb(60, 56, 54),
-		carpetMaterial = M.Metal,
+		carpetMaterial = M.DiamondPlate,
 		carpetBorder = rgb(240, 170, 40),
 		wall = rgb(122, 58, 46),
 		wallMaterial = M.Brick,
@@ -134,6 +176,10 @@ local themes: { [string]: Theme } = {
 		pot = rgb(100, 90, 80),
 		fog = rgb(26, 14, 10),
 		ambient = rgb(32, 20, 16),
+		surfaces = {
+			wall = surface("RN_WallBrick", M.Brick, rgb(236, 226, 220)),
+			ceiling = surface("RN_Concrete", M.Concrete, rgb(150, 144, 140)),
+		},
 	},
 	greenhouse = {
 		id = "greenhouse",
@@ -164,6 +210,11 @@ local themes: { [string]: Theme } = {
 		pot = rgb(180, 100, 60),
 		fog = rgb(14, 20, 12),
 		ambient = rgb(22, 28, 20),
+		surfaces = {
+			wall = surface("RN_WallMossBrick", M.Brick),
+			carpet = surface("RN_CarpetMoss", M.Carpet),
+			floor = surface("RN_FloorHerringbone", M.WoodPlanks),
+		},
 	},
 	frost = {
 		id = "frost",
@@ -175,7 +226,7 @@ local themes: { [string]: Theme } = {
 		wall = rgb(140, 176, 206),
 		wallMaterial = M.Fabric,
 		wainscot = rgb(226, 236, 246),
-		wainscotMaterial = M.Wood,
+		wainscotMaterial = M.Marble,
 		trim = rgb(242, 248, 255),
 		trimMaterial = M.SmoothPlastic,
 		ceiling = rgb(222, 234, 246),
@@ -194,6 +245,10 @@ local themes: { [string]: Theme } = {
 		pot = rgb(196, 214, 232),
 		fog = rgb(16, 22, 34),
 		ambient = rgb(24, 30, 44),
+		surfaces = {
+			wall = surface("RN_WallDamaskMint", M.Fabric, rgb(196, 222, 248)),
+			floor = surface("RN_FloorMarbleWhite", M.Marble, rgb(218, 232, 246)),
+		},
 	},
 	vault = {
 		id = "vault",
@@ -224,6 +279,11 @@ local themes: { [string]: Theme } = {
 		pot = rgb(222, 184, 90),
 		fog = rgb(10, 12, 22),
 		ambient = rgb(18, 20, 30),
+		surfaces = {
+			wall = surface("RN_WallDamaskNavy", M.Fabric),
+			carpet = surface("RN_CarpetMedallion", M.Carpet),
+			floor = surface("RN_FloorMarbleBlack", M.Marble),
+		},
 	},
 	lobby = {
 		id = "lobby",
@@ -254,13 +314,39 @@ local themes: { [string]: Theme } = {
 		pot = rgb(200, 160, 80),
 		fog = rgb(24, 16, 20),
 		ambient = rgb(40, 30, 34),
+		surfaces = {
+			wall = surface("RN_WallDamaskRed", M.Fabric, rgb(236, 226, 226)),
+			carpet = surface("RN_CarpetLattice", M.Carpet),
+			floor = surface("RN_FloorMarbleWhite", M.Marble),
+		},
 	},
 }
 
 local Palette = {}
 
+Palette.VARIANTS = VARIANTS
+
 function Palette.get(id: string): Theme
 	return themes[id] or themes.classic
+end
+
+-- Dress a structural part with the theme's patterned surface of that kind (wallpaper, carpet, parquet ...),
+-- if the theme has one; the part keeps its plain colour and material otherwise.
+function Palette.dress(part: BasePart, theme: Theme, kind: SurfaceKind)
+	local s = theme.surfaces and theme.surfaces[kind]
+	if s then
+		Palette.apply(part, s.variant, s.tint)
+	end
+end
+
+-- Put a part on one of the place's MaterialVariants (with its base material) tinted `tint`.
+function Palette.apply(part: BasePart, variant: string, tint: Color3?)
+	local material = VARIANTS[variant]
+	if material then
+		part.Material = material
+		part.MaterialVariant = variant
+		part.Color = tint or Color3.new(1, 1, 1)
+	end
 end
 
 Palette.themes = themes

@@ -102,6 +102,13 @@
       }
     },
 
+    "MaterialService": {
+      "$path": "src/MaterialService",
+      "$properties": {
+        "Use2022Materials": true
+      }
+    },
+
     "AssetService": {
       "$properties": {
         "AllowInsertFreeAssets": true

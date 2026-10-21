@@ -256,8 +256,8 @@ local function wall(
 		end
 		if isSolid then
 			local part = Kit.solid(ctx.structure, name, partCF, size, color, material)
-			if name == "Wall" and theme.wallVariant then
-				part.MaterialVariant = theme.wallVariant
+			if name == "Wall" or name == "Lintel" then
+				Palette.dress(part, theme, "wall")
 			end
 			return part
 		end
@@ -373,9 +373,17 @@ local function floorTile(ctx: Ctx, cf: CFrame, a0: number, a1: number, carpet: b
 	local theme = ctx.theme
 	local len = a1 - a0
 	local mid = (a0 + a1) / 2
-	Kit.solid(ctx.structure, "Floor", tcf(cf, 0, -0.5, mid), Vector3.new(T, 1, len), theme.floor, theme.floorMaterial)
+	local floor = Kit.solid(
+		ctx.structure,
+		"Floor",
+		tcf(cf, 0, -0.5, mid),
+		Vector3.new(T, 1, len),
+		theme.floor,
+		theme.floorMaterial
+	)
+	Palette.dress(floor, theme, "floor")
 	if carpet then
-		Kit.decor(
+		local runner = Kit.decor(
 			ctx.decor,
 			"Carpet",
 			tcf(cf, 0, 0.04, mid),
@@ -383,6 +391,7 @@ local function floorTile(ctx: Ctx, cf: CFrame, a0: number, a1: number, carpet: b
 			theme.carpet,
 			theme.carpetMaterial
 		)
+		Palette.dress(runner, theme, "carpet")
 		for _, x in { -4.7, 4.7 } do
 			Kit.decor(
 				ctx.decor,
@@ -399,7 +408,7 @@ end
 local function ceilingTile(ctx: Ctx, cf: CFrame, a0: number, a1: number)
 	local len = a1 - a0
 	local theme = ctx.theme
-	Kit.solid(
+	local ceiling = Kit.solid(
 		ctx.structure,
 		"Ceiling",
 		tcf(cf, 0, CEIL + 0.5, (a0 + a1) / 2),
@@ -407,6 +416,7 @@ local function ceilingTile(ctx: Ctx, cf: CFrame, a0: number, a1: number)
 		theme.ceiling,
 		theme.ceilingMaterial
 	)
+	Palette.dress(ceiling, theme, "ceiling")
 	-- Coffers: a beam across the corridor at the start of every tile, lining up with the pilasters.
 	local beamColor = theme.ceiling:Lerp(theme.trim, 0.35):Lerp(Color3.new(0, 0, 0), 0.08)
 	local beam = Kit.decor(
@@ -813,11 +823,32 @@ local function buildAlcove(ctx: Ctx, tile: TileInfo, side: string, alcoveId: str
 	local function ap(x: number, y: number, d: number): CFrame
 		return acf * CFrame.new(x, y, -d)
 	end
-	Kit.solid(ctx.structure, "AlcoveFloor", ap(0, -0.5, 4), Vector3.new(8, 1, 8), theme.floor, theme.floorMaterial)
-	Kit.solid(ctx.structure, "AlcoveCeiling", ap(0, 9.5, 4), Vector3.new(8, 1, 8), theme.ceiling, theme.ceilingMaterial)
-	Kit.solid(ctx.structure, "AlcoveBack", ap(0, 4.5, 8.5), Vector3.new(8, 9, 1), theme.wall, theme.wallMaterial)
-	Kit.solid(ctx.structure, "AlcoveL", ap(-3.5, 4.5, 4), Vector3.new(1, 9, 8), theme.wall, theme.wallMaterial)
-	Kit.solid(ctx.structure, "AlcoveR", ap(3.5, 4.5, 4), Vector3.new(1, 9, 8), theme.wall, theme.wallMaterial)
+	Palette.dress(
+		Kit.solid(ctx.structure, "AlcoveFloor", ap(0, -0.5, 4), Vector3.new(8, 1, 8), theme.floor, theme.floorMaterial),
+		theme,
+		"floor"
+	)
+	Palette.dress(
+		Kit.solid(
+			ctx.structure,
+			"AlcoveCeiling",
+			ap(0, 9.5, 4),
+			Vector3.new(8, 1, 8),
+			theme.ceiling,
+			theme.ceilingMaterial
+		),
+		theme,
+		"ceiling"
+	)
+	local alcoveWalls: { { name: string, cf: CFrame, size: Vector3 } } = {
+		{ name = "AlcoveBack", cf = ap(0, 4.5, 8.5), size = Vector3.new(8, 9, 1) },
+		{ name = "AlcoveL", cf = ap(-3.5, 4.5, 4), size = Vector3.new(1, 9, 8) },
+		{ name = "AlcoveR", cf = ap(3.5, 4.5, 4), size = Vector3.new(1, 9, 8) },
+	}
+	for _, spec in alcoveWalls do
+		local wall = Kit.solid(ctx.structure, spec.name, spec.cf, spec.size, theme.wall, theme.wallMaterial)
+		Palette.dress(wall, theme, "wall")
+	end
 	local vaultLight = Kit.part(ctx.decor, {
 		name = "AlcoveLight",
 		cf = ap(0, 8.9, 4),

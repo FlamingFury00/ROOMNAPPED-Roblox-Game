@@ -40,6 +40,7 @@ const cacheDir = path.join(here, "cache");
 fs.mkdirSync(cacheDir, { recursive: true });
 const ids = new Set();
 for (const p of data.parts) for (const t of p.tex || []) { const m = String(t.id).match(/(\d+)/); if (m) ids.add(m[1]); }
+for (const v of Object.values(data.variants || {})) ids.add(String(v.image));
 const missing = [...ids].filter(id => !fs.existsSync(path.join(cacheDir, `${id}.png`)));
 for (let i = 0; i < missing.length; i += 100) {
   const chunk = missing.slice(i, i + 100);

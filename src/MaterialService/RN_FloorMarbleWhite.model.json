@@ -1,0 +1,9 @@
+{
+  "className": "MaterialVariant",
+  "properties": {
+    "BaseMaterial": "Marble",
+    "ColorMap": "rbxassetid://13244172992",
+    "StudsPerTile": 14,
+    "MaterialPattern": "Organic"
+  }
+}

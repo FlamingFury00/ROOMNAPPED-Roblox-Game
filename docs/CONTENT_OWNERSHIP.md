@@ -23,7 +23,8 @@ Last reviewed: 2026-10-21, against Roblox client `version-9ac8595712b447a7` (0.7
 | The Caretaker | An R15 character dressed from catalog items (table below), animated with Roblox-made animation packs; the part-built bellhop in `CaretakerView.luau` is the fallback | Catalog items in an NPC's `HumanoidDescription`; Roblox animations |
 | Materials | Roblox built-in `Enum.Material` values | Engine feature |
 | UI icons | Composed from `Frame`s, `UICorner`s and `UIStroke`s in `src/client/UI/Icons.luau` | Original |
-| Images and particles | Textures bundled with the Roblox client (`rbxasset://textures/...`, list below) | Shipped with every Roblox client; referenced in place, never re-uploaded |
+| Wallpapers, carpets, floors and paintings | Free Creator Store images used as MaterialVariants and picture-frame decals (table below) | Free Creator Store assets |
+| Particles | Textures bundled with the Roblox client (`rbxasset://textures/...`, list below) | Shipped with every Roblox client; referenced in place, never re-uploaded |
 | Fonts | Roblox built-in font families (`rbxasset://fonts/families/...`, list below) | Shipped with every Roblox client |
 | Audio | 67 cues from the Roblox Creator Store: Roblox-owned audio and Roblox's licensed partner libraries ProSoundEffects and APM Music (table below) | Free to use in Roblox experiences; no synthesized or self-uploaded audio |
 | Player avatars | `rbxthumb://` headshots and the players' own characters | Roblox platform feature |
@@ -68,6 +69,49 @@ in `default.project.json`).
 
 Rejected on likeness grounds although they looked right: re-uploads of props from DOORS, FNaF, Hello
 Neighbor, Piggy and SCP, branded vending machines and the Shining-pattern carpet.
+
+## Surface textures and paintings
+
+Free Creator Store images (the image asset each decal wraps, matched by creator and upload time and viewed
+on its own thumbnail; tiles were checked for seams by tiling them 2x2). The surfaces are MaterialVariants
+in the place file (`src/MaterialService/*.model.json`) that the themes in `src/shared/World/Palette.luau`
+put on walls, floors, carpets and ceilings; the paintings hang in the hotel's frames
+(`src/shared/Content/Artwork.luau`).
+
+| MaterialVariant | Image id | Name (creator) |
+| --- | --- | --- |
+| RN_WallDamaskRed | 95115328923362 | wall (TheMasterNinjaO) |
+| RN_WallDamaskGreen | 17557248412 | foreste (xaov_Lakayleia) |
+| RN_WallDamaskNavy | 93245924735654 | fancy wallpaper (DisBuilder) |
+| RN_WallDamaskMint | 9502411649 | textura verde victoriana clara (FurRuBear) |
+| RN_WallStripes | 1587315754 | Striped Wallpaper [Cream/Tan] (Yuvha) |
+| RN_WallTiles | 748527930 | White Tile Texture (IROCK108) |
+| RN_WallBrick | 106832102497540 | Old Brick Wall (SpaceSurpher) |
+| RN_WallMossBrick | 12969213627 | Mossy Brick Wall (Myzicx) |
+| RN_CarpetLattice | 96947613328020 | Hotel carpet (natethegamer1467) |
+| RN_CarpetMedallion | 133466011073486 | Hotel Carpet (ProfessionalBloxxer7) |
+| RN_CarpetMoss | 13209499244 | Moss ColorMap (voidfxul) |
+| RN_FloorParquet | 132171894739555 | luxury wood parquet (Decalshejsankawaii) |
+| RN_FloorHerringbone | 4546985492 | Herringbone Parquet Floor (6vrse) |
+| RN_FloorMarbleWhite | 13244172992 | White Marble Floor (Myzicx) |
+| RN_FloorMarbleBlack | 8569440485 | Black marble floor (Besvare) |
+| RN_FloorChecker | 71661415583957 | Checkered marble kitchen tile floor (BornYETl) |
+| RN_Concrete | 10438628935, 10438645466, 10438659826 | dirty_concrete colour, normal and roughness (Chrn_E; Poly Haven CC0 source) |
+| RN_RustMetal | 134162642420787 | corroded metal (Soy_DarkFox) |
+| RN_Ice | 6989477160 | seamless ice texture (MilleSimon) |
+| RN_GoldDeco | 7105226276 | PatternNo5 (Mysteryexe1) |
+
+Paintings (public-domain works; image ids): 18430235398 Rembrandt, *The Storm on the Sea of Galilee*
+(BrotherRaskolnikov); 1409031210 Vigee Le Brun, *Marie Antoinette and her Children* (Rambo_builder);
+72130553645630 moonlit coastal capriccio (SparterO9); 111154086863275 ship in a storm (dddu_dddu);
+17206697773 Georgiana Cavendish (mariontje); 1564409880 *The Man with the Golden Helmet* (Andrew_Alba);
+3360739154 Dutch lady with a ruff (awsomesstv80415); 130601462587585 Rembrandt Peale, *Rubens Peale with a
+Geranium* (rox_llq); 91327321009394 and 140408481713108 still lifes (Verity942); 6683780280 Victorian
+watermill (VIE_nnese); 5687258726 Gainsborough, *The Baillie Family* (Annie_Sparkling); 16487841857
+stormy sea with a rowboat (Thxo_lgs); 230190583 Rembrandt, *St Paul in Prison* (gordonfreeman564).
+
+Rejected: images whose own thumbnail is a moderation placeholder, decals with no matching image, tiles
+that showed seams, and anything named after a film, game or brand (for example the Shining carpets).
 
 ## The Caretaker
 

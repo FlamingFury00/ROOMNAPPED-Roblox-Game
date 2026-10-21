@@ -87,5 +87,74 @@ return function(ctx)
 		end)
 	end)
 
+	describe("Surfaces and real models (A01/A10)", function()
+		local Palette = ctx.module("ReplicatedStorage.Shared.World.Palette")
+		local AssetManifest = ctx.module("ReplicatedStorage.Shared.Content.AssetManifest")
+		local LobbyBuilder = ctx.module("ReplicatedStorage.Shared.World.LobbyBuilder")
+
+		it("every palette surface is a MaterialVariant in the place with the same base material", function()
+			local service = ctx.game:FindFirstChildOfClass("MaterialService")
+			if not service then
+				error("the place has no MaterialService")
+			end
+			for name, material in Palette.VARIANTS do
+				local variant = service:FindFirstChild(name)
+				if not (variant and variant.ClassName == "MaterialVariant") then
+					error("missing MaterialVariant " .. name)
+				end
+				if variant.BaseMaterial ~= material then
+					error(name .. " has base material " .. tostring(variant.BaseMaterial))
+				end
+			end
+			for id, theme in Palette.themes do
+				for kind, surface in theme.surfaces or {} do
+					if Palette.VARIANTS[surface.variant] ~= surface.material then
+						error(id .. "." .. kind .. " uses " .. surface.variant .. " on the wrong base material")
+					end
+				end
+			end
+		end)
+
+		it("every manifest entry is well formed", function()
+			for _, key in AssetManifest.keys() do
+				local entry = AssetManifest.get(key)
+				if #entry.ids == 0 then
+					error(key .. " has no ids")
+				end
+				local size = entry.size
+				if size.X <= 0 or size.Y <= 0 or size.Z <= 0 then
+					error(key .. " has an empty size")
+				end
+				for id in entry.turns or {} do
+					if not table.find(entry.ids, id) then
+						error(key .. " turns an id it does not list: " .. tostring(id))
+					end
+				end
+			end
+		end)
+
+		it("every prop slot the builders make names a manifest key", function()
+			local models = { LobbyBuilder.build().model }
+			for _, id in { "L1", "L4", "L6" } do
+				if Layouts[id] then
+					table.insert(models, LevelBuilder.build(Layouts[id]).model)
+				end
+			end
+			local seen = 0
+			for _, model in models do
+				for _, d in model:GetDescendants() do
+					local key = d:GetAttribute("AssetKey")
+					if key ~= nil then
+						seen += 1
+						if not AssetManifest.get(key) then
+							error("slot for unknown prop key " .. tostring(key))
+						end
+					end
+				end
+			end
+			expect(seen > 0).toBe(true)
+		end)
+	end)
+
 	local _ = Geometry
 end

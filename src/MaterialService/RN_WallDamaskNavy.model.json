@@ -1,0 +1,9 @@
+{
+  "className": "MaterialVariant",
+  "properties": {
+    "BaseMaterial": "Fabric",
+    "ColorMap": "rbxassetid://93245924735654",
+    "StudsPerTile": 7,
+    "MaterialPattern": "Regular"
+  }
+}

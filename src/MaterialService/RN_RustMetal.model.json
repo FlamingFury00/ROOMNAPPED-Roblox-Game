@@ -1,0 +1,9 @@
+{
+  "className": "MaterialVariant",
+  "properties": {
+    "BaseMaterial": "Metal",
+    "ColorMap": "rbxassetid://134162642420787",
+    "StudsPerTile": 10,
+    "MaterialPattern": "Organic"
+  }
+}

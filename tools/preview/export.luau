@@ -150,8 +150,26 @@ for _, d in root:GetDescendants() do
 		})
 	end
 end
+-- MaterialVariants (from their Rojo files): the viewer draws their colour maps from asset thumbnails.
+local variants = {}
+local variantDir = "src/MaterialService"
+if fs.isDir(variantDir) then
+	for _, file in fs.readDir(variantDir) do
+		local name = string.match(file, "^(.+)%.model%.json$")
+		if name then
+			local ok, decoded = pcall(serde.decode, "json", fs.readFile(variantDir .. "/" .. file))
+			local props = ok and decoded.properties
+			local image = props and string.match(tostring(props.ColorMap or ""), "(%d+)")
+			if image then
+				variants[name] = { image = image, studs = props.StudsPerTile or 8 }
+			end
+		end
+	end
+end
+
 extra.parts = parts
 extra.lights = lights
 extra.slots = slots
+extra.variants = variants
 fs.writeFile(outPath, serde.encode("json", extra))
 print(string.format("exported %d parts, %d lights, %d asset slots -> %s", #parts, #lights, #slots, outPath))

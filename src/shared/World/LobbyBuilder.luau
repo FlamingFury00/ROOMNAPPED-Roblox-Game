@@ -77,12 +77,18 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 
 	-- Floor: marble checkerboard framed by an inlay band, a compass rose under the chandelier and a carpet
 	-- runner to the elevators.
-	Kit.solid(structure, "Floor", at(0, -0.5, 0), Vector3.new(W, 1, D), theme.floor, M.Marble)
+	Palette.dress(
+		Kit.solid(structure, "Floor", at(0, -0.5, 0), Vector3.new(W, 1, D), theme.floor, M.Marble),
+		theme,
+		"floor"
+	)
 	local dark = Color3.fromRGB(60, 40, 48)
 	for ix = -4, 3 do
 		for iz = -3, 2 do
 			if (ix + iz) % 2 == 0 then
-				piece("Tile", at(ix * 9 + 4.5, 0.02, iz * 10 + 5), Vector3.new(9, 0.04, 10), dark, M.Marble)
+				local tile =
+					piece("Tile", at(ix * 9 + 4.5, 0.02, iz * 10 + 5), Vector3.new(9, 0.04, 10), dark, M.Marble)
+				Palette.apply(tile, "RN_FloorMarbleBlack", Color3.fromRGB(200, 190, 196))
 			end
 		end
 	end
@@ -105,7 +111,11 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 			material = M.Marble,
 		})
 	end
-	Props.rug(decor, at(0, 0.1, 13), Vector2.new(10, 26), theme.carpet, theme.carpetBorder)
+	Palette.dress(
+		Props.rug(decor, at(0, 0.1, 13), Vector2.new(10, 26), theme.carpet, theme.carpetBorder),
+		theme,
+		"carpet"
+	)
 
 	-- Ceiling: plaster with a coffered grid.
 	Kit.solid(structure, "Ceiling", at(0, H + 0.5, 0), Vector3.new(W, 1, D), theme.ceiling, M.Plaster)
@@ -119,9 +129,7 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 	-- Walls: structure, then the gallery architecture.
 	local function wallPiece(name: string, cf: CFrame, size: Vector3)
 		local part = Kit.solid(structure, name, cf, size, theme.wall, theme.wallMaterial)
-		if theme.wallVariant then
-			part.MaterialVariant = theme.wallVariant
-		end
+		Palette.dress(part, theme, "wall")
 	end
 	wallPiece("WallBack", at(0, H / 2, -D / 2 - 0.5), Vector3.new(W + 2, H, 1))
 	wallPiece("WallLeft", at(-W / 2 - 0.5, H / 2, 0), Vector3.new(1, H, D + 2))
@@ -448,9 +456,14 @@ function LobbyBuilder.build(origin: Vector3?): { model: Model, runtime: LobbyRun
 		)
 		Kit.decor(decor, "CarRug", at(x, 0.05, cz), Vector3.new(7, 0.1, carDepth - 2), theme.carpet, M.Carpet)
 		Kit.solid(structure, "CarCeiling", at(x, 11.5, cz), Vector3.new(10, 1, carDepth), theme.trim, M.Foil)
-		Kit.solid(structure, "CarWallL", at(x - 4.5, 5.5, cz), Vector3.new(1, 11, carDepth), theme.trim, M.Foil)
-		Kit.solid(structure, "CarWallR", at(x + 4.5, 5.5, cz), Vector3.new(1, 11, carDepth), theme.trim, M.Foil)
-		Kit.solid(structure, "CarBack", at(x, 5.5, cz + carDepth / 2 + 0.5), Vector3.new(10, 11, 1), theme.trim, M.Foil)
+		local carWalls: { { name: string, cf: CFrame, size: Vector3 } } = {
+			{ name = "CarWallL", cf = at(x - 4.5, 5.5, cz), size = Vector3.new(1, 11, carDepth) },
+			{ name = "CarWallR", cf = at(x + 4.5, 5.5, cz), size = Vector3.new(1, 11, carDepth) },
+			{ name = "CarBack", cf = at(x, 5.5, cz + carDepth / 2 + 0.5), size = Vector3.new(10, 11, 1) },
+		}
+		for _, spec in carWalls do
+			Palette.apply(Kit.solid(structure, spec.name, spec.cf, spec.size, theme.trim, M.Foil), "RN_GoldDeco")
+		end
 		-- Car interior: wood panels, a mirror, a handrail.
 		for _, side in { -1, 1 } do
 			for k = 0, 2 do

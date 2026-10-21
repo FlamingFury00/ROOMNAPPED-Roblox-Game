@@ -99,12 +99,31 @@ const TILE = { Wood: 6, WoodPlanks: 8, Carpet: 4, Fabric: 3, Plaster: 8, Concret
   DiamondPlate: 4, Metal: 6, Slate: 8, Granite: 6, Ground: 8, Leather: 4 };
 
 const matCache = new Map();
+let VARIANTS = {};
+const variantTextures = new Map();
+// A MaterialVariant's colour map, tiled every `studs` studs (box UVs are in units of TILE[base material]).
+function variantTexture(p) {
+  const v = VARIANTS[p.mv];
+  if (!v) return null;
+  const key = `${p.mv}|${p.m}`;
+  if (variantTextures.has(key)) return variantTextures.get(key);
+  const base = imageTexture(v.image);
+  if (!base) return null;
+  const t = base.clone();
+  t.needsUpdate = true;
+  const k = (TILE[p.m] || 6) / (v.studs || 8);
+  t.repeat.set(k, k);
+  variantTextures.set(key, t);
+  return t;
+}
 function material(p) {
   const key = [p.m, p.c.map(v => v.toFixed(3)).join(","), p.t.toFixed(2), (p.r || 0).toFixed(2), p.mv || ""].join("|");
   if (matCache.has(key)) return matCache.get(key);
   const color = new THREE.Color(p.c[0], p.c[1], p.c[2]).convertSRGBToLinear();
   const opts = { color, roughness: ROUGH[p.m] ?? 0.6, metalness: METAL[p.m] ?? 0 };
-  if (DETAIL[p.m]) { opts.map = DETAIL[p.m]; opts.bumpMap = DETAIL[p.m]; opts.bumpScale = 0.6; }
+  const variantMap = p.mv ? variantTexture(p) : null;
+  if (variantMap) { opts.map = variantMap; opts.bumpMap = variantMap; opts.bumpScale = 0.25; }
+  else if (DETAIL[p.m]) { opts.map = DETAIL[p.m]; opts.bumpMap = DETAIL[p.m]; opts.bumpScale = 0.6; }
   if (p.m === "Neon") { opts.emissive = color.clone(); opts.emissiveIntensity = 2.2; }
   if (p.m === "Glass" || p.m === "Ice" || p.t > 0.01) {
     opts.transparent = true;
@@ -209,6 +228,7 @@ function faceOverlay(p, tex, group) {
 
 let shadowBudget = 8;
 async function build(data, mood) {
+  VARIANTS = data.variants || {};
   for (const p of data.parts) {
     if (p.t >= 0.99) continue;
     if (mood.hideTop && mood.hideTop.includes(p.n)) continue;

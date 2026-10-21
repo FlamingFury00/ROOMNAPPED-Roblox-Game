@@ -210,6 +210,15 @@ function Props.painting(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, wi
 	local w, h = width or 4, height or 3
 	local roll = rng()
 	local sceneRng = subRng(rng)
+	-- The frame takes the painting's shape (fitted inside the space it was given), so art never stretches.
+	local art = Artwork.pick(roll, w / h)
+	if art then
+		if art.aspect > w / h then
+			h = w / art.aspect
+		else
+			w = h * art.aspect
+		end
+	end
 	local model = Kit.model(parent, "Painting")
 	-- Gilded frame: four mitred-looking bars around a dark backing, with an inner lip.
 	local border = 0.32
@@ -242,7 +251,6 @@ function Props.painting(parent: Instance, cf: CFrame, theme: Theme, rng: Rng, wi
 			M.Foil
 		)
 	end
-	local art = Artwork.pick(roll, w / h)
 	if art then
 		local canvas =
 			decor(model, "Canvas", at(cf, 0, 0, 0.14), Vector3.new(w - 0.1, h - 0.1, 0.04), Color3.new(1, 1, 1))
@@ -756,9 +764,17 @@ function Props.pipeRun(parent: Instance, from: Vector3, to: Vector3, diameter: n
 	})
 end
 
-function Props.rug(parent: Instance, cf: CFrame, size: Vector2, base: Color3, border: Color3)
+-- A rug with a border; returns the inner field (for a patterned carpet).
+function Props.rug(parent: Instance, cf: CFrame, size: Vector2, base: Color3, border: Color3): Part
 	decor(parent, "RugBorder", cf * CFrame.new(0, 0.04, 0), Vector3.new(size.X, 0.06, size.Y), border, M.Carpet)
-	decor(parent, "Rug", cf * CFrame.new(0, 0.08, 0), Vector3.new(size.X - 0.7, 0.06, size.Y - 0.7), base, M.Carpet)
+	return decor(
+		parent,
+		"Rug",
+		cf * CFrame.new(0, 0.08, 0),
+		Vector3.new(size.X - 0.7, 0.06, size.Y - 0.7),
+		base,
+		M.Carpet
+	)
 end
 
 function Props.umbrellaStand(parent: Instance, cf: CFrame, theme: Theme)
