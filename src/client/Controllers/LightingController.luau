@@ -87,8 +87,10 @@ local autoTried = false -- one attempt per session
 local slowFor = 0
 local averageFrame = 1 / 60
 local lowApplied: boolean? = nil
--- Lights whose shadows Low Effects switched off (weak), to switch back on.
-local unshadowed: { [Light]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+-- Lights whose shadows Low Effects switched off, to switch back on. A strong table: the engine may collect an
+-- Instance's Lua object while the light lives on, which would drop it from a weak one. Destroyed lights are
+-- dropped whenever more are switched off.
+local unshadowed: { [Light]: boolean } = {}
 
 local function lowEffects(): boolean
 	return SettingsController.get().lowEffects
@@ -96,6 +98,11 @@ end
 
 local function applyShadows(root: Instance?, low: boolean)
 	if low then
+		for light in unshadowed do
+			if light.Parent == nil then
+				unshadowed[light] = nil
+			end
+		end
 		if root then
 			for _, d in root:GetDescendants() do
 				if d:IsA("Light") and d.Shadows then

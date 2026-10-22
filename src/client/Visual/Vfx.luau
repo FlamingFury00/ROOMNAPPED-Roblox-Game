@@ -77,8 +77,19 @@ Vfx.Curated = {
 } :: { [string]: Curated }
 
 local lowEffects = false
--- Continuous emitters and their full-density rate (weak: destroyed emitters drop out).
-local tracked: { [ParticleEmitter]: number } = setmetatable({}, { __mode = "k" }) :: any
+-- Continuous emitters and their full-density rate. A strong table: the engine may collect an Instance's Lua
+-- object while the emitter lives on, which would drop it from a weak one. Destroyed emitters are swept out.
+local tracked: { [ParticleEmitter]: number } = {}
+local addedSinceSweep = 0
+local SWEEP_EVERY = 100
+
+local function sweepTracked()
+	for emitter in tracked do
+		if emitter.Parent == nil then
+			tracked[emitter] = nil
+		end
+	end
+end
 
 local function densityScale(): number
 	return if lowEffects then GameConfig.Performance.LowEffectsParticleScale else 1
@@ -93,6 +104,8 @@ function Vfx.setLowEffects(value: boolean)
 	for emitter, rate in tracked do
 		if emitter.Parent then
 			emitter.Rate = rate * scale
+		else
+			tracked[emitter] = nil
 		end
 	end
 end
@@ -103,6 +116,13 @@ end
 
 -- Change a continuous emitter's full-density rate (scaled for Low Effects now and on later changes).
 function Vfx.setRate(emitter: ParticleEmitter, rate: number)
+	if tracked[emitter] == nil then
+		addedSinceSweep += 1
+		if addedSinceSweep >= SWEEP_EVERY then
+			addedSinceSweep = 0
+			sweepTracked()
+		end
+	end
 	tracked[emitter] = rate
 	emitter.Rate = rate * densityScale()
 end
