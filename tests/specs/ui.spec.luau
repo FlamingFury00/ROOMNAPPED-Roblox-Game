@@ -303,6 +303,8 @@ return function(ctx)
 			local SettingsController = client:module("Controllers.SettingsController")
 			UIRoot.open("Settings")
 			expect(UIRoot.isOpen("Settings")).toBe(true)
+			-- Roblox's touch controls never sit over a menu.
+			expect(client.services.GuiService.TouchControlsEnabled).toBe(false)
 			for _, key in { "reducedMotion", "lowEffects", "hints", "cameraShake" } do
 				expect(client:find("Toggle_" .. key)).toBeTruthy()
 			end
@@ -315,6 +317,7 @@ return function(ctx)
 			-- Menu action toggles the screen.
 			UIRoot.close("Settings")
 			expect(UIRoot.isOpen("Settings")).toBe(false)
+			expect(client.services.GuiService.TouchControlsEnabled).toBe(true)
 			assertClean(client)
 		end)
 

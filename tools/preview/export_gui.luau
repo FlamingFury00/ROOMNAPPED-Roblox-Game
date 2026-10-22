@@ -360,5 +360,7 @@ for _, gui in client.playerGui:GetChildren() do
 		end
 	end
 end
-fs.writeFile(outPath, serde.encode("json", { scenario = scenario, guis = guis }, false))
+-- Roblox hides its thumbstick and jump button while the game has switched them off (menus are open).
+local touchControls = client.services.GuiService.TouchControlsEnabled ~= false
+fs.writeFile(outPath, serde.encode("json", { scenario = scenario, guis = guis, touchControls = touchControls }, false))
 print("wrote " .. outPath .. " (" .. #guis .. " screen guis)")

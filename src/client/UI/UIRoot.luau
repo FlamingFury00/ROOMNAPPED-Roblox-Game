@@ -10,8 +10,8 @@
 	  Overlay 30 - toasts, hints and fades that must sit on top of everything
 	  Cinema 40  - full-bleed black bars / fades for cinematics (no safe-area inset)
 
-	Menus are a stack: opening one blocks gameplay input, frees the mouse and gives gamepads a selection;
-	B / the close button pops the top menu.
+	Menus are a stack: opening one blocks gameplay input, frees the mouse, hides Roblox's thumbstick and jump
+	button on touch screens and gives gamepads a selection; B / the close button pops the top menu.
 ]]
 
 local ContextActionService = game:GetService("ContextActionService")
@@ -113,6 +113,8 @@ local function refresh()
 	if blockHook then
 		(blockHook :: (boolean) -> ())(any)
 	end
+	-- No thumbstick or jump button drawn over a menu (and no walking off while browsing one).
+	GuiService.TouchControlsEnabled = not any
 	if any then
 		dim.Visible = true
 		Motion.fade(dim, Theme.Tween.medium, { BackgroundTransparency = 0.45 })

@@ -782,7 +782,10 @@ def render(data, width, height, inset, background, touch=False):
             continue
         for child in sorted(root.children, key=lambda c: c.node.get("z", 1)):
             draw_box(canvas, child)
-    if touch:
+    if touch and data.get("touchControls", True) is False:
+        # The game switched Roblox's touch controls off (a menu is open): nothing is drawn or can be covered.
+        print("touch zones: hidden while a menu is open")
+    elif touch:
         zones = touch_zones(roots, width)
         if zones:
             draw_touch(canvas, zones, height)
