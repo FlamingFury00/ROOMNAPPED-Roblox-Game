@@ -239,8 +239,10 @@ with the reason and a tip on the results.
   place on rings around Jump); the lobby squad becomes an avatar strip and the mission card and PLAY sit
   between the thumbstick zone and Jump; downed and spectator panels shrink onto the message line, banners
   play in the top band and the Caretaker / ping direction arrows circle the middle of the screen instead of
-  its edges. Keyboards and controllers keep the desktop layout. The phone renders draw the touch controls
-  and report any HUD element that covers them, and the touch play tests assert the same rules.
+  its edges. Keyboards and controllers keep the desktop layout. While a menu is open Roblox's thumbstick
+  and jump button are switched off (`GuiService.TouchControlsEnabled`), so they never sit over a menu. The
+  phone renders draw the touch controls and report any HUD element that covers them, and the touch play
+  tests assert the same rules.
 * **Progress moments**: Results counts the credit total up behind turning light rays and calls out a new
   personal best; `NewItems` keeps rooms and skins unlocked this session marked NEW (cards, Collection tabs
   and a count on the Rooms button) until they are looked at; the mission board shows three mastery stars
