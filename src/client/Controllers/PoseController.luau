@@ -9,10 +9,11 @@
 	  capturing  arms out holding the suitcase open towards the room, leaning back against the pull
 	  escaped    a cheer when the squad gets out (Roblox's own R15 emote, which plays in every experience)
 
-	Poses blend onto the animated joints every frame (Motor6D.Transform, written after the Animator has run),
-	on every client and for every character it can see, so teammates see each other's poses. R6 bodies have
-	no waist, elbows or knees to pose: they only stop swinging their arms while carrying or downed. Nothing
-	here replicates or touches physics.
+	Poses blend onto the animated joints every frame (their Transform, written after the Animator has run), on
+	every client and for every character it can see, so teammates see each other's poses. The joints are
+	Motor6Ds, or the AnimationConstraints Roblox's avatar joint upgrade puts in their place. R6 bodies have no
+	waist, elbows or knees to pose: they only stop swinging their arms while carrying or downed. Nothing here
+	replicates or touches physics, except the cheer, which each player plays on their own body.
 ]]
 
 local Players = game:GetService("Players")
@@ -32,10 +33,17 @@ local BLEND_RATE = 7 -- per second
 type Pose = string
 local POSES: { Pose } = { "carry", "carryLight", "downed", "revive", "capture" }
 
+-- A body joint: a Motor6D, or the AnimationConstraint of an upgraded R15 avatar. Both carry the Transform the
+-- Animator writes each frame.
+type Joint = Motor6D | AnimationConstraint
+
 type Rig = {
 	character: Model,
 	r15: boolean,
-	joints: { [string]: Motor6D },
+	joints: { [string]: Joint },
+	animator: Animator?,
+	-- Whether the Animator says when it skipped a frame (distant characters are animated less often).
+	throttleKnown: boolean,
 	legs: { upper: number, lower: number },
 	weights: { [Pose]: number },
 	stars: BillboardGui?,
@@ -44,14 +52,40 @@ type Rig = {
 }
 
 local rigs: { [Model]: Rig } = {}
+-- Characters whose body could not be read yet (still loading, or an unknown rig): when to try again.
+local retryAt: { [Model]: number } = {}
 
 local function rad(degrees: number): number
 	return math.rad(degrees)
 end
 
-local function motor(parent: Instance?, name: string): Motor6D?
-	local m = parent and parent:FindFirstChild(name)
-	return if m and m:IsA("Motor6D") then m else nil
+local function isJoint(instance: Instance?): boolean
+	return instance ~= nil and (instance:IsA("Motor6D") or instance:IsA("AnimationConstraint"))
+end
+
+-- The joint that moves `limb`: called `name` in the limb (where Motor6Ds live), or, on an upgraded R15 body,
+-- the AnimationConstraint whose second attachment is on the limb, wherever it sits and whatever it is called.
+local function joint(character: Model, limb: string, name: string, upgraded: boolean): Joint?
+	local part = character:FindFirstChild(limb)
+	if not part then
+		return nil
+	end
+	local found = part:FindFirstChild(name)
+	if isJoint(found) then
+		return found :: any
+	end
+	if not upgraded then
+		return nil
+	end
+	for _, d in character:GetDescendants() do
+		if d:IsA("AnimationConstraint") then
+			local attachment = d.Attachment1
+			if attachment and attachment.Parent == part then
+				return d
+			end
+		end
+	end
+	return nil
 end
 
 local function buildRig(character: Model): Rig?
@@ -59,26 +93,30 @@ local function buildRig(character: Model): Rig?
 	if not humanoid then
 		return nil
 	end
-	local joints: { [string]: Motor6D } = {}
+	local joints: { [string]: Joint } = {}
 	local r15 = humanoid.RigType == Enum.HumanoidRigType.R15
-	local function add(key: string, m: Motor6D?)
-		if m then
-			joints[key] = m
+	local function add(key: string, j: Joint?)
+		if j then
+			joints[key] = j
 		end
 	end
 	local legs = { upper = 1.2, lower = 1.3 }
 	if r15 then
-		add("rightShoulder", motor(character:FindFirstChild("RightUpperArm"), "RightShoulder"))
-		add("rightElbow", motor(character:FindFirstChild("RightLowerArm"), "RightElbow"))
-		add("leftShoulder", motor(character:FindFirstChild("LeftUpperArm"), "LeftShoulder"))
-		add("leftElbow", motor(character:FindFirstChild("LeftLowerArm"), "LeftElbow"))
-		add("waist", motor(character:FindFirstChild("UpperTorso"), "Waist"))
-		add("neck", motor(character:FindFirstChild("Head"), "Neck"))
-		add("root", motor(character:FindFirstChild("LowerTorso"), "Root"))
-		add("rightHip", motor(character:FindFirstChild("RightUpperLeg"), "RightHip"))
-		add("leftHip", motor(character:FindFirstChild("LeftUpperLeg"), "LeftHip"))
-		add("rightKnee", motor(character:FindFirstChild("RightLowerLeg"), "RightKnee"))
-		add("leftKnee", motor(character:FindFirstChild("LeftLowerLeg"), "LeftKnee"))
+		local upgraded = character:FindFirstChildWhichIsA("AnimationConstraint", true) ~= nil
+		local function limb(key: string, part: string, name: string)
+			add(key, joint(character, part, name, upgraded))
+		end
+		limb("rightShoulder", "RightUpperArm", "RightShoulder")
+		limb("rightElbow", "RightLowerArm", "RightElbow")
+		limb("leftShoulder", "LeftUpperArm", "LeftShoulder")
+		limb("leftElbow", "LeftLowerArm", "LeftElbow")
+		limb("waist", "UpperTorso", "Waist")
+		limb("neck", "Head", "Neck")
+		limb("root", "LowerTorso", "Root")
+		limb("rightHip", "RightUpperLeg", "RightHip")
+		limb("leftHip", "LeftUpperLeg", "LeftHip")
+		limb("rightKnee", "RightLowerLeg", "RightKnee")
+		limb("leftKnee", "LeftLowerLeg", "LeftKnee")
 		local upper = character:FindFirstChild("RightUpperLeg")
 		local lower = character:FindFirstChild("RightLowerLeg")
 		local foot = character:FindFirstChild("RightFoot")
@@ -87,10 +125,9 @@ local function buildRig(character: Model): Rig?
 			legs.lower = lower.Size.Y + (if foot and foot:IsA("BasePart") then foot.Size.Y * 0.5 else 0)
 		end
 	else
-		local torso = character:FindFirstChild("Torso")
-		add("rightShoulder", motor(torso, "Right Shoulder"))
-		add("leftShoulder", motor(torso, "Left Shoulder"))
-		add("neck", motor(torso, "Neck"))
+		add("rightShoulder", joint(character, "Torso", "Right Shoulder", false))
+		add("leftShoulder", joint(character, "Torso", "Left Shoulder", false))
+		add("neck", joint(character, "Torso", "Neck", false))
 	end
 	if not joints.rightShoulder then
 		return nil
@@ -99,10 +136,15 @@ local function buildRig(character: Model): Rig?
 	for _, pose in POSES do
 		weights[pose] = 0
 	end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
 	return {
 		character = character,
 		r15 = r15,
 		joints = joints,
+		animator = animator,
+		throttleKnown = animator ~= nil and pcall(function(): any
+			return (animator :: Animator).EvaluationThrottled
+		end),
 		legs = legs,
 		weights = weights,
 		stars = nil,
@@ -276,7 +318,7 @@ end
 
 -- Frame ----------------------------------------------------------------------------------------------------
 
--- Forget characters that left the game (respawns, departed players): the cache holds them strongly.
+-- Forget characters that left the game (respawns, departed players): the caches hold them strongly.
 local function prune()
 	for character, rig in rigs do
 		if not character.Parent then
@@ -284,6 +326,11 @@ local function prune()
 				(rig.stars :: BillboardGui):Destroy()
 			end
 			rigs[character] = nil
+		end
+	end
+	for character in retryAt do
+		if not character.Parent then
+			retryAt[character] = nil
 		end
 	end
 end
@@ -305,10 +352,15 @@ local function step(dt: number)
 		end
 		local rig = rigs[character]
 		if not rig then
-			local made = buildRig(character)
-			if not made then
+			if (retryAt[character] or 0) > t then
 				continue
 			end
+			local made = buildRig(character)
+			if not made then
+				retryAt[character] = t + 1
+				continue
+			end
+			retryAt[character] = nil
 			rig = made
 			rigs[character] = made
 		end
@@ -333,13 +385,19 @@ local function step(dt: number)
 		if not any then
 			continue
 		end
+		-- A frame the Animator skipped still holds last frame's posed joints: blending again would compound.
+		local animator = r.animator
+		if r.throttleKnown and animator and animator.EvaluationThrottled then
+			continue
+		end
 		for _, pose in POSES do
 			local w = r.weights[pose]
 			if w > 0 then
 				for key, target in poseTargets(r, pose, t) do
-					local m = r.joints[key]
-					if m then
-						m.Transform = m.Transform:Lerp(target, w)
+					local found = r.joints[key]
+					if found then
+						local j = found :: any -- Motor6D or AnimationConstraint: both have a Transform
+						j.Transform = (j.Transform :: CFrame):Lerp(target, w)
 					end
 				end
 			end
@@ -354,13 +412,15 @@ local function onPhase(phase: string)
 		end
 		return
 	end
-	for key in RunInfo.roster() do
-		local player = RunInfo.playerFor(key)
-		local character = player and player.Character
-		local rig = character and rigs[character]
-		if rig then
-			cheer(rig)
-		end
+	-- Each player cheers on their own body: an animation a player plays on their own character reaches
+	-- everyone, so playing it on teammates too would show it twice, out of step.
+	if not RunInfo.inThisRun() then
+		return
+	end
+	local character = Players.LocalPlayer.Character
+	local rig = character and rigs[character]
+	if rig then
+		cheer(rig)
 	end
 end
 

@@ -74,6 +74,10 @@ republishing, and running servers follow within five minutes (see §6).
 **Avatar**
 - [ ] R15 or R6 both work (the code looks up `RightHand` or `Right Arm`, and ground checks allow for R6 legs).
       Keep player choice unless a playtest shows a problem.
+- [ ] Avatar joint upgrade (*StarterPlayer › AvatarJointUpgrade*): **Disabled**, as the place file
+      sets it. Bodies keep Motor6D joints, which the carry, downed, revive and capture poses bend and the
+      Caretaker's head turns use. If Roblox makes the upgrade mandatory, the poses still work on its
+      AnimationConstraint joints; only the Caretaker's head turns and reach are lost.
 
 **Security**
 - [ ] *Enable Studio Access to API Services*: on for the test place only (Studio saves).

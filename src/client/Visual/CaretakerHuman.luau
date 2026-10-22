@@ -14,6 +14,9 @@
 	reach for the lunge, a stagger for React, a lean into the wind, frost and a blue tint when chilled, the
 	fade for Phase - plus a swinging lantern, a key ring and glowing eyes. CaretakerView falls back to its
 	part-built bellhop when no template exists (offline tests, or the catalog could not be reached).
+
+	The joint overlays bend Motor6Ds. A body built with Roblox's avatar joint upgrade (AnimationConstraints;
+	the place keeps it off) still animates, held rigid, without the overlays.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -44,6 +47,7 @@ export type HumanRig = {
 	head: BasePart,
 	torso: BasePart,
 	parts: { BasePart },
+	decals: { Decal }, -- the face on a classic head fades with the body
 	clothes: { Clothing },
 	clothingColors: { [Clothing]: Color3 },
 	tracks: { [string]: AnimationTrack },
@@ -138,6 +142,7 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 	root.Anchored = true
 	root.Transparency = 1
 	local parts: { BasePart } = {}
+	local decals: { Decal } = {}
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.CanCollide = false
@@ -147,6 +152,13 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 			if d ~= root then
 				table.insert(parts, d)
 			end
+		elseif d:IsA("Decal") then
+			table.insert(decals, d)
+		elseif d:IsA("AnimationConstraint") then
+			-- Kinematic: holds the limbs to the animation like a Motor6D, with no physics pulling them there.
+			d.IsKinematic = true
+		elseif d:IsA("BallSocketConstraint") then
+			d.Enabled = false -- ragdoll limits of an upgraded body: nothing to limit on a puppet
 		end
 	end
 	local clothes: { Clothing } = {}
@@ -250,6 +262,7 @@ function CaretakerHuman.build(parent: Instance): HumanRig?
 		head = head,
 		torso = torso,
 		parts = parts,
+		decals = decals,
 		clothes = clothes,
 		clothingColors = clothingColors,
 		tracks = tracks,
@@ -377,6 +390,9 @@ function CaretakerHuman.animate(r: HumanRig, position: Vector3, hover: number, y
 		appliedAlpha[r] = transparency
 		for _, part in r.parts do
 			part.LocalTransparencyModifier = transparency
+		end
+		for _, decal in r.decals do
+			decal.LocalTransparencyModifier = transparency
 		end
 	end
 end

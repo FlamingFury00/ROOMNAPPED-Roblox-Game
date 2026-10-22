@@ -32,6 +32,7 @@
         "DevCameraOcclusionMode": "Zoom",
         "EnableMouseLockOption": true,
         "AutoJumpEnabled": false,
+        "AvatarJointUpgrade": "Disabled",
         "LoadCharacterAppearance": true,
         "CharacterBreakJointsOnDeath": false,
         "HealthDisplayDistance": 0,

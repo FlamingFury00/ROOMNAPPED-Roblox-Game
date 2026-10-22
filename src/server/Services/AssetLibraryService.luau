@@ -6,10 +6,11 @@
 	InsertService:LoadAsset, which still loads models the experience owner has in their inventory) and turned
 	into a template in ReplicatedStorage.RN_Assets/<key>/<n>:
 
-	  * cleaned: no scripts, sounds, GUIs, prompts, click detectors, humanoids, joints, constraints or legacy
-	    effects; every part anchored, non-colliding, untouchable, invisible to raycasts and locked (collision
-	    stays with the builders' simple proxies); seats disabled; the model's own lights and particles only
-	    when the entry asks for them, never casting shadows;
+	  * cleaned: no scripts, sounds (old or new audio API), video, GUIs, prompts, click detectors, humanoids,
+	    joints, constraints, highlights, adornments, pathfinding modifiers or legacy effects; every part
+	    anchored, non-colliding, untouchable, invisible to raycasts and locked (collision stays with the
+	    builders' simple proxies), invisible parts dropped; seats and spawn points disabled; the model's own
+	    lights and particles only when the entry asks for them, never casting shadows;
 	  * turned so its front faces -Z: seats say which way a piece of furniture faces; otherwise the front is the
 	    side the model's Creator Store thumbnail shows, which follows from its pivot (see thumbnailFront), with
 	    per-model corrections from the manifest;
@@ -97,6 +98,13 @@ local REMOVE: { string } = {
 	"RemoteEvent",
 	"RemoteFunction",
 	"UnreliableRemoteEvent",
+	"VideoPlayer",
+	"VideoDeviceInput",
+	"Wire", -- the new audio graph (its Audio* objects are matched by name below)
+	"Highlight",
+	"GuiBase3d", -- selection boxes and handle adornments
+	"PathfindingModifier", -- a stranger's model must not change where the Caretaker can walk
+	"PathfindingLink",
 	"Model", -- never: nested models are flattened instead (handled below)
 }
 
@@ -105,6 +113,10 @@ local function shouldRemove(instance: Instance, entry: AssetManifest.Entry): boo
 		if class ~= "Model" and instance:IsA(class) then
 			return true
 		end
+	end
+	-- AudioPlayer, AudioEmitter, AudioListener and the rest of the new audio API share no base class.
+	if string.sub(instance.ClassName, 1, 5) == "Audio" then
+		return true
 	end
 	if instance:IsA("Light") then
 		return entry.lights ~= true
@@ -160,6 +172,10 @@ local function clean(loaded: Instance, entry: AssetManifest.Entry, label: string
 		part.CastShadow = false
 		if part:IsA("Seat") or part:IsA("VehicleSeat") then
 			(part :: any).Disabled = true
+		elseif part:IsA("SpawnLocation") then
+			-- Every clone would be a place players can spawn at.
+			part.Enabled = false
+			part.Neutral = false
 		end
 		part.Parent = model -- flattened first, so dropping a part below never takes a nested one with it
 	end

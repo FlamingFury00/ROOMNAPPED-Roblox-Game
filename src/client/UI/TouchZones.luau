@@ -179,6 +179,8 @@ local function signature(zones: Zones): string
 end
 
 local tracked: { [ScreenGui]: string } = {}
+-- The zones of each tracked gui as last read; a new table only when they changed.
+local current: { [ScreenGui]: Zones } = {}
 local started = false
 
 local function refresh()
@@ -187,6 +189,7 @@ local function refresh()
 		local sig = signature(zones)
 		if sig ~= last then
 			tracked[gui] = sig
+			current[gui] = zones
 			TouchZones.Changed:Fire(zones, gui)
 		end
 	end
@@ -198,7 +201,9 @@ function TouchZones.track(gui: ScreenGui)
 	if tracked[gui] ~= nil then
 		return
 	end
-	tracked[gui] = signature(TouchZones.get(gui))
+	local zones = TouchZones.get(gui)
+	tracked[gui] = signature(zones)
+	current[gui] = zones
 	if started then
 		return
 	end
@@ -213,6 +218,17 @@ function TouchZones.track(gui: ScreenGui)
 			refresh()
 		end
 	end)
+end
+
+-- The zones of a gui as last read (tracking it if it was not yet): for code that asks every frame. The same
+-- table comes back until the zones change, so callers can compare it to skip work.
+function TouchZones.current(gui: ScreenGui): Zones
+	local zones = current[gui]
+	if not zones then
+		TouchZones.track(gui)
+		zones = current[gui] :: Zones
+	end
+	return zones
 end
 
 return TouchZones

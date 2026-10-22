@@ -668,4 +668,83 @@ return function(ctx)
 			assertClean(client)
 		end)
 	end)
+
+	describe("Player poses (A05)", function()
+		-- An R15 body whose joints are Motor6Ds in each limb, or (Roblox's avatar joint upgrade) AnimationConstraints
+		-- named and placed otherwise, found by their attachment on the limb. Joint transforms start where an
+		-- Animator would leave them.
+		local function body(constraints: boolean): (any, { [string]: any })
+			local Instance = roblox.Instance
+			local character = Instance.new("Model")
+			character.Name = "Tester"
+			local humanoid = Instance.new("Humanoid")
+			humanoid.RigType = roblox.Enum.HumanoidRigType.R15
+			Instance.new("Animator").Parent = humanoid
+			humanoid.Parent = character
+			local joints = {}
+			for part, jointName in
+				{
+					Head = "Neck",
+					UpperTorso = "Waist",
+					LowerTorso = "Root",
+					RightUpperArm = "RightShoulder",
+					RightLowerArm = "RightElbow",
+					LeftUpperArm = "LeftShoulder",
+					LeftLowerArm = "LeftElbow",
+					RightUpperLeg = "RightHip",
+					LeftUpperLeg = "LeftHip",
+					RightLowerLeg = "RightKnee",
+					LeftLowerLeg = "LeftKnee",
+					RightFoot = false,
+				}
+			do
+				local p = Instance.new("Part")
+				p.Name = part
+				p.Size = roblox.Vector3.new(1, 1.2, 1)
+				p.Parent = character
+				if jointName then
+					local j = Instance.new(if constraints then "AnimationConstraint" else "Motor6D")
+					j.Name = if constraints then "Joint" else jointName
+					j.Transform = roblox.CFrame.new()
+					if constraints then
+						local attachment = Instance.new("Attachment")
+						attachment.Name = jointName .. "RigAttachment"
+						attachment.Parent = p
+						j.Attachment1 = attachment
+						j.Parent = character
+					else
+						j.Parent = p
+					end
+					joints[jointName] = j
+				end
+			end
+			character.Parent = ctx.game:GetService("Workspace")
+			return character, joints
+		end
+
+		for _, constraints in { false, true } do
+			it(
+				"slumps a downed body on " .. (if constraints then "AnimationConstraint" else "Motor6D") .. " joints",
+				function()
+					local client = boot()
+					local character, joints = body(constraints)
+					client.localPlayer.Character = character
+					client.services.Players.GetPlayers = function()
+						return { client.localPlayer }
+					end
+					client.localPlayer:SetAttribute("Downed", true)
+					for _ = 1, 10 do
+						client.services.RunService.Stepped:Fire(0, 0.1)
+					end
+					task.wait(0.05)
+					-- The waist bends forward and the head lolls; stars circle overhead.
+					local waist = joints.Waist.Transform
+					expect(waist.LookVector:Dot(roblox.Vector3.new(0, 0, -1)) < 0.98).toBe(true)
+					expect(character:FindFirstChild("RN_DizzyStars")).toBeTruthy()
+					character:Destroy()
+					assertClean(client)
+				end
+			)
+		end
+	end)
 end

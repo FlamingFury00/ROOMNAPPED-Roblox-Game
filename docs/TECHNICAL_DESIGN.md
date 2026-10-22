@@ -210,7 +210,9 @@ with the reason and a tip on the results.
 * **Bodies** (`PoseController`): every client blends poses onto every visible player's animated joints after
   the Animator runs — a straight-armed suitcase carry with a lean away from the weight, a slumped downed pose
   with stars circling the head, a squat over a teammate while reviving, arms out leaning back while stealing
-  a room — and plays Roblox's Cheer when the squad escapes.
+  a room — and plays Roblox's Cheer when the squad escapes (each player on their own body, which everyone
+  sees). Poses bend Motor6D joints or, on avatars with Roblox's joint upgrade, AnimationConstraints (the
+  place keeps the upgrade off), and skip frames the Animator throttled so blends never compound.
 * **Cinematic shots** (`CinematicController`): the doors part on the squad on arrival, the camera pulls back
   to watch the room fold during a theft and pushes in on the waking Caretaker, and watches the elevator
   close on an escape. Shots are short, skipped with Reduced Motion and always hand control back.

@@ -72,7 +72,7 @@ end
 -- Centre of a circle of direction markers (radius + marker size) in the middle of the screen, nudged right
 -- so the circle never reaches into the thumbstick zone.
 function HudLayout.orbitCentre(radius: number, size: number): Vector2
-	local zones = HudLayout.zones()
+	local zones = TouchZones.current(UIRoot.Guis.Hud) -- asked for every marker every frame
 	local centre = zones.canvas / 2
 	return Vector2.new(math.max(centre.X, zones.stick.x1 + radius + size / 2 + 4), centre.Y)
 end

@@ -390,33 +390,26 @@ function Quickbar.create(parent: Instance): Handle
 	-- to the nearest free place on rings around the jump button.
 	local visible = false
 	local spectating = false -- out of the run: only Ping stays, so spectators can still point things out
-	local lastLayout = ""
+	-- What the last layout was made for (it runs every frame, so it returns early unless something moved).
+	local laidOutFor: TouchZones.Zones? = nil
+	local laidOutFlags = -1
 	local function layoutTouch()
 		local gui = parent:FindFirstAncestorOfClass("ScreenGui")
 		if not gui or not touch.Visible then
 			return
 		end
-		local zones = TouchZones.get(gui)
+		local zones = TouchZones.current(gui)
+		local flags = (if rotate.Visible then 1 else 0)
+			+ (if cancel.Visible then 2 else 0)
+			+ (if drop.Visible then 4 else 0)
+			+ (if spectating then 8 else 0)
+		if zones == laidOutFor and flags == laidOutFlags then
+			return
+		end
+		laidOutFor, laidOutFlags = zones, flags
 		local canvas = zones.canvas
 		local jump = zones.jump
 		local centre = zones.jumpCenter
-		local signature = string.format(
-			"%d:%d:%d:%d:%d:%d",
-			math.round(canvas.X),
-			math.round(canvas.Y),
-			math.round(jump.x0),
-			math.round(jump.y0),
-			math.round(jump.x1),
-			math.round(jump.y1)
-		)
-		for _, button in { rotate, cancel, drop } do
-			signature ..= if button.Visible then "1" else "0"
-		end
-		signature ..= if spectating then "s" else "p"
-		if signature == lastLayout then
-			return
-		end
-		lastLayout = signature
 
 		local taken: { TouchZones.Rect } = { zones.stick, jump, TouchZones.rect(0, 0, canvas.X, Quickbar.TOP_RESERVE) }
 		local edge = 8
@@ -482,7 +475,7 @@ function Quickbar.create(parent: Instance): Handle
 		TouchZones.track(hudGui)
 	end
 	TouchZones.Changed:Connect(function()
-		lastLayout = ""
+		laidOutFor = nil
 		layoutTouch()
 	end)
 
@@ -617,7 +610,7 @@ function Quickbar.create(parent: Instance): Handle
 			slot.button.Visible = not spectating
 		end
 		touch.Visible = (visible or spectating) and onTouch
-		lastLayout = ""
+		laidOutFor = nil
 		layoutTouch()
 	end
 	Device.Changed:Connect(applyVisibility)
