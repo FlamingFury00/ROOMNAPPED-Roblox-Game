@@ -24,6 +24,10 @@
 	The `assets` feature flag is the kill switch for this third-party content: loading waits for the server's
 	first read of the live flags, and switching the flag off on a running server drops every template and puts
 	every slot's built-in prop back (switching it on again reloads).
+
+	RN_Assets carries LobbyReady = true once the first keys (the lobby's furniture) have loaded or failed, or
+	when there is nothing to load: the loading screen holds the curtain for it, briefly, so players never
+	watch the lobby swap its props.
 ]]
 
 local AssetService = game:GetService("AssetService")
@@ -63,6 +67,12 @@ local generation = 0
 
 local function current(gen: number): boolean
 	return gen == generation and Registry.get("Flags").feature("assets")
+end
+
+local function setLobbyReady(ready: boolean)
+	if root then
+		root:SetAttribute("LobbyReady", ready)
+	end
 end
 
 -- Cleaning ----------------------------------------------------------------------------------------------------
@@ -632,6 +642,7 @@ function AssetLibraryService.Init()
 	end
 	root = Instance.new("Folder")
 	root.Name = Assets.FOLDER
+	root:SetAttribute("LobbyReady", false)
 	root.Parent = ReplicatedStorage
 end
 
@@ -648,6 +659,13 @@ local function loadAll()
 	local started = os.clock()
 	local queue = table.clone(keys)
 	local done = 0
+	local lobbyKeys: { [string]: boolean } = {}
+	local lobbyLeft = 0
+	for _, key in AssetManifest.firstKeys() do
+		lobbyKeys[key] = true
+		lobbyLeft += 1
+	end
+	setLobbyReady(lobbyLeft == 0)
 	local function nextKey()
 		local key = table.remove(queue, 1)
 		if not key then
@@ -662,6 +680,12 @@ local function loadAll()
 				status[key] = "failed"
 				failures[key] = tostring(problem)
 				failedCount += 1
+			end
+			if lobbyKeys[key] and gen == generation then
+				lobbyLeft -= 1
+				if lobbyLeft == 0 then
+					setLobbyReady(true)
+				end
 			end
 			done += 1
 			if current(gen) then
@@ -712,6 +736,7 @@ end
 local function switchOff()
 	generation += 1
 	finished = true
+	setLobbyReady(true)
 	root:ClearAllChildren()
 	local reverted = Assets.revert()
 	local rig = ReplicatedStorage:FindFirstChild(CARETAKER_TEMPLATE)
@@ -734,6 +759,7 @@ function AssetLibraryService.Start()
 	end)
 	if #AssetManifest.keys() == 0 or not canLoad or not RunService:IsServer() then
 		finished = true
+		setLobbyReady(true)
 		AssetLibraryService.Finished:Fire({}, {})
 		return
 	end
@@ -757,6 +783,7 @@ function AssetLibraryService.Start()
 			loadAll()
 		else
 			finished = true
+			setLobbyReady(true)
 			log:Info("asset library off (feature flag)")
 		end
 	end)

@@ -15,6 +15,7 @@ local catalog: { [string]: string } = {
 	["loading.title"] = "Checking you in...",
 	["loading.profile"] = "Fetching your luggage",
 	["loading.world"] = "Unfolding the hotel",
+	["loading.lobby"] = "Dressing the lobby",
 	["loading.ready"] = "Welcome!",
 	["loading.failed"] = "We couldn't open your save.",
 	["loading.failedBody"] = "Your progress is safe - nothing was overwritten. Try again in a moment.",

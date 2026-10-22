@@ -691,6 +691,9 @@ return function(ctx)
 			-- Studio has no live flags to wait for (startup work that waits on them never stalls there).
 			expect(Flags.isReady()).toBe(true)
 			expect(Flags.waitReady(0)).toBe(true)
+			-- Nothing to load here, so the loading screen never waits for the lobby's furniture.
+			local library = sim.game:GetService("ReplicatedStorage"):FindFirstChild("RN_Assets")
+			expect(library ~= nil and library:GetAttribute("LobbyReady") == true).toBe(true)
 			local clean, dropped = Flags.cleanOverrides({
 				rooms = false,
 				missions = { M3 = false, M99 = false, M2 = "no" },

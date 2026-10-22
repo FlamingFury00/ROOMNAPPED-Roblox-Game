@@ -4,13 +4,16 @@
 
 	Runs from ReplicatedFirst before anything else, replaces the default Roblox loading screen and stays up
 	until the game has loaded AND the player's save is Ready, so nobody lands in the lobby with an empty
-	profile. It never hides a problem: a failed load shows "your progress is safe" with Retry, a save from a
-	newer version says so, and a slow load offers Continue instead of blocking forever.
+	profile. It also gives the lobby a few seconds to dress: a fresh server is still loading its furniture
+	models, and their meshes and textures are fetched before the curtain lifts, so nothing swaps or sharpens
+	in front of the player. It never hides a problem: a failed load shows "your progress is safe" with Retry,
+	a save from a newer version says so, and a slow load offers Continue instead of blocking forever.
 
 	This script cannot use the client UI kit (it lives in StarterPlayerScripts and loads later), so it keeps
 	its own small copies of the theme colours and fonts.
 ]]
 
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -40,6 +43,7 @@ local FONT_BODY = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.Fo
 
 local MIN_SECONDS = 2.2
 local SLOW_SECONDS = 40
+local LOBBY_SECONDS = 15 -- from the start, the longest the screen waits for the lobby's furniture
 
 local startedAt = os.clock()
 local reducedMotion = false
@@ -481,11 +485,41 @@ local function setStatus(key: string, fallback: string, value: number)
 	targetProgress = math.max(targetProgress, value)
 end
 
+-- The lobby's real furniture (the server flags it once loaded) and the meshes and textures it shows, within
+-- LOBBY_SECONDS of the start.
+local function dressLobby()
+	local deadline = startedAt + LOBBY_SECONDS
+	local function ready(): boolean
+		local library = ReplicatedStorage:FindFirstChild("RN_Assets")
+		return library ~= nil and library:GetAttribute("LobbyReady") == true
+	end
+	if not ready() then
+		setStatus("loading.lobby", "Dressing the lobby", 0.85)
+		while not ready() and os.clock() < deadline do
+			task.wait(0.2)
+		end
+	end
+	local lobby = Workspace:FindFirstChild("Lobby")
+	if lobby and os.clock() < deadline then
+		local done = false
+		task.spawn(function()
+			pcall(function()
+				ContentProvider:PreloadAsync({ lobby })
+			end)
+			done = true
+		end)
+		while not done and os.clock() < deadline do
+			task.wait(0.1)
+		end
+	end
+end
+
 local function finish()
 	if dismissed then
 		return
 	end
 	dismissed = true
+	dressLobby()
 	tipsRunning = false
 	local wait = MIN_SECONDS - (os.clock() - startedAt)
 	if wait > 0 then

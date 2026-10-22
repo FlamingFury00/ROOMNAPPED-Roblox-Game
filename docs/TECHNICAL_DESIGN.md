@@ -23,7 +23,7 @@ them to code and tests.
 ## 2. Runtime layout
 
 ```
-ReplicatedFirst/Loading         branded loading / profile gate (U20)
+ReplicatedFirst/Loading         branded loading / profile gate; holds for the lobby's furniture (U20)
 ReplicatedStorage/Shared        config, content, logic, net, world builders, utilities
 ServerScriptService/Server      bootstrap + Core (state, profiles, registry) + Services
 StarterPlayerScripts/Client     bootstrap + Core (state mirror, run info, device) + Controllers + UI
@@ -204,7 +204,10 @@ with the reason and a tip on the results.
   model is fitted, so they never shrink or shift it. The `assets` feature flag is the kill switch for this
   third-party content: loading waits for the server's first read of the live flags, and switching the flag
   off on a running server drops every template and puts each slot's built-in prop back (`Assets.revert`),
-  clients' own slots (moving carts, previews) included; switching it on again reloads. Wallpapers, carpets, parquet, marble, tiles, brick, concrete and
+  clients' own slots (moving carts, previews) included; switching it on again reloads. The loading screen
+  holds the curtain (up to 15 s from joining) until the server flags the lobby's models loaded
+  (`RN_Assets.LobbyReady`) and their meshes and textures are fetched, so a player joining a fresh server
+  never watches the lobby swap its props. Wallpapers, carpets, parquet, marble, tiles, brick, concrete and
   ice are MaterialVariants in the place file (`src/MaterialService`) that themes and room skins put on their
   surfaces (`Palette.dress`). Picture frames hang public-domain paintings shaped to each canvas.
 * **Bodies** (`PoseController`): every client blends poses onto every visible player's animated joints after

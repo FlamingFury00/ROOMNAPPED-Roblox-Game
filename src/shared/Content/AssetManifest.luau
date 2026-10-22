@@ -521,6 +521,17 @@ local FIRST: { string } = {
 	"flowerVase",
 }
 
+-- The keys that load first (those in the manifest): the loading screen waits for them, briefly.
+function AssetManifest.firstKeys(): { string }
+	local keys = {}
+	for _, key in FIRST do
+		if entries[key] then
+			table.insert(keys, key)
+		end
+	end
+	return keys
+end
+
 -- Keys in loading order (the server loads them in this order, a few at a time).
 function AssetManifest.keys(): { string }
 	local keys = {}
