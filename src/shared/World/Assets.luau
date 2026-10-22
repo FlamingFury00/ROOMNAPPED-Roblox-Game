@@ -40,8 +40,20 @@ export type PlaceOptions = {
 
 local enabled = true
 
--- Each slot's fallback, to put back if the library is switched off (weak: slots come and go with levels).
-local fallbacks: { [Model]: Fallback } = setmetatable({}, { __mode = "k" }) :: any
+-- Each slot's fallback, to put back if the library is switched off. A strong table: the engine may collect an
+-- Instance's Lua object while the Instance lives on, so weak keys would lose fallbacks of slots in use.
+-- Destroyed slots (gone with their level or preview) are swept out every so often.
+local fallbacks: { [Model]: Fallback } = {}
+local placedSinceSweep = 0
+local SWEEP_EVERY = 200
+
+local function sweep()
+	for slot in fallbacks do
+		if slot.Parent == nil then
+			fallbacks[slot] = nil
+		end
+	end
+end
 
 -- Switch real models off (the `assets` live flag): slots keep or get their fallbacks.
 function Assets.setEnabled(value: boolean)
@@ -130,6 +142,11 @@ function Assets.place(parent: Instance, key: string, cf: CFrame, fallback: Fallb
 		slot:SetAttribute("Local", true)
 	end
 	if fallback then
+		placedSinceSweep += 1
+		if placedSinceSweep >= SWEEP_EVERY then
+			placedSinceSweep = 0
+			sweep()
+		end
 		fallbacks[slot] = fallback
 	end
 	if not Assets.fill(slot) then
@@ -160,7 +177,7 @@ function Assets.upgrade(key: string?, localOnly: boolean?): number
 end
 
 -- Put the fallback back in every slot for `key` (or every key) that holds a real model: the library was
--- switched off. Same ownership rule as upgrade.
+-- switched off, so the model goes even from a slot placed without a fallback. Same ownership rule as upgrade.
 function Assets.revert(key: string?, localOnly: boolean?): number
 	local count = 0
 	for _, slot in CollectionService:GetTagged(Assets.TAG) do

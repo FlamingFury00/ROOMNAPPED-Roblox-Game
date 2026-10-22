@@ -228,6 +228,11 @@ return function(ctx)
 			part("Nested", hitbox) -- visible, inside the invisible hitbox
 			local label = part("Label", root, 1)
 			Instance.new("Decal").Parent = label
+			-- Seats are usually invisible, and they say which way a piece of furniture faces.
+			local seat = Instance.new("Seat")
+			seat.Name = "Seat"
+			seat.Transparency = 1
+			seat.Parent = root
 			local entry = { ids = { 1 }, mount = "floor", size = Vector3.one, fit = "contain", facing = "any" }
 			local model = Library.clean(loaded, entry, "test")
 			expect(model ~= nil).toBe(true)
@@ -239,6 +244,8 @@ return function(ctx)
 			expect(kept.Nested ~= nil).toBe(true)
 			expect(kept.Label ~= nil).toBe(true)
 			expect(kept.Hitbox).toBe(nil)
+			expect(kept.Seat ~= nil).toBe(true)
+			expect(kept.Seat.Disabled).toBe(true)
 			expect(kept.Body.Anchored).toBe(true)
 			expect(kept.Body.CanCollide).toBe(false)
 			expect(kept.Body.CanQuery).toBe(false)

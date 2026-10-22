@@ -116,9 +116,10 @@ local function shouldRemove(instance: Instance, entry: AssetManifest.Entry): boo
 end
 
 -- An invisible part (a hitbox, a collision proxy, an empty root) would only stretch the bounds the model is
--- fitted by. Keep the ones that carry something visible: a decal, or the lights and effects the entry wants.
+-- fitted by. Keep the ones that carry something visible (a decal, or the lights and effects the entry wants)
+-- and seats, which are usually invisible and say which way the furniture faces (frontYaw).
 local function invisible(part: BasePart, entry: AssetManifest.Entry): boolean
-	if part.Transparency < 0.99 then
+	if part.Transparency < 0.99 or part:IsA("Seat") or part:IsA("VehicleSeat") then
 		return false
 	end
 	for _, d in part:GetDescendants() do
@@ -440,7 +441,9 @@ local function loadKey(key: string, gen: number)
 	if not current(gen) then
 		-- Switched off (or restarted) while this key loaded: the slots keep their built-in props.
 		holder:Destroy()
-		status[key] = "pending"
+		if gen == generation then
+			status[key] = "pending"
+		end
 		return
 	end
 	if made > 0 then

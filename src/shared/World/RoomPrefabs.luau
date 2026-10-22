@@ -407,18 +407,18 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 		end
 	end
 	-- Boxes by the side walls: a neat stack exactly 3.2 high with a desk fan on top on the left, a pile on the
-	-- right (the curated piles have no flat top to stand a fan on); air ducts along the ceiling.
+	-- right (the curated piles have no flat top to stand a fan on); air ducts along the ceiling. Both keep
+	-- clear of the walls and their base trim (inner faces at x = +-7) however the boxes are turned.
 	local cardboard = Color3.fromRGB(186, 146, 98)
-	local stack = facingDoor(roomCF, -5.8, 0, 9)
+	local stack = facingDoor(roomCF, -5.4, 0, 9)
 	local stackRng = subRng(rng)
 	local stackTop = 0
 	for i, height in { 1.1, 1.1, 1 } do
+		local turn = if i == 1 then 0 else (stackRng() - 0.5) * 0.4
 		decor(
 			props,
 			"Box",
-			stack
-				* CFrame.new((stackRng() - 0.5) * 0.3, stackTop + height / 2, 0)
-				* CFrame.Angles(0, (stackRng() - 0.5) * 0.4, 0),
+			stack * CFrame.new((stackRng() - 0.5) * 0.3, stackTop + height / 2, 0) * CFrame.Angles(0, turn, 0),
 			Vector3.new(2.6 - i * 0.3, height, 2.2 - i * 0.2),
 			cardboard,
 			M.Cardboard
@@ -427,7 +427,7 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 		stackTop += height
 	end
 	collider(props, stack * CFrame.new(0, stackTop / 2, 0), Vector3.new(2.4, stackTop, 2.2))
-	local pile = facingDoor(roomCF, 5.8, 0, 9)
+	local pile = facingDoor(roomCF, 5.4, 0, 9)
 	local pileRng = subRng(rng)
 	Assets.place(props, "cardboardBoxes", pile, function(slot: Model, cf: CFrame)
 		local y = 0
@@ -437,8 +437,8 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 				slot,
 				"Box",
 				cf
-					* CFrame.new((pileRng() - 0.5) * 0.4, y + size.Y / 2, 0)
-					* CFrame.Angles(0, (pileRng() - 0.5) * 0.5, 0),
+					* CFrame.new((pileRng() - 0.5) * 0.2, y + size.Y / 2, 0)
+					* CFrame.Angles(0, (pileRng() - 0.5) * 0.3, 0),
 				size,
 				cardboard,
 				M.Cardboard
@@ -478,7 +478,7 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 	Assets.place(
 		props,
 		"deskFan",
-		facingDoor(roomCF, -5.8, stackTop, 9) * CFrame.Angles(0, 0.5, 0),
+		facingDoor(roomCF, -5.4, stackTop, 9) * CFrame.Angles(0, 0.5, 0),
 		function(slot: Model, cf: CFrame)
 			Kit.cylinder(slot, {
 				name = "FanBase",
@@ -510,7 +510,7 @@ local function buildFan(model: Model, roomCF: CFrame, palette: Palette, props: F
 	end
 	if palette.style == "tropical" then
 		-- Potted palms against the side walls in front of the vents (clear of the boxes, the fan and the walls).
-		for i, x in { -5.1, 5.1 } do
+		for i, x in { -4.8, 4.8 } do
 			Assets.place(props, "bigPlant", facingDoor(roomCF, x, 0, 4.2), function(slot: Model, cf: CFrame)
 				Kit.cylinder(slot, {
 					name = "Pot",
