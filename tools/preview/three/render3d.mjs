@@ -109,7 +109,10 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const port = server.address().port;
 
-const exe = ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome", "/opt/pw-browsers/chromium"].find(p => fs.existsSync(p));
+// Chromium: CHROMIUM_PATH, a preinstalled Playwright browser, or (when neither exists) the one Playwright
+// installs with `npx playwright install chromium`.
+const exe = [process.env.CHROMIUM_PATH, "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", "/opt/pw-browsers/chromium"]
+  .find(p => p && fs.existsSync(p));
 const browser = await chromium.launch({ executablePath: exe, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage({ viewport: { width: size[0], height: size[1] } });
 page.on("console", m => { if (m.type() === "error") console.error("[page]", m.text()); });

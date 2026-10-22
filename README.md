@@ -73,7 +73,8 @@ Set `RN_LAYOUT_SIMS_NO_CLIENT=1` to run the layout playthroughs without the clie
 
 ### Visual previews
 
-`tools/preview/` renders offline previews for QA without Studio:
+`tools/preview/` renders offline previews for QA without Studio (the Python renderers and the asset scout
+need Python 3 with Pillow; the 3D renderer needs Node 22):
 
 ```bash
 # Interface: drive the real client into a scenario and render its ScreenGuis.
@@ -84,14 +85,37 @@ python3 tools/preview/render_gui.py tools/preview/out/gui.json tools/preview/out
 lune run tools/preview/export_gui.luau build/test.rbxl phone:escape tools/preview/out/phone.json
 python3 tools/preview/render_gui.py tools/preview/out/phone.json tools/preview/out/phone.png --size 750x311 --inset 0
 
-# World geometry of a layout, the lobby or a single room prefab.
+# Several scenarios at once (four in parallel) into tools/preview/out/gui_<scenario>.png. Phone renders draw
+# the thumbstick zone and the jump button and report any HUD element that covers them.
+tools/preview/render_all.sh lobby explore phone:explore results phone:results menu:Collection
+
+# World geometry of a layout, the lobby or a single room prefab ("room <roomId> <skinId>").
 lune run tools/preview/export.luau build/test.rbxl L3 tools/preview/out/scene.json
+lune run tools/preview/export.luau build/test.rbxl room tools/preview/out/fan.json Fan fan_tropical
 python3 tools/preview/render.py tools/preview/out/scene.json tools/preview/out/L3 --views 4 --size 1280x720
+
+# The same scenes lit and textured (wallpapers, carpets and marble from the MaterialVariants, paintings,
+# decals) with three.js in headless Chromium: walkthrough views, an overview without ceilings, or a camera
+# placed by hand. One-time setup: `npm install` in tools/preview/three, and a Chromium (set CHROMIUM_PATH,
+# or run `npx playwright install chromium` there). Curated models show as their procedural fallbacks.
+node tools/preview/three/render3d.mjs tools/preview/out/scene.json tools/preview/out/L3 --views 4 --top
+node tools/preview/three/render3d.mjs tools/preview/out/fan.json tools/preview/out/fan --views 0 --at 0,7,4:0,4,-9
 ```
 
 Scenarios: `lobby`, `squad` (four players), `unlock` (NEW badges), `mastery` (mission stars), `explore`,
 `placement`, `escape`, `downed`, `spectate`, `results`, `results6` (the longest reward plan), `menu:<Screen>` (MissionBoard, Collection, Settings,
 Debug, Feedback), each optionally prefixed with `phone:`.
+
+### Finding free models
+
+`tools/assets/scout.py` searches the Creator Store (public toolbox API, no login) and writes numbered contact
+sheets of the free models that pass its filters (triangle and part budgets, no scripts or audio), with a
+`candidates.json` of ids, names, creators and counts. Picks go into `src/shared/Content/AssetManifest.luau`
+and their provenance into [CONTENT_OWNERSHIP.md](docs/CONTENT_OWNERSHIP.md).
+
+```bash
+python3 tools/assets/scout.py out/sofas "victorian sofa" "chesterfield sofa" --max-tris 12000
+```
 
 ## Project layout
 
